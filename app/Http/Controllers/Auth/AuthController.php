@@ -23,6 +23,6 @@ class AuthController extends Controller
     public function login(LoginRequest $request)
     {
         $this->authService->login($request->toDTO());
-        return redirect()->route('welcome')->with('success', 'Berhasil login');
+        return redirect()->route('users.index')->with('success', 'Berhasil login');
     }
 }
