@@ -10,12 +10,14 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasUuids, HasFactory, Notifiable;
 
     protected $fillable = [
         'name',
         'username',
         'password',
+        'role',
+        'password_changed_at',
     ];
 
     protected $hidden = [
@@ -24,6 +26,7 @@ class User extends Authenticatable
 
     protected $casts = [
         'password' => 'hashed',
+        'password_changed_at' => 'datetime',
     ];
 
     protected static function newFactory()
