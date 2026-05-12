@@ -29,6 +29,11 @@ class User extends Authenticatable
         'password_changed_at' => 'datetime',
     ];
 
+    public function passwordHistories()
+    {
+        return $this->hasMany(PasswordHistory::class);
+    }
+
     protected static function newFactory()
     {
         return UserFactory::new();
