@@ -3,6 +3,7 @@
 namespace Domain\User\Repositories;
 
 use Domain\User\Dtos\CreateUserDto;
+use Domain\User\Dtos\GetUserDto;
 use Domain\User\Models\User;
 use Domain\User\Interfaces\UserRepositoryInterface;
 
@@ -23,6 +24,12 @@ class UserRepository implements UserRepositoryInterface
         $user->password = bcrypt($data->password);
         $user->role = $data->role;
         $user->save();
+        return $user;
+    }
+
+    public function getUserByUsername(GetUserDto $data)
+    {
+        $user = User::where('username', $data->username)->first();
         return $user;
     }
 }
