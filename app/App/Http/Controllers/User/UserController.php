@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Domains\User\Http\Controllers;
+namespace App\Domain\User\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Domains\User\Services\UserService;
+use Domain\User\Services\UserService;
 
 class UserController extends Controller
 {
