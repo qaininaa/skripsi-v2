@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domain\User\Dtos;
+namespace Domain\User\Dtos;
 
 class CreateUserDto
 {
