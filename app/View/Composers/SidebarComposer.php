@@ -2,9 +2,9 @@
 
 namespace App\View\Composers;
 
-use Illuminate\View\View;
-use Domain\User\Repositories\UserRepository;
 use Domain\Report\Repositories\ReportRepository;
+use Domain\User\Repositories\UserRepository;
+use Illuminate\View\View;
 
 class SidebarComposer
 {

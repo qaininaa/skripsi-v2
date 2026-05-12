@@ -16,6 +16,7 @@ class AppServiceProvider extends ServiceProvider
         $bindings = [
             UserRepositoryInterface::class => UserRepository::class,
         ];
+
         foreach ($bindings as $interface => $implementation) {
             $this->app->bind($interface, $implementation);
         }
