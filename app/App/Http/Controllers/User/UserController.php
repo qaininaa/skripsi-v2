@@ -16,7 +16,7 @@ class UserController extends Controller
     public function index()
     {
         $users = $this->userService->getDataUsers();
-        return view('user.index', compact('users'));
+        return view('user-management.index', compact('users'));
     }
 
     public function getUsers()
