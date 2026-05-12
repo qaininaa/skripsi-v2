@@ -12,16 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
+            $table->uuid('id')->primary();
             $table->string('username')->unique();
+            $table->string('name');
             $table->string('password');
+            $table->enum('role', ['super', 'admin', 'analyst', 'supervisor', 'manager']);
+            $table->timestamp('password_changed_at')->nullable();
             $table->timestamps();
         });
 
         Schema::create('sessions', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->foreignId('user_id')->nullable()->index();
+            $table->uuid('id')->primary();
+            $table->uuid('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');
