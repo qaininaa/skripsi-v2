@@ -2,6 +2,7 @@
 
 namespace Domain\User\Repositories;
 
+use App\Domain\User\Dtos\CreateUserDto;
 use Domain\User\Models\User;
 use Domain\User\Interfaces\UserRepositoryInterface;
 
@@ -14,25 +15,14 @@ class UserRepository implements UserRepositoryInterface
         return $users;
     }
 
-    public function getUser($id)
+    public function createUser(CreateUserDto $data)
     {
-        $user = User::find($id);
+        $user = new User();
+        $user->name = $data->name;
+        $user->username = $data->username;
+        $user->password = bcrypt($data->password);
+        $user->role = $data->role;
+        $user->save();
         return $user;
-    }
-
-    public function createUser($data)
-    {
-        $user = User::create($data);
-        return $user;
-    }
-
-    public function updateUser($id, $data)
-    {
-        $user = User::find($id);
-        if ($user) {
-            $user->update($data);
-            return $user;
-        }
-        return null;
     }
 }
