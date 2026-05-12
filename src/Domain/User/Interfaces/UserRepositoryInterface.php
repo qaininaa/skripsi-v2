@@ -2,7 +2,7 @@
 
 namespace Domain\User\Interfaces;
 
-use App\Domain\User\Dtos\CreateUserDto;
+use Domain\User\Dtos\CreateUserDto;
 
 interface UserRepositoryInterface
 {

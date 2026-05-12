@@ -2,7 +2,7 @@
 
 namespace Domain\User\Repositories;
 
-use App\Domain\User\Dtos\CreateUserDto;
+use Domain\User\Dtos\CreateUserDto;
 use Domain\User\Models\User;
 use Domain\User\Interfaces\UserRepositoryInterface;
 

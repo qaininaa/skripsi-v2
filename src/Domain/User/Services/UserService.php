@@ -2,7 +2,7 @@
 
 namespace Domain\User\Services;
 
-use App\Domain\User\Dtos\CreateUserDto;
+use Domain\User\Dtos\CreateUserDto;
 use \Domain\User\Interfaces\UserRepositoryInterface;
 
 class UserService

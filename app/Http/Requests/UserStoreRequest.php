@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use App\Domain\User\Dtos\CreateUserDto;
+use Domain\User\Dtos\CreateUserDto;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UserStoreRequest extends FormRequest
