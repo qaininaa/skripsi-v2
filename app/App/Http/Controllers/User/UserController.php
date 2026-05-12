@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Domain\User\Http\Controllers;
+namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use Domain\User\Services\UserService;
@@ -17,5 +17,15 @@ class UserController extends Controller
     {
         $users = $this->userService->getDataUsers();
         return view('users.index', compact('users'));
+    }
+
+    public function getUsers()
+    {
+        $users = $this->userService->getDataUsers();
+        return response()->json([
+            'success' => true,
+            'data' => $users,
+            'message' => 'Users retrieved successfully'
+        ]);
     }
 }
