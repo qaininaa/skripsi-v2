@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\View\Composers\SidebarComposer;
+use Domain\User\Interfaces\PasswordHistoryRepositoryInterface;
 use Domain\User\Interfaces\PasswordSettingRepositoryInterface;
 use Domain\User\Interfaces\UserRepositoryInterface;
+use Domain\User\Repositories\PasswordHistoryRepository;
 use Domain\User\Repositories\PasswordSettingRepository;
 use Domain\User\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
         $bindings = [
             UserRepositoryInterface::class => UserRepository::class,
             PasswordSettingRepositoryInterface::class => PasswordSettingRepository::class,
+            PasswordHistoryRepositoryInterface::class => PasswordHistoryRepository::class,
         ];
 
         foreach ($bindings as $interface => $implementation) {
