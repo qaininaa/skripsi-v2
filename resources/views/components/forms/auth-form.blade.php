@@ -10,7 +10,7 @@
     $formMethod = in_array($httpMethod, ['GET', 'POST']) ? $httpMethod : 'POST';
 @endphp
 
-<form action="{{ $action }}" method="{{ strtolower($formMethod) }}" class="space-y-6">
+<form action="{{ $action }}" method="{{ strtolower($formMethod) }}" class="space-y-5">
     @if ($formMethod !== 'GET')
         @csrf
     @endif
@@ -63,10 +63,16 @@
     </div>
 
     <div>
-        <button type="submit" class="flex w-full justify-center rounded-md bg-sky-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+        <button type="submit" class="flex w-full justify-center rounded-md bg-sky-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
             Login
         </button>
     </div>
+
 </form>
 
+    @if ($errors->has('login'))
+        <div class="text-center text-sm text-red-700 mt-2">
+            {{ $errors->first('login') }}
+        </div>
+    @endif
 
