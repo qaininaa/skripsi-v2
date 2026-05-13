@@ -28,12 +28,19 @@
         ></div>
 
         {{-- Sidebar --}}
-        
+        <div
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            class="fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:flex-shrink-0"
+        >
+            @include('components.sidebar.sidebar')
+        </div>
 
         {{-- Main Content --}}
         <div class="flex flex-col flex-1 overflow-hidden min-w-0">
 
             {{-- Top Bar --}}
+            @include('components.layouts.header')
+
 
             {{-- Page Content --}}
             <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
