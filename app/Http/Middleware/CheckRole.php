@@ -8,12 +8,14 @@ use Symfony\Component\HttpFoundation\Response;
 
 class CheckRole
 {
-    // Tambahkan parameter variadic ...$roles di akhir fungsi
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         $user = $request->user();
 
-        // Cek apakah role user saat ini ada di dalam daftar parameter yang dikirim route
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
         if (!in_array($user->role, $roles)) {
             abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk mengakses halaman ini.');
         }
