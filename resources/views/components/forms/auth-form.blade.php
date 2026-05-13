@@ -70,9 +70,9 @@
 
 </form>
 
-    @if ($errors->has('login'))
-        <div class="text-center text-sm text-red-700 mt-2">
-            {{ $errors->first('login') }}
-        </div>
-    @endif
+@if ($errors->has('login'))
+    <div class="text-center text-sm text-red-700 mt-2">
+        {{ $errors->first('login') }}
+    </div>
+@endif
 
