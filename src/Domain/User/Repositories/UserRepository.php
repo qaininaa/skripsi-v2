@@ -4,9 +4,9 @@ namespace Domain\User\Repositories;
 
 use Domain\User\Dtos\CreateUserDto;
 use Domain\User\Dtos\GetUserDto;
+use Domain\User\Dtos\UpdateUserPasswordDto;
 use Domain\User\Models\User;
 use Domain\User\Interfaces\UserRepositoryInterface;
-use Illuminate\Support\Carbon;
 
 class UserRepository implements UserRepositoryInterface
 {
@@ -35,10 +35,10 @@ class UserRepository implements UserRepositoryInterface
         return $user;
     }
 
-    public function updatePassword(User $user, string $plainPassword, Carbon $changedAt): void
+    public function updatePassword(UpdateUserPasswordDto $data): void
     {
-        $user->password = $plainPassword;
-        $user->password_changed_at = $changedAt;
-        $user->save();
+        $data->user->password = $data->newPassword;
+        $data->user->password_changed_at = $data->changedAt;
+        $data->user->save();
     }
 }
