@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use Domain\User\Dtos\getUserDto;
+use Domain\User\Dtos\GetUserDto;
 use Illuminate\Foundation\Http\FormRequest;
 
 class LoginRequest extends FormRequest

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Services\AuthService;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -22,7 +23,10 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request)
     {
-        $this->authService->login($request->toDTO());
+        $user = $this->authService->login($request->toDTO());
+        Auth::login($user);
+        $request->session()->regenerate();
+
         return redirect()->route('users.index')->with('success', 'Berhasil login');
     }
 }
