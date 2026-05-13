@@ -4,6 +4,8 @@ namespace App\Services;
 
 use Domain\User\Dtos\GetUserDto;
 use Domain\User\Interfaces\UserRepositoryInterface;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -38,5 +40,13 @@ class AuthService
         } catch (\Throwable $th) {
             throw $th;
         }
+    }
+
+    public function logout(Request $request): void
+    {
+        Auth::guard('web')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
     }
 }
