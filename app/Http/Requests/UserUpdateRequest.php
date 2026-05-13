@@ -26,6 +26,8 @@ class UserUpdateRequest extends FormRequest
                 Rule::unique('users', 'username')->ignore($userId),
             ],
             'role' => ['required', 'in:super,admin,analyst,supervisor,manager'],
+            'password' => ['nullable', 'string', 'confirmed', 'required_with:password_confirmation'],
+            'password_confirmation' => ['nullable', 'string', 'required_with:password'],
         ];
     }
 

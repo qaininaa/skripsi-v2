@@ -53,6 +53,11 @@ class UserRepository implements UserRepositoryInterface
         $user->name = $data->name;
         $user->username = $data->username;
         $user->role = $data->role;
+        if ($data->hasPasswordReset() && $data->password !== null) {
+            $user->password = $data->password;
+            $user->password_changed_at = null;
+        }
+
         $user->save();
     }
 
