@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\User\PasswordSettingController;
 use App\Http\Controllers\User\UserController;
@@ -18,8 +18,8 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-    Route::get('/password/change-initial', [PasswordController::class, 'edit'])->name('password.change.form');
-    Route::put('/password/change-initial', [PasswordController::class, 'update'])->name('password.change.update');
+    Route::get('/password/change-initial', [ChangePasswordController::class, 'edit'])->name('password.change.form');
+    Route::put('/password/change-initial', [ChangePasswordController::class, 'update'])->name('password.change.update');
 });
 
 Route::middleware(['auth', 'password.changed'])->group(function () {

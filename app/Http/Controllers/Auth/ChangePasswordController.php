@@ -5,15 +5,15 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangeInitialPasswordRequest;
 use Domain\User\Dtos\CheckPasswordExpirationDto;
-use Domain\User\Services\InitialPasswordService;
+use Domain\User\Services\ChangePasswordService;
 use Domain\User\Services\PasswordSettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class PasswordController extends Controller
+class ChangePasswordController extends Controller
 {
     public function __construct(
-        protected InitialPasswordService $initialPasswordService,
+        protected ChangePasswordService $changePasswordService,
         protected PasswordSettingService $passwordSettingService
     ) {
     }
@@ -42,7 +42,7 @@ class PasswordController extends Controller
 
     public function update(ChangeInitialPasswordRequest $request): RedirectResponse
     {
-        $this->initialPasswordService->changePassword($request->user(), $request->toDTO());
+        $this->changePasswordService->changePassword($request->user(), $request->toDTO());
 
         return redirect()
             ->route('dashboard')
