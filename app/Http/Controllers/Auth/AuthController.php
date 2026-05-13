@@ -29,7 +29,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('users.index')->with('success', 'Berhasil login');
+        return redirect()->route('dashboard')->with('success', 'Berhasil login');
     }
 
     public function logout(Request $request): RedirectResponse
