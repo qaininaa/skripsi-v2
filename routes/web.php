@@ -22,6 +22,10 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 });
 
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+});
+
 Route::get('/users', [UserController::class, 'index'])->middleware(['auth', 'role:super'])->name('users.index');
 Route::get('/users/create', [UserController::class, 'create'])->middleware(['auth', 'role:super'])->name('users.create');
 Route::post('/users/store', [UserController::class, 'store'])->middleware(['auth', 'role:super'])->name('users.store');
