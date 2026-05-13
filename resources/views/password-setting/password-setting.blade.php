@@ -25,7 +25,7 @@
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">Masa Berlaku Password</h3>
                         <p class="mt-1 text-sm text-gray-500">
-                            Pengguna wajib mengganti password setelah jumlah hari ini. Berlaku untuk semua role.
+                            Pengguna wajib mengganti password setelah jumlah hari ini. Berlaku untuk semua role kecuali super admin.
                         </p>
                     </div>
                     <div class="flex items-center gap-3">
