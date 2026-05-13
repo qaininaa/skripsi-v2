@@ -2,11 +2,8 @@
 
 namespace Database\Seeders;
 
-use Domain\User\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -17,14 +14,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $now = Carbon::now();
-
-        User::create([
-            'name' => 'Super Admin',
-            'username' => 'superadmin',
-            'role' => 'super',
-            'password' => Hash::make('admin123'),
-            'password_changed_at' => $now,
+        $this->call([
+            AccountSeeder::class,
+            PasswordSettingSeeder::class,
         ]);
     }
 }
