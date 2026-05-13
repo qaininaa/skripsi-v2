@@ -17,14 +17,19 @@ class PasswordSettingService
     public function getSettings(): array
     {
         return [
-            'password_expiration_days' => (int) $this->repository->getValue('password_expiration_days', 90),
-            'password_history_count' => (int) $this->repository->getValue('password_history_count', 3),
+            'password_expiration_days' => $this->getPasswordExpirationDays(),
+            'password_history_count' => $this->getPasswordHistoryCount(),
         ];
     }
 
     public function getPasswordExpirationDays(): int
     {
         return max(1, (int) $this->repository->getValue('password_expiration_days', 90));
+    }
+
+    public function getPasswordHistoryCount(): int
+    {
+        return max(1, (int) $this->repository->getValue('password_history_count', 3));
     }
 
     public function isPasswordExpired(CheckPasswordExpirationDto $dto): bool
