@@ -1,11 +1,11 @@
 @extends('layouts.auth')
 
-@section('title', 'Ubah Password Awal')
-@section('auth-heading', 'Ubah Password Awal Anda')
+@section('title', 'Ubah Password')
+@section('auth-heading', 'Ubah Password Anda')
 
 @section('auth-content')
     <p class="mb-6 text-sm text-gray-600">
-        Demi keamanan akun, Anda wajib mengganti password default sebelum melanjutkan.
+        {{ $passwordNotice ?? 'Demi keamanan akun, Anda wajib mengganti password sebelum melanjutkan.' }}
     </p>
 
     @if ($errors->any())
@@ -29,7 +29,7 @@
                 name="old_password"
                 type="password"
                 required
-                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
             >
         </div>
 
@@ -40,7 +40,7 @@
                 name="new_password"
                 type="password"
                 required
-                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
             >
             <p class="mt-1 text-xs text-gray-500">Minimal 8 karakter, mengandung angka dan simbol.</p>
         </div>
@@ -52,15 +52,25 @@
                 name="new_password_confirmation"
                 type="password"
                 required
-                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
             >
         </div>
 
         <button
             type="submit"
-            class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+            class="w-full rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 cursor-pointer"
         >
             Simpan Password Baru
+        </button>
+    </form>
+
+    <form action="{{ route('logout') }}" method="POST" class="mt-2">
+        @csrf
+        <button
+            type="submit"
+            class="w-full rounded-md border border-gray-300 bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-700 cursor-pointer"
+        >
+            Logout
         </button>
     </form>
 @endsection

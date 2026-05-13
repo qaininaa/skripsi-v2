@@ -9,7 +9,7 @@ use Domain\User\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
-class InitialPasswordService
+class ChangePasswordService
 {
     public function __construct(
         protected UserRepositoryInterface $userRepository
