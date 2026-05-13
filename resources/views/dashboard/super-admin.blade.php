@@ -1,6 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Dashboard Super Admin')
+@section('page-title', 'Dashboard Super Admin')
 
 @section('content')
     <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
