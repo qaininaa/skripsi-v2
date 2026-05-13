@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>login</title>
-</head>
-<body>
-    <form action="{{ route('login.post') }}" method="POST">
-        @csrf
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-        <button type="submit">Login</button>
-    </form>
-</body>
-</html>
+@extends('layouts.auth')
+
+@section('title', 'Sign In')
+@section('auth-heading', 'Masuk ke Akun Anda')
+
+@section('auth-content')
+    <x-forms.auth-form :action="route('login.post')" />
+@endsection

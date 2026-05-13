@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Services\AuthService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class AuthController extends Controller
 {
@@ -27,6 +29,13 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('users.index')->with('success', 'Berhasil login');
+        return redirect()->route('dashboard')->with('success', 'Berhasil login');
+    }
+
+    public function logout(Request $request): RedirectResponse
+    {
+        $this->authService->logout($request);
+
+        return redirect()->route('login');
     }
 }
