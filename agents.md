@@ -43,15 +43,14 @@ Controller hanya bertanggung jawab untuk:
 app/
 ├── Http/
 │   ├── Controllers/
+│   ├── Middleware/
 │   ├── Requests/
 │   └── Resources/
 ├── Services/
 ├── Providers/
-├── Middleware/
 ├── View/
 │   ├── Components/
 └── └── Composers/
-
 ```
 
 ---
@@ -505,6 +504,81 @@ Setiap fitur utama memiliki folder sendiri.
 
 ---
 
+## View Composer Rule
+
+### Wajib menggunakan View Composer
+
+Untuk data pelengkap, global data, atau shared data yang digunakan di banyak view, wajib menggunakan View Composer.
+
+### Contoh penggunaan:
+
+- Sidebar menu data
+- User profile summary
+- Notification counts
+- Global settings
+- Dynamic navigation
+- Shared dashboard widgets
+
+---
+
+## Alur View Composer
+
+### Penempatan:
+
+View Composer dieksekusi di Application Layer melalui:
+
+```bash
+app/Providers/
+├── AppServiceProvider.php
+└── ViewServiceProvider.php
+```
+
+### Implementasi:
+
+- Logic ditempatkan di fungsi `boot()`
+- Menggunakan service layer
+- Data diinjeksi langsung ke view
+- Tidak perlu melalui controller
+
+### Standard Pattern:
+
+```php
+View::composer([
+    'dashboard.index',
+    'user-management.index'
+], function ($view) use ($service) {
+    $view->with('variable', $service->getData());
+});
+```
+
+---
+
+## Golden Rule:
+
+> Shared view data wajib melalui View Composer, bukan copy-paste di banyak controller.
+
+---
+
+## Benefits:
+
+- Centralized shared UI data
+- Cleaner controllers
+- Reusable data injection
+- Better maintainability
+- Reduced duplication
+- Separation of concerns
+
+---
+
+## Dilarang:
+
+- Shared sidebar data diulang di banyak controller
+- Global layout data hardcoded per controller
+- Query langsung di blade untuk shared data
+- Repetitive data binding antar halaman
+
+---
+
 ## View Best Practices
 
 ### Wajib:
@@ -535,6 +609,72 @@ Setiap fitur utama memiliki folder sendiri.
 - Menampilkan kondisi sederhana (@if, @foreach)
 - Memanggil reusable components
 - Menyusun layout
+
+---
+
+## 2. GUNAKAN VIEW COMPOSER
+
+Untuk data pelengkap yang digunakan di berbagai view, wajib menggunakan View Composer.
+
+### Gunakan untuk:
+
+- Sidebar data
+- Shared navigation
+- User summary
+- Notification count
+- Global settings
+- Dashboard widgets
+- Shared dropdown data
+
+---
+
+## 3. ALUR VIEW COMPOSER
+
+### Eksekusi logic:
+
+- Dilakukan di layer App
+- Tepatnya di file Service Provider:
+
+```bash
+app/Providers/AppServiceProvider.php
+atau
+app/Providers/ViewServiceProvider.php
+```
+
+---
+
+### Penempatan:
+
+- Letakkan di dalam fungsi `boot()`
+
+---
+
+### Standard Syntax:
+
+```php
+View::composer([
+    'nama.view.satu',
+    'nama.view.dua'
+], function ($view) use ($service) {
+    $view->with('variabel', $data);
+});
+```
+
+---
+
+### Tujuan:
+
+- Menyuntikkan data otomatis ke berbagai view
+- Menghindari duplikasi logic di Controller
+- Menjaga Controller tetap tipis
+- Menstandarkan shared data flow
+- Menjaga separation of concerns
+
+---
+
+### Golden Rule:
+
+> Shared data antar view wajib menggunakan View Composer, bukan melalui copy-paste controller logic.
 
 ---
 
