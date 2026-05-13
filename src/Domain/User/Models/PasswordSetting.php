@@ -9,5 +9,9 @@ class PasswordSetting extends Model
 {
     use HasUuids;
 
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
     protected $fillable = ['key', 'value'];
 }
