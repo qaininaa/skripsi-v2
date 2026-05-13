@@ -19,17 +19,18 @@ class AuthService
     {
         try {
             $user = $this->repository->getUserByUsername($request);
-            $checkPassword = Hash::check($request->password, $user->password);
 
             if (!$user) {
                 throw ValidationException::withMessages([
-                    'message' => ['Akun tidak ditemukan.'],
+                    'login' => ['Pengguna tidak ditemukan.'],
                 ]);
             }
 
+            $checkPassword = Hash::check($request->password, $user->password);
+
             if (!$checkPassword) {
                 throw ValidationException::withMessages([
-                    'message' => ['Username atau password salah.'],
+                    'login' => ['Username atau password salah.'],
                 ]);
             }
 

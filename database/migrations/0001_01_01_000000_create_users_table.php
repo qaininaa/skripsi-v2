@@ -15,15 +15,15 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->string('username')->unique();
             $table->string('name');
-            $table->enum('role', ['super', 'admin', 'analyst', 'supervisor', 'manager']);
             $table->string('password');
+            $table->enum('role', ['super', 'admin', 'analyst', 'supervisor', 'manager']);
             $table->timestamp('password_changed_at')->nullable();
             $table->timestamps();
         });
 
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
-            $table->uuid('user_id');
+            $table->foreignUuid('user_id')->nullable()->index();
             $table->string('ip_address', 45)->nullable();
             $table->text('user_agent')->nullable();
             $table->longText('payload');
