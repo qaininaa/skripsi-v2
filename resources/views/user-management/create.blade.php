@@ -1,28 +1,72 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tambah Users</title>
-</head>
-<body>
-    <form action="{{ route('users.store') }}" method="POST">
-        @csrf
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name" required>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
-        <label for="role">Role:</label>
-        <select id="role" name="role" required>
-            <option value="super">Super</option>
-            <option value="admin">Admin</option>
-            <option value="analyst">Analyst</option>
-            <option value="supervisor">Supervisor</option>
-            <option value="manager">Manager</option>
-        </select>
-        <button type="submit">Tambah User</button>
-    </form>
-</body>
-</html>
+@extends('layouts.app')
+
+@section('title', 'Tambah Pengguna')
+
+@section('content')
+    <div class="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+        <h1 class="text-xl font-bold text-gray-900">Tambah Pengguna</h1>
+        <p class="mt-1 text-sm text-gray-500">Buat akun pengguna baru untuk sistem.</p>
+
+        <form action="{{ route('users.store') }}" method="POST" class="mt-6 space-y-4">
+            @csrf
+
+            <div>
+                <label for="username" class="mb-1 block text-sm font-medium text-gray-700">Username</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                >
+            </div>
+
+            <div>
+                <label for="name" class="mb-1 block text-sm font-medium text-gray-700">Nama</label>
+                <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    required
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                >
+            </div>
+
+            <div>
+                <label for="password" class="mb-1 block text-sm font-medium text-gray-700">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                >
+            </div>
+
+            <div>
+                <label for="role" class="mb-1 block text-sm font-medium text-gray-700">Role</label>
+                <select
+                    id="role"
+                    name="role"
+                    required
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                >
+                    <option value="super">Super</option>
+                    <option value="admin">Admin</option>
+                    <option value="analyst">Analyst</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="manager">Manager</option>
+                </select>
+            </div>
+
+            <div class="pt-2">
+                <button
+                    type="submit"
+                    class="inline-flex items-center rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-800"
+                >
+                    Tambah User
+                </button>
+            </div>
+        </form>
+    </div>
+@endsection
