@@ -2,22 +2,19 @@
 
 namespace App\View\Composers;
 
-use Domain\Report\Repositories\ReportRepository;
-use Domain\User\Repositories\UserRepository;
+use App\Services\SidebarService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class SidebarComposer
 {
-    // public function __construct(
-    //     protected UserRepository $userRepo,
-    //     protected ReportRepository $reportRepo
-    // ) {}
+    public function __construct(
+        protected SidebarService $sidebarService
+    ) {
+    }
 
-    // public function compose(View $view)
-    // {
-    //     $view->with([
-    //         'analysts' => $this->userRepo->getActiveAnalysts(),
-    //         'pendingReports' => $this->reportRepo->countPending(),
-    //     ]);
-    // }
+    public function compose(View $view): void
+    {
+        $view->with('sidebarData', $this->sidebarService->buildForUser(Auth::user()));
+    }
 }

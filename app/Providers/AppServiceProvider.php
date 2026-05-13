@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\View\Composers\SidebarComposer;
 use Domain\User\Interfaces\UserRepositoryInterface;
 use Domain\User\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // View::composer('layouts.sidebar', SidebarComposer::class);
+        View::composer('components.sidebar.sidebar', SidebarComposer::class);
     }
 }
