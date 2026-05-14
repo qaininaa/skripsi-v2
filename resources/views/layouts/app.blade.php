@@ -44,6 +44,8 @@
                 @yield('content')
             </main>
         </div>
+
+        <x-modals.delete-modal />
     </div>
 
     @stack('scripts')
