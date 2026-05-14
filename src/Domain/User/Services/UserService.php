@@ -5,41 +5,40 @@ namespace Domain\User\Services;
 use Domain\User\Dtos\CreateUserDto;
 use Domain\User\Dtos\GetUsersFilterDto;
 use Domain\User\Dtos\UpdateUserDto;
-use \Domain\User\Interfaces\UserRepositoryInterface;
+use Domain\User\Interfaces\UserRepositoryInterface;
 use Domain\User\Models\User;
 
 class UserService
 {
-    public $repository;
+    protected UserRepositoryInterface $repository;
+
     public function __construct(UserRepositoryInterface $repository)
     {
         $this->repository = $repository;
     }
 
-    public function getDataUsers(GetUsersFilterDto $request)
+    public function getDataUsers(GetUsersFilterDto $dto)
     {
         try {
-            $users = $this->repository->getUsers($request);
-            return $users;
+            return $this->repository->getUsers($dto);
         } catch (\Throwable $th) {
             throw $th;
         }
     }
 
-    public function createUser(CreateUserDto $request)
+    public function createUser(CreateUserDto $dto): User
     {
         try {
-            $user = $this->repository->createUser($request);
-            return $user;
+            return $this->repository->createUser($dto);
         } catch (\Throwable $th) {
             throw $th;
         }
     }
 
-    public function updateUser(User $user, UpdateUserDto $request): void
+    public function updateUser(User $user, UpdateUserDto $dto): void
     {
         try {
-            $this->repository->updateUser($user, $request);
+            $this->repository->updateUser($user, $dto);
         } catch (\Throwable $th) {
             throw $th;
         }
