@@ -17,14 +17,16 @@ class DashboardController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        $view = $this->dashboardService->resolveViewByRole(
-            Auth::user()?->role
-        );
+        $user = Auth::user();
+
+        $view = $this->dashboardService->resolveViewByRole($user?->role);
 
         if ($view === null) {
             return redirect('/');
         }
 
-        return view($view);
+        return view($view, [
+            'userName' => $this->dashboardService->resolveUserName($user),
+        ]);
     }
 }

@@ -6,5 +6,6 @@
     <x-cards.welcome-card
         title="Dashboard Supervisor"
         description="Selamat datang di dashboard Supervisor."
+        :name="$userName"
     />
 @endsection

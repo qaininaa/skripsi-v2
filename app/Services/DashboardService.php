@@ -15,4 +15,9 @@ class DashboardService
             default => null,
         };
     }
+
+    public function resolveUserName(?object $user): string
+    {
+        return $user?->name ?? 'Pengguna';
+    }
 }
