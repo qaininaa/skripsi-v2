@@ -53,7 +53,14 @@ class RoomController extends Controller
 
     public function update(RoomUpdateRequest $request, Room $room): RedirectResponse
     {
-        $this->roomService->updateRoom($room, $request->toDTO());
+        try {
+            $this->roomService->updateRoom($room, $request->toDTO());
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()->route('rooms.index')->with('success', 'Berhasil memperbarui ruangan');
     }

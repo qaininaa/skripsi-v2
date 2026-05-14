@@ -48,6 +48,16 @@ class RoomService
     public function updateRoom(Room $room, UpdateRoomDto $dto): void
     {
         try {
+            $existingRoom = $this->repository->getRoomByName(new GetRoomDto([
+                'name'        => $dto->name,
+                'room_number' => $dto->room_number,
+                'exclude_id'  => $room->id,
+            ]));
+
+            if ($existingRoom !== null) {
+                throw new \RuntimeException('Ruangan dengan nama dan nomor ruangan tersebut sudah ada.');
+            }
+
             $this->repository->updateRoom($room, $dto);
         } catch (\Throwable $th) {
             throw $th;

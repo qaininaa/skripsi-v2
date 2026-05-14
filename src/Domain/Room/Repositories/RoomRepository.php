@@ -46,12 +46,13 @@ class RoomRepository implements RoomRepositoryInterface
             return null;
         }
 
-        $normalizedName = strtolower(trim($data->name ?? ''));
+        $normalizedName       = strtolower(trim($data->name ?? ''));
         $normalizedRoomNumber = strtolower(trim($data->room_number ?? ''));
 
         return Room::query()
             ->whereRaw('LOWER(name) = ?', [$normalizedName])
             ->whereRaw('LOWER(room_number) = ?', [$normalizedRoomNumber])
+            ->when($data->excludeId !== null, fn ($q) => $q->where('id', '!=', $data->excludeId))
             ->first();
     }
 

@@ -20,5 +20,45 @@ class AccountSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'password_changed_at' => $now,
         ]);
+
+        User::create([
+            'name' => 'Admin QC',
+            'username' => 'adminqc',
+            'role' => 'admin',
+            'password' => Hash::make('admin123'),
+            'password_changed_at' => $now,
+        ]);
+
+        User::create([
+            'name' => 'Analis 1',
+            'username' => 'analis1',
+            'role' => 'analyst',
+            'password' => Hash::make('admin123'),
+            'password_changed_at' => $now,
+        ]);
+
+        User::create([
+            'name' => 'Analis 2',
+            'username' => 'analis2',
+            'role' => 'analis',
+            'password' => Hash::make('admin123'),
+            'password_changed_at' => $now,
+        ]);
+
+        User::create([
+            'name' => 'Analis 3',
+            'username' => 'analis3',
+            'role' => 'analyst',
+            'password' => Hash::make('admin123'),
+            'password_changed_at' => $now,
+        ]);
+
+        User::create([
+            'name' => 'Analis 4',
+            'username' => 'analis4',
+            'role' => 'analyst',
+            'password' => Hash::make('admin123'),
+            'password_changed_at' => $now,
+        ]);
     }
 }
