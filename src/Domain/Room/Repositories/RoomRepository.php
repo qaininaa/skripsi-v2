@@ -24,7 +24,8 @@ class RoomRepository implements RoomRepositoryInterface
             ->when($data->class !== null, function ($query) use ($data) {
                 $query->where('class', $data->class);
             })
-            ->orderByDesc('created_at')
+            ->orderBy('class')
+            ->orderBy('name')
             ->paginate(10)
             ->withQueryString();
     }
