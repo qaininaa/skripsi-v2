@@ -2,6 +2,7 @@
 
 namespace Domain\User\Services;
 
+use Domain\PasswordPolicy\Services\PasswordPolicyService;
 use Domain\User\Dtos\ChangeInitialPasswordDto;
 use Domain\User\Dtos\CreatePasswordHistoryDto;
 use Domain\User\Dtos\GetRecentPasswordHistoriesDto;
@@ -19,7 +20,7 @@ class ChangePasswordService
     public function __construct(
         protected UserRepositoryInterface $userRepository,
         protected PasswordHistoryRepositoryInterface $passwordHistoryRepository,
-        protected PasswordSettingService $passwordSettingService
+        protected PasswordPolicyService $passwordPolicyService
     ) {
     }
 
@@ -31,7 +32,7 @@ class ChangePasswordService
             ]);
         }
 
-        $historyLimit = $this->passwordSettingService->getPasswordHistoryCount();
+        $historyLimit = $this->passwordPolicyService->getPasswordHistoryCount();
 
         DB::transaction(function () use ($user, $dto, $historyLimit): void {
             $this->validateNotUsingRecentPasswords($user, $dto->newPassword, $historyLimit);
