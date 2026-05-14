@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('rooms', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->string('name')->unique(); 
+            $table->string('name');
             $table->string('room_number');
             $table->string('class');
+            $table->unique(['name', 'room_number']);
             $table->timestamps();
         });
     }
