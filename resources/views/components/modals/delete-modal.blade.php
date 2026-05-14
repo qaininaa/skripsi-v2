@@ -37,7 +37,7 @@
             <button
                 @click="$store.deleteModal.close()"
                 type="button"
-                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 cursor-pointer"
                 x-text="$store.deleteModal.cancelLabel"
             ></button>
 
@@ -46,7 +46,7 @@
                 @method('DELETE')
                 <button
                     type="submit"
-                    class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+                    class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 cursor-pointer"
                     x-text="$store.deleteModal.confirmLabel"
                 ></button>
             </form>
