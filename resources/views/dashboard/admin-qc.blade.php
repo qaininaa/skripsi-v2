@@ -3,8 +3,8 @@
 @section('title', 'Dashboard Admin QC')
 
 @section('content')
-    <div class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-        <h1 class="text-2xl font-bold text-gray-900">Dashboard Admin QC</h1>
-        <p class="mt-2 text-sm text-gray-600">Selamat datang di area Admin Quality Control.</p>
-    </div>
+    <x-cards.welcome-card
+        title="Dashboard Admin QC"
+        description="Selamat datang di dashboard Admin Quality Control."
+    />
 @endsection

@@ -10,7 +10,13 @@
     $formMethod = in_array($httpMethod, ['GET', 'POST']) ? $httpMethod : 'POST';
 @endphp
 
-<form action="{{ $action }}" method="{{ strtolower($formMethod) }}" class="space-y-5">
+<form
+    action="{{ $action }}"
+    method="{{ strtolower($formMethod) }}"
+    class="space-y-5"
+    x-data="{ isSubmitting: false }"
+    @submit="isSubmitting = true"
+>
     @if ($formMethod !== 'GET')
         @csrf
     @endif
@@ -63,8 +69,13 @@
     </div>
 
     <div>
-        <button type="submit" class="flex w-full justify-center rounded-md bg-sky-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
-            Login
+        <button
+            type="submit"
+            :disabled="isSubmitting"
+            :class="isSubmitting ? 'opacity-60 cursor-wait' : ''"
+            class="flex w-full justify-center rounded-md bg-sky-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm transition-opacity hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600"
+        >
+            <span x-text="isSubmitting ? 'Memeriksa...' : 'Login'"></span>
         </button>
     </div>
 

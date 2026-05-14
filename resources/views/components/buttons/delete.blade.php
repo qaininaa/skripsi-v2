@@ -29,7 +29,7 @@
         confirmLabel: @js($confirmLabel),
         cancelLabel: @js($cancelLabel),
     })"
-    class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100"
+    class="inline-flex items-center rounded-md border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-600 transition-colors hover:bg-red-100 cursor-pointer"
 >
     {{ $label }}
 </button>

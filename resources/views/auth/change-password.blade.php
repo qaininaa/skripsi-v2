@@ -18,7 +18,13 @@
         </div>
     @endif
 
-    <form action="{{ route('password.change.update') }}" method="POST" class="space-y-4">
+    <form
+        action="{{ route('password.change.update') }}"
+        method="POST"
+        class="space-y-4"
+        x-data="{ isSubmitting: false }"
+        @submit="isSubmitting = true"
+    >
         @csrf
         @method('PUT')
 
@@ -58,9 +64,11 @@
 
         <button
             type="submit"
-            class="w-full rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 cursor-pointer"
+            :disabled="isSubmitting"
+            :class="isSubmitting ? 'opacity-60 cursor-wait' : ''"
+            class="w-full rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
         >
-            Simpan Password Baru
+            <span x-text="isSubmitting ? 'Memeriksa...' : 'Ubah Password'"></span>
         </button>
     </form>
 
