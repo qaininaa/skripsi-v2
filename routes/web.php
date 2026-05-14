@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Dashboard\DashboardController;
+use App\Http\Controllers\Room\RoomController;
 use App\Http\Controllers\User\PasswordSettingController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
@@ -34,5 +35,14 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::get('/settings/password', [PasswordSettingController::class, 'index'])->name('settings.index');
         Route::put('/settings/password', [PasswordSettingController::class, 'update'])->name('settings.update');
+    });
+
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/rooms', [RoomController::class, 'index'])->name('rooms.index');
+        Route::get('/rooms/create', [RoomController::class, 'create'])->name('rooms.create');
+        Route::post('/rooms/store', [RoomController::class, 'store'])->name('rooms.store');
+        Route::get('/rooms/{room}/edit', [RoomController::class, 'edit'])->name('rooms.edit');
+        Route::put('/rooms/{room}', [RoomController::class, 'update'])->name('rooms.update');
+        Route::delete('/rooms/{room}', [RoomController::class, 'destroy'])->name('rooms.destroy');
     });
 });
