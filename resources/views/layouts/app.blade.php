@@ -10,11 +10,12 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased bg-gray-100">
-    <div x-data="{ sidebarOpen: false, showDeleteModal: false, deleteAction: null, itemName: null }">
-
-    <div class="flex h-screen overflow-hidden">
-
-        {{-- Mobile backdrop --}}
+    <div
+        x-data="{ sidebarOpen: false }"
+        @keydown.escape.window="sidebarOpen = false"
+        :class="sidebarOpen ? 'overflow-hidden lg:overflow-visible' : ''"
+        class="flex min-h-screen overflow-hidden"
+    >
         <div
             x-show="sidebarOpen"
             x-transition:enter="transition-opacity ease-linear duration-300"
@@ -24,35 +25,27 @@
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
             @click="sidebarOpen = false"
-            class="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            class="fixed inset-0 z-30 bg-black/50 lg:hidden"
         ></div>
 
-        {{-- Sidebar --}}
-        <div
+        <aside
+            id="app-sidebar"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-            class="fixed inset-y-0 left-0 z-30 w-64 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 lg:flex-shrink-0"
+            class="fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:shrink-0"
+            :aria-hidden="sidebarOpen ? 'false' : 'true'"
         >
             @include('components.sidebar.sidebar')
-        </div>
+        </aside>
 
-        {{-- Main Content --}}
-        <div class="flex flex-col flex-1 overflow-hidden min-w-0">
-
-            {{-- Top Bar --}}
+        <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
             @include('components.layouts.header')
 
-
-            {{-- Page Content --}}
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+            <main class="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8">
                 @yield('content')
             </main>
-
         </div>
     </div>
 
-    {{-- Global delete modal: di luar overflow-hidden agar fixed inset-0 cover full screen --}}
-
-    </div>{{-- end x-data wrapper --}}
     @stack('scripts')
 </body>
 </html>
