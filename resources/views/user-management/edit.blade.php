@@ -93,7 +93,13 @@
                 </div>
             </div>
 
-            <div class="pt-2">
+            <div class="flex gap-3 pt-2">
+                <a
+                    href="{{ route('users.index') }}"
+                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                    Batal
+                </a>
                 <button
                     type="submit"
                     class="inline-flex items-center rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-800"
