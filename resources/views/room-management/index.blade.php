@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Manajemen Pengguna')
-@section('page-title', 'Manajemen Pengguna')
+@section('title', 'Manajemen Ruangan')
+@section('page-title', 'Manajemen Ruangan')
 
 @section('content')
     @php
@@ -40,7 +40,7 @@
                 type="text"
                 name="search"
                 value="{{ request('search') }}"
-                placeholder="Cari nama atau username..."
+                placeholder="Cari nama atau nomor ruangan..."
                 class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
             >
 
