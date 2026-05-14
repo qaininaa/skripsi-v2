@@ -92,7 +92,7 @@
                     <option value="daily" @selected(old('frequency') === 'daily')>Harian</option>
                     <option value="weekly" @selected(old('frequency') === 'weekly')>Mingguan</option>
                     <option value="monthly" @selected(old('frequency') === 'monthly')>Bulanan</option>
-                    <option value="semi_annual" @selected(old('frequency') === 'semi_annual')>Semi-Tahunan</option>
+                    <option value="semi_annual" @selected(old('frequency') === 'semi_annual')>6 Bulanan</option>
                 </select>
             </div>
 

@@ -102,7 +102,7 @@
                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                 >
                     <option value="">— Pilih Frekuensi Pemantauan —</option>
-                    @foreach (['operational' => 'Operasional', 'daily' => 'Harian', 'weekly' => 'Mingguan', 'monthly' => 'Bulanan', 'semi_annual' => 'Semi-Tahunan'] as $value => $label)
+                    @foreach (['operational' => 'Operasional', 'daily' => 'Harian', 'weekly' => 'Mingguan', 'monthly' => 'Bulanan', 'semi_annual' => '6 Bulanan'] as $value => $label)
                         <option value="{{ $value }}" @selected(old('frequency', $location->frequency) === $value)>
                             {{ $label }}
                         </option>
