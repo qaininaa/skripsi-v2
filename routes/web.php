@@ -4,7 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Room\RoomController;
-use App\Http\Controllers\User\PasswordSettingController;
+use App\Http\Controllers\PasswordPolicy\PasswordSettingController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 

@@ -3,13 +3,13 @@
 namespace App\Providers;
 
 use App\View\Composers\SidebarComposer;
+use Domain\PasswordPolicy\Interfaces\PasswordSettingRepositoryInterface;
+use Domain\PasswordPolicy\Repositories\PasswordSettingRepository;
 use Domain\Room\Interfaces\RoomRepositoryInterface;
 use Domain\Room\Repositories\RoomRepository;
 use Domain\User\Interfaces\PasswordHistoryRepositoryInterface;
-use Domain\User\Interfaces\PasswordSettingRepositoryInterface;
 use Domain\User\Interfaces\UserRepositoryInterface;
 use Domain\User\Repositories\PasswordHistoryRepository;
-use Domain\User\Repositories\PasswordSettingRepository;
 use Domain\User\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;

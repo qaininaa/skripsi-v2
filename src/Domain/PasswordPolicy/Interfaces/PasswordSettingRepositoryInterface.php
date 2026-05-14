@@ -1,6 +1,6 @@
 <?php
 
-namespace Domain\User\Interfaces;
+namespace Domain\PasswordPolicy\Interfaces;
 
 interface PasswordSettingRepositoryInterface
 {

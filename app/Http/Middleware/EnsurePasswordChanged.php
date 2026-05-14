@@ -3,8 +3,8 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Domain\PasswordPolicy\Services\PasswordSettingService;
 use Domain\User\Dtos\CheckPasswordExpirationDto;
-use Domain\User\Services\PasswordSettingService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 

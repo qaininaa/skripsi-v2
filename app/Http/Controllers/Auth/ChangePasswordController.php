@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangeInitialPasswordRequest;
 use Domain\User\Dtos\CheckPasswordExpirationDto;
 use Domain\User\Services\ChangePasswordService;
-use Domain\User\Services\PasswordSettingService;
+use Domain\PasswordPolicy\Services\PasswordSettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 

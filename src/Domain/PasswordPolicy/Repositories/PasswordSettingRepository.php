@@ -1,9 +1,9 @@
 <?php
 
-namespace Domain\User\Repositories;
+namespace Domain\PasswordPolicy\Repositories;
 
-use Domain\User\Interfaces\PasswordSettingRepositoryInterface;
-use Domain\User\Models\PasswordSetting;
+use Domain\PasswordPolicy\Interfaces\PasswordSettingRepositoryInterface;
+use Domain\PasswordPolicy\Models\PasswordSetting;
 
 class PasswordSettingRepository implements PasswordSettingRepositoryInterface
 {

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests;
 
-use Domain\User\Dtos\UpdatePasswordSettingDto;
+use Domain\PasswordPolicy\Dtos\UpdatePasswordSettingDto;
 use Illuminate\Foundation\Http\FormRequest;
 
 class PasswordSettingUpdateRequest extends FormRequest

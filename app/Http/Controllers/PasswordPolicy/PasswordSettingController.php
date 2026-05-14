@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\User;
+namespace App\Http\Controllers\PasswordPolicy;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\PasswordSettingUpdateRequest;
-use Domain\User\Services\PasswordSettingService;
+use Domain\PasswordPolicy\Services\PasswordSettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 

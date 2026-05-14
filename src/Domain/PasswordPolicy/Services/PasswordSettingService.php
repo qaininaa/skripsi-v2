@@ -1,10 +1,10 @@
 <?php
 
-namespace Domain\User\Services;
+namespace Domain\PasswordPolicy\Services;
 
 use Domain\User\Dtos\CheckPasswordExpirationDto;
-use Domain\User\Dtos\UpdatePasswordSettingDto;
-use Domain\User\Interfaces\PasswordSettingRepositoryInterface;
+use Domain\PasswordPolicy\Dtos\UpdatePasswordSettingDto;
+use Domain\PasswordPolicy\Interfaces\PasswordSettingRepositoryInterface;
 use InvalidArgumentException;
 
 class PasswordSettingService
