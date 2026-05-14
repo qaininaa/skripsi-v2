@@ -3,6 +3,7 @@
 namespace Domain\Location\Repositories;
 
 use Domain\Location\Dtos\CreateLocationDto;
+use Domain\Location\Dtos\GetLocationDto;
 use Domain\Location\Dtos\GetLocationsFilterDto;
 use Domain\Location\Dtos\UpdateLocationDto;
 use Domain\Location\Interfaces\LocationRepositoryInterface;
@@ -25,9 +26,27 @@ class LocationRepository implements LocationRepositoryInterface
             ->when($data->room_id !== null, function ($query) use ($data) {
                 $query->where('room_id', $data->room_id);
             })
-            ->orderBy('created_at', 'desc')
+            ->join('rooms', 'locations.room_id', '=', 'rooms.id')
+            ->orderBy('rooms.name')
+            ->orderBy('locations.loc_number')
+            ->select('locations.*')
             ->paginate(10)
             ->withQueryString();
+    }
+
+    public function getLocationByRoomAndNumber(GetLocationDto $data): ?Location
+    {
+        if ($data->room_id === null && $data->loc_number === null) {
+            return null;
+        }
+
+        $normalizedLocNumber = strtolower(trim($data->loc_number ?? ''));
+
+        return Location::query()
+            ->where('room_id', $data->room_id)
+            ->whereRaw('LOWER(loc_number) = ?', [$normalizedLocNumber])
+            ->when($data->excludeId !== null, fn ($q) => $q->where('id', '!=', $data->excludeId))
+            ->first();
     }
 
     public function createLocation(CreateLocationDto $data): Location

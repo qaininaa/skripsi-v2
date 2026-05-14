@@ -38,7 +38,13 @@ class LocationController extends Controller
 
     public function store(LocationStoreRequest $request): RedirectResponse
     {
-        $this->locationService->createLocation($request->toDTO());
+        $location = $this->locationService->createLocation($request->toDTO());
+
+        if (! $location->wasRecentlyCreated) {
+            return redirect()
+                ->route('location.edit', $location)
+                ->with('info', 'Kombinasi ruangan dan nomor lokasi sudah ada. Silakan edit data lokasi yang tersedia.');
+        }
 
         return redirect()->route('location.index')->with('success', 'Berhasil menambahkan lokasi baru');
     }
