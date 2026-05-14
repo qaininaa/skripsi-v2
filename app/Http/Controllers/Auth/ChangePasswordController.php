@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangeInitialPasswordRequest;
 use Domain\User\Dtos\CheckPasswordExpirationDto;
 use Domain\User\Services\ChangePasswordService;
-use Domain\User\Services\PasswordSettingService;
+use Domain\PasswordPolicy\Services\PasswordPolicyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -14,7 +14,7 @@ class ChangePasswordController extends Controller
 {
     public function __construct(
         protected ChangePasswordService $changePasswordService,
-        protected PasswordSettingService $passwordSettingService
+        protected PasswordPolicyService $passwordPolicyService
     ) {
     }
 
@@ -23,7 +23,7 @@ class ChangePasswordController extends Controller
         $reason = request()->query('reason');
         $user = request()->user();
         $isPasswordExpired = $reason === 'expired'
-            || ($user !== null && $this->passwordSettingService->isPasswordExpired(
+            || ($user !== null && $this->passwordPolicyService->isPasswordExpired(
                 new CheckPasswordExpirationDto($user->password_changed_at)
             ));
 

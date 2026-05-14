@@ -1,8 +1,8 @@
 <?php
 
-namespace Domain\User\Dtos;
+namespace Domain\PasswordPolicy\Dtos;
 
-class UpdatePasswordSettingDto
+class UpdatePasswordPolicyDto
 {
     public int $passwordExpirationDays;
     public int $passwordHistoryCount;

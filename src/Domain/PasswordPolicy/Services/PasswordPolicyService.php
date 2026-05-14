@@ -1,16 +1,16 @@
 <?php
 
-namespace Domain\User\Services;
+namespace Domain\PasswordPolicy\Services;
 
 use Domain\User\Dtos\CheckPasswordExpirationDto;
-use Domain\User\Dtos\UpdatePasswordSettingDto;
-use Domain\User\Interfaces\PasswordSettingRepositoryInterface;
+use Domain\PasswordPolicy\Dtos\UpdatePasswordPolicyDto;
+use Domain\PasswordPolicy\Interfaces\PasswordPolicyRepositoryInterface;
 use InvalidArgumentException;
 
-class PasswordSettingService
+class PasswordPolicyService
 {
     public function __construct(
-        protected PasswordSettingRepositoryInterface $repository
+        protected PasswordPolicyRepositoryInterface $repository
     ) {
     }
 
@@ -47,7 +47,7 @@ class PasswordSettingService
         return $currentDate->greaterThanOrEqualTo($expiredDate);
     }
 
-    public function updateSettings(UpdatePasswordSettingDto $dto): void
+    public function updateSettings(UpdatePasswordPolicyDto $dto): void
     {
         $this->validateUpdateSettingsDto($dto);
 
@@ -62,7 +62,7 @@ class PasswordSettingService
         }
     }
 
-    private function validateUpdateSettingsDto(UpdatePasswordSettingDto $dto): void
+    private function validateUpdateSettingsDto(UpdatePasswordPolicyDto $dto): void
     {
         if ($dto->passwordExpirationDays < 1 || $dto->passwordExpirationDays > 3650) {
             throw new InvalidArgumentException('Password expiration days harus di antara 1 sampai 3650.');

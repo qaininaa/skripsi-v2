@@ -1,8 +1,8 @@
 <?php
 
-namespace Domain\User\Interfaces;
+namespace Domain\PasswordPolicy\Interfaces;
 
-interface PasswordSettingRepositoryInterface
+interface PasswordPolicyRepositoryInterface
 {
     public function getAll(): array;
     public function getValue(string $key, mixed $default = null): mixed;

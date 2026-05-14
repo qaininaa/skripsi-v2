@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use Domain\User\Interfaces\PasswordSettingRepositoryInterface;
+use Domain\PasswordPolicy\Interfaces\PasswordSettingRepositoryInterface;
 use Illuminate\Database\Seeder;
 
 class PasswordSettingSeeder extends Seeder

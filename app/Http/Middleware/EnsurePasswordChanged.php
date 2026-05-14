@@ -3,15 +3,15 @@
 namespace App\Http\Middleware;
 
 use Closure;
+use Domain\PasswordPolicy\Services\PasswordPolicyService;
 use Domain\User\Dtos\CheckPasswordExpirationDto;
-use Domain\User\Services\PasswordSettingService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsurePasswordChanged
 {
     public function __construct(
-        protected PasswordSettingService $passwordSettingService
+        protected PasswordPolicyService $passwordPolicyService
     ) {
     }
 
@@ -27,7 +27,7 @@ class EnsurePasswordChanged
             return $next($request);
         }
 
-        $isPasswordExpired = $this->passwordSettingService->isPasswordExpired(
+        $isPasswordExpired = $this->passwordPolicyService->isPasswordExpired(
             new CheckPasswordExpirationDto($user->password_changed_at)
         );
 
