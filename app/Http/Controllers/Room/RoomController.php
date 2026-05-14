@@ -37,7 +37,7 @@ class RoomController extends Controller
     {
         $this->roomService->createRoom($request->toDTO());
 
-        return redirect()->route('rooms.index')->with('success', 'Room created successfully');
+        return redirect()->route('rooms.index')->with('success', 'Berhasil membuat ruangan baru');
     }
 
     public function edit(Room $room): View
@@ -49,14 +49,14 @@ class RoomController extends Controller
     {
         $this->roomService->updateRoom($room, $request->toDTO());
 
-        return redirect()->route('rooms.index')->with('success', 'Room updated successfully');
+        return redirect()->route('rooms.index')->with('success', 'Berhasil memperbarui ruangan');
     }
 
     public function destroy(Room $room): RedirectResponse
     {
         $this->roomService->deleteRoom($room);
 
-        return redirect()->route('rooms.index')->with('success', 'Room deleted successfully');
+        return redirect()->route('rooms.index')->with('success', 'Berhasil menghapus ruangan');
     }
 
     public function getRooms()
@@ -65,8 +65,8 @@ class RoomController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $rooms,
             'message' => 'Rooms retrieved successfully',
+            'data' => $rooms,
         ]);
     }
 }
