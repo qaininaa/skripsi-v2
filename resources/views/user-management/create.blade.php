@@ -11,7 +11,7 @@
             @csrf
 
             <div>
-                <label for="username" class="mb-1 block text-sm font-medium text-gray-700">Username</label>
+                <label for="username" class="mb-1 block text-sm font-medium text-gray-700">Username <span class="text-red-500">*</span></label>
                 <input
                     type="text"
                     id="username"
@@ -22,7 +22,7 @@
             </div>
 
             <div>
-                <label for="name" class="mb-1 block text-sm font-medium text-gray-700">Nama</label>
+                <label for="name" class="mb-1 block text-sm font-medium text-gray-700">Nama <span class="text-red-500">*</span></label>
                 <input
                     type="text"
                     id="name"
@@ -33,7 +33,24 @@
             </div>
 
             <div>
-                <label for="password" class="mb-1 block text-sm font-medium text-gray-700">Password</label>
+                <label for="role" class="mb-1 block text-sm font-medium text-gray-700">Role <span class="text-red-500">*</span></label>
+                <select
+                    id="role"
+                    name="role"
+                    required
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                >
+                    <option value="" >--Pilih role--</option>
+                    <option value="super">Super</option>
+                    <option value="admin">Admin</option>
+                    <option value="analyst">Analyst</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="manager">Manager</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="password" class="mb-1 block text-sm font-medium text-gray-700">Password <span class="text-red-500">*</span></label>
                 <input
                     type="password"
                     id="password"
@@ -41,22 +58,6 @@
                     required
                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                 >
-            </div>
-
-            <div>
-                <label for="role" class="mb-1 block text-sm font-medium text-gray-700">Role</label>
-                <select
-                    id="role"
-                    name="role"
-                    required
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                >
-                    <option value="super">Super</option>
-                    <option value="admin">Admin</option>
-                    <option value="analyst">Analyst</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="manager">Manager</option>
-                </select>
             </div>
 
             <div class="pt-2">
