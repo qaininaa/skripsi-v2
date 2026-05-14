@@ -67,7 +67,7 @@ class SidebarService
             $sections[] = [
                 'label' => 'Master Data',
                 'items' => [
-                    $this->item('Ruangan', 'master.room.index', 'master.room.*', 'icons/sidebar/location.svg'),
+                    $this->item('Ruangan', 'rooms.index', 'rooms.*', 'icons/sidebar/building.svg'),
                     $this->item('Lokasi', 'master.location.index', 'master.location.*', 'icons/sidebar/location.svg'),
                     $this->item('Manajemen Laporan', 'report-types.index', 'report-types.*', 'icons/sidebar/reports.svg'),
                 ],
