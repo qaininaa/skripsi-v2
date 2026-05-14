@@ -105,7 +105,12 @@
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <x-buttons.edit :href="route('users.edit', $user)" />
-                                    <x-buttons.delete :action="route('users.destroy', $user)" />
+                                    <x-buttons.delete
+                                        :action="route('users.destroy', $user)"
+                                        :item-name="$user->name"
+                                        title="Hapus Pengguna"
+                                        warning="Pengguna yang dihapus tidak dapat dikembalikan."
+                                    />
                                 </div>
                             </td>
                         </tr>

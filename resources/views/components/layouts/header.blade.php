@@ -3,15 +3,18 @@
         $user = auth()->user();
     @endphp
 
-    <header class="z-10 flex-shrink-0 border-b border-gray-200 bg-white">
+    <header class="z-10 shrink-0 border-b border-gray-200 bg-white">
         <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div class="flex items-center gap-3">
                 <button
                     type="button"
                     @click="sidebarOpen = !sidebarOpen"
-                    class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 lg:hidden"
+                    aria-controls="app-sidebar"
+                    :aria-expanded="sidebarOpen ? 'true' : 'false'"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 lg:hidden"
                 >
-                    Menu
+                    <span class="sr-only">Buka menu navigasi</span>
+                    <img src="{{ asset('icons/burger.svg') }}" alt="" class="h-5 w-5" aria-hidden="true">
                 </button>
                 <h1 class="text-lg font-semibold text-gray-800">
                     @hasSection('page-title')
@@ -24,7 +27,7 @@
 
             <div class="flex items-center gap-4">
                 <div class="hidden items-center gap-3 sm:flex">
-                    <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
                         {{ strtoupper(substr($user->name, 0, 1)) }}
                     </div>
                     <div>
