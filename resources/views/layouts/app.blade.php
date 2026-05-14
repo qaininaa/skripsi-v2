@@ -13,9 +13,9 @@
     <div
         x-data="{ sidebarOpen: false }"
         @keydown.escape.window="sidebarOpen = false"
-        :class="sidebarOpen ? 'overflow-hidden lg:overflow-visible' : ''"
-        class="flex min-h-screen overflow-hidden"
+        class="flex h-screen overflow-hidden"
     >
+        {{-- Mobile overlay --}}
         <div
             x-show="sidebarOpen"
             x-transition:enter="transition-opacity ease-linear duration-300"
@@ -28,18 +28,24 @@
             class="fixed inset-0 z-30 bg-black/50 lg:hidden"
         ></div>
 
+        {{-- Sidebar: fixed height, scrollable internally --}}
         <aside
             id="app-sidebar"
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-            class="fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:shrink-0"
+            class="fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 lg:shrink-0 h-screen"
             :aria-hidden="sidebarOpen ? 'false' : 'true'"
         >
             @include('components.sidebar.sidebar')
         </aside>
 
-        <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
-            @include('components.layouts.header')
+        {{-- Right side: header sticky + scrollable content --}}
+        <div class="flex min-w-0 flex-1 flex-col h-screen overflow-hidden">
+            {{-- Sticky header --}}
+            <div class="shrink-0 sticky top-0 z-20">
+                @include('components.layouts.header')
+            </div>
 
+            {{-- Scrollable content area only --}}
             <main class="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-6 lg:p-8">
                 @yield('content')
             </main>

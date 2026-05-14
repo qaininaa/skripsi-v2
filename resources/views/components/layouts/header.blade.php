@@ -3,7 +3,7 @@
         $user = auth()->user();
     @endphp
 
-    <header class="z-10 shrink-0 border-b border-gray-200 bg-white">
+    <header class="shrink-0 border-b border-gray-200 bg-white shadow-sm">
         <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
             <div class="flex items-center gap-3">
                 <button
