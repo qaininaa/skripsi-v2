@@ -16,7 +16,7 @@ class RoomStoreRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'room_number' => ['required', 'string', 'max:255', 'unique:rooms,room_number'],
+            'room_number' => ['required', 'string', 'max:255'],
             'class' => ['required', 'in:A,B,C,D,E'],
         ];
     }

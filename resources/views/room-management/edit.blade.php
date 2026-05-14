@@ -8,6 +8,12 @@
         <h1 class="text-xl font-bold text-gray-900">Edit Ruangan</h1>
         <p class="mt-1 text-sm text-gray-500">Perbarui informasi ruangan.</p>
 
+        @if (session('info'))
+            <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                {{ session('info') }}
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <ul class="list-disc pl-4">

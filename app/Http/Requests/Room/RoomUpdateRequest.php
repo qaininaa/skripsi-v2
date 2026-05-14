@@ -4,7 +4,6 @@ namespace App\Http\Requests\Room;
 
 use Domain\Room\Dtos\UpdateRoomDto;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class RoomUpdateRequest extends FormRequest
 {
@@ -15,10 +14,8 @@ class RoomUpdateRequest extends FormRequest
 
     public function rules(): array
     {
-        $roomId = $this->route('room')?->id;
-
         return [
-            'name' => ['required', 'string', 'max:255', Rule::unique('rooms', 'name')->ignore($roomId),],
+            'name' => ['required', 'string', 'max:255'],
             'room_number' => ['required', 'string', 'max:255'],
             'class' => ['required', 'in:A,B,C,D,E'],
         ];

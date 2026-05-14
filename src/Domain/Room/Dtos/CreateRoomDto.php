@@ -4,9 +4,9 @@ namespace Domain\Room\Dtos;
 
 class CreateRoomDto
 {
-    public $name;
-    public $room_number;
-    public $class;
+    public string $name;
+    public string $room_number;
+    public string $class;
 
     public function __construct(array $data)
     {

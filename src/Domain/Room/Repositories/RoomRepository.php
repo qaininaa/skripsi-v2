@@ -42,8 +42,17 @@ class RoomRepository implements RoomRepositoryInterface
 
     public function getRoomByName(GetRoomDto $data)
     {
-        $room = Room::where('name', $data->name)->first();
-        return $room;
+        if ($data->name === null && $data->room_number === null) {
+            return null;
+        }
+
+        $normalizedName = strtolower(trim($data->name ?? ''));
+        $normalizedRoomNumber = strtolower(trim($data->room_number ?? ''));
+
+        return Room::query()
+            ->whereRaw('LOWER(name) = ?', [$normalizedName])
+            ->whereRaw('LOWER(room_number) = ?', [$normalizedRoomNumber])
+            ->first();
     }
 
     public function updateRoom(Room $room, UpdateRoomDto $data): void

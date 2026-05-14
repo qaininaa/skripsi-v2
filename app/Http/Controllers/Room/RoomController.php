@@ -35,7 +35,13 @@ class RoomController extends Controller
 
     public function store(RoomStoreRequest $request): RedirectResponse
     {
-        $this->roomService->createRoom($request->toDTO());
+        $room = $this->roomService->createRoom($request->toDTO());
+
+        if (! $room->wasRecentlyCreated) {
+            return redirect()
+                ->route('rooms.edit', $room)
+                ->with('info', 'Nama ruangan sudah ada. Silakan edit data ruangan yang tersedia.');
+        }
 
         return redirect()->route('rooms.index')->with('success', 'Berhasil membuat ruangan baru');
     }
