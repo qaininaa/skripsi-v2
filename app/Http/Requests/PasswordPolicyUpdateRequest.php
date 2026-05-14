@@ -2,10 +2,10 @@
 
 namespace App\Http\Requests;
 
-use Domain\PasswordPolicy\Dtos\UpdatePasswordSettingDto;
+use Domain\PasswordPolicy\Dtos\UpdatePasswordPolicyDto;
 use Illuminate\Foundation\Http\FormRequest;
 
-class PasswordSettingUpdateRequest extends FormRequest
+class PasswordPolicyUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -20,8 +20,8 @@ class PasswordSettingUpdateRequest extends FormRequest
         ];
     }
 
-    public function toDTO(): UpdatePasswordSettingDto
+    public function toDTO(): UpdatePasswordPolicyDto
     {
-        return new UpdatePasswordSettingDto($this->validated());
+        return new UpdatePasswordPolicyDto($this->validated());
     }
 }
