@@ -7,6 +7,16 @@
         <h1 class="text-xl font-bold text-gray-900">Tambah Pengguna</h1>
         <p class="mt-1 text-sm text-gray-500">Buat akun pengguna baru untuk sistem.</p>
 
+        @if ($errors->any())
+            <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <ul class="list-disc pl-4">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <form action="{{ route('users.store') }}" method="POST" class="mt-6 space-y-4">
             @csrf
 
@@ -16,6 +26,7 @@
                     type="text"
                     id="username"
                     name="username"
+                    value="{{ old('username') }}"
                     required
                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                 >
@@ -27,6 +38,7 @@
                     type="text"
                     id="name"
                     name="name"
+                    value="{{ old('name') }}"
                     required
                     class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                 >
