@@ -6,6 +6,8 @@ use App\View\Composers\SidebarComposer;
 use Domain\PasswordPolicy\Interfaces\PasswordPolicyRepositoryInterface;
 use Domain\PasswordPolicy\Repositories\PasswordPolicyRepository;
 use Domain\PasswordPolicy\Services\PasswordPolicyService;
+use Domain\Location\Interfaces\LocationRepositoryInterface;
+use Domain\Location\Repositories\LocationRepository;
 use Domain\Room\Interfaces\RoomRepositoryInterface;
 use Domain\Room\Repositories\RoomRepository;
 use Domain\User\Interfaces\PasswordHistoryRepositoryInterface;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
             PasswordPolicyRepositoryInterface::class => PasswordPolicyRepository::class,
             PasswordHistoryRepositoryInterface::class => PasswordHistoryRepository::class,
             RoomRepositoryInterface::class => RoomRepository::class,
+            LocationRepositoryInterface::class => LocationRepository::class,
         ];
 
         foreach ($bindings as $interface => $implementation) {

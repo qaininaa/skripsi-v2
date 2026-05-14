@@ -40,7 +40,7 @@ class AccountSeeder extends Seeder
         User::create([
             'name' => 'Analis 2',
             'username' => 'analis2',
-            'role' => 'analis',
+            'role' => 'analyst',
             'password' => Hash::make('admin123'),
             'password_changed_at' => $now,
         ]);
