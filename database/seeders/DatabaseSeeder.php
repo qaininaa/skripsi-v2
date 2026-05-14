@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AccountSeeder::class,
             PasswordSettingSeeder::class,
+            RoomSeeder::class,
+            LocationSeeder::class
         ]);
     }
 }

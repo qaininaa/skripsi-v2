@@ -23,6 +23,7 @@ return new class extends Migration
             $table->unsignedSmallInteger('alert_action_total')->nullable();
             $table->unsignedSmallInteger('alert_action_fungi')->nullable();
             $table->timestamp('section_assigned_at')->nullable();
+            $table->unique(['room_id', 'loc_number']);
             $table->timestamps();
         });
     }
