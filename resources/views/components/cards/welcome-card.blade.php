@@ -11,7 +11,7 @@
             <h2 class="mt-1 text-2xl font-bold leading-tight">Selamat Datang, {{ $name }}!</h2>
             <p class="mt-1 text-sm text-emerald-200">{{ $description }}</p>
             <div class="mt-3 flex items-center gap-4 text-xs text-emerald-300">
-                <span>{{ now()->isoFormat('dddd, D MMMM Y') }}</span>
+                <span>{{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}</span>
             </div>
         </div>
         <div class="hidden shrink-0 items-center justify-center rounded-2xl bg-white/10 p-4 md:flex">
