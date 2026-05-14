@@ -45,12 +45,12 @@
             >
 
             <select
-                name="class-room"
+                name="class"
                 class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
             >
                 <option value="">Semua Kelas</option>
                 @foreach (['A', 'B', 'C', 'D', 'E'] as $class)
-                    <option value="{{ $class }}" @selected(request('class-room') === $class)>{{ $class }}</option>
+                    <option value="{{ $class }}" @selected(request('class') === $class)>{{ $class }}</option>
                 @endforeach
             </select>
 
