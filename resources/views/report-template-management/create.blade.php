@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Tambah Jenis Laporan')
-@section('page-title', 'Tambah Jenis Laporan')
+@section('title', 'Tambah Template Laporan')
+@section('page-title', 'Tambah Template Laporan')
 
 @section('content')
     <div
         x-data="reportTemplateForm()"
         class="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100"
     >
-        <h1 class="text-xl font-bold text-gray-900">Tambah Jenis Laporan Baru</h1>
+        <h1 class="text-xl font-bold text-gray-900">Tambah Template Laporan Baru</h1>
         <p class="mt-1 text-sm text-gray-500">Buat jenis laporan Annex beserta konfigurasi medium dan inkubatornya.</p>
 
         @if (session('error'))
