@@ -20,7 +20,6 @@ class LocationRepository implements LocationRepositoryInterface
      * Retrieve a paginated list of locations with optional search and room filter.
      *
      * Results are joined with the rooms table and ordered by room name then loc_number.
-     * Each result eagerly loads the related room.
      *
      * @param  GetLocationsFilterDto  $data  Filter parameters (search, room_id).
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
