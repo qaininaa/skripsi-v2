@@ -17,7 +17,7 @@ class DashboardService
      * @param  string|null  $role  
      * @return string              
      *
-     * @throws InvalidArgumentException  If the role is null or unrecognized.
+     * @throws InvalidArgumentException  
      */
     public function resolveViewByRole(?string $role): string
     {
