@@ -15,6 +15,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * Handles the password change flow for authenticated users.
+ *
+ * Enforces:
+ * - Old password verification
+ * - Password history check (cannot reuse recent N passwords)
+ * - Atomic update of password + history within a DB transaction
+ * - Trimming of excess password history entries
+ */
 class ChangePasswordService
 {
     public function __construct(
@@ -24,6 +33,20 @@ class ChangePasswordService
     ) {
     }
 
+    /**
+     * Change a user's password.
+     *
+     * Validates the old password, checks the new password against recent history,
+     * then atomically updates the password, records it in history, and trims
+     * excess history entries — all within a single database transaction.
+     *
+     * @param  User                      $user  The user whose password is being changed.
+     * @param  ChangeInitialPasswordDto  $dto   DTO containing oldPassword and newPassword.
+     * @return void
+     *
+     * @throws ValidationException  If the old password is incorrect or the new password
+     *                              matches one of the recent password history entries.
+     */
     public function changePassword(User $user, ChangeInitialPasswordDto $dto): void
     {
         if (!Hash::check($dto->oldPassword, $user->password)) {
@@ -51,6 +74,18 @@ class ChangePasswordService
         });
     }
 
+    /**
+     * Validate that the new password does not match any of the user's recent passwords.
+     *
+     * Fetches the most recent N password history entries and checks each one.
+     *
+     * @param  User    $user          The user to check history for.
+     * @param  string  $newPassword   The plain-text new password to validate.
+     * @param  int     $historyLimit  Number of recent passwords to check against.
+     * @return void
+     *
+     * @throws ValidationException  If the new password matches a recent history entry.
+     */
     private function validateNotUsingRecentPasswords(User $user, string $newPassword, int $historyLimit): void
     {
         $recentPasswordHistories = $this->passwordHistoryRepository->getRecentByUser(
