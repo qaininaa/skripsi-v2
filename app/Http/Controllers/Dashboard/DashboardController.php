@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Services\DashboardService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
+use InvalidArgumentException;
 
 class DashboardController extends Controller
 {
@@ -15,14 +15,14 @@ class DashboardController extends Controller
     ) {
     }
 
-    public function index(): View|RedirectResponse
+    public function index(): View
     {
         $user = Auth::user();
 
-        $view = $this->dashboardService->resolveViewByRole($user?->role);
-
-        if ($view === null) {
-            return redirect('/');
+        try {
+            $view = $this->dashboardService->resolveViewByRole($user?->role);
+        } catch (InvalidArgumentException) {
+            abort(403, 'Role tidak memiliki halaman dashboard.');
         }
 
         return view($view, [

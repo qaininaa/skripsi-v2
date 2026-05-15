@@ -28,10 +28,10 @@ class AuthService
      * Looks up the user by username, then verifies the password hash.
      * Throws a ValidationException if the user is not found or the password does not match.
      *
-     * @param  GetUserDto  $request  DTO containing username and plain-text password.
-     * @return User                  The authenticated user model.
+     * @param  GetUserDto  $request  
+     * @return User                  
      *
-     * @throws ValidationException  If username is not found or password is incorrect.
+     * @throws ValidationException  
      */
     public function login(GetUserDto $request): User
     {
@@ -63,7 +63,7 @@ class AuthService
      *
      * Calls Auth::logout(), invalidates the session, and regenerates the CSRF token.
      *
-     * @param  Request  $request  The current HTTP request.
+     * @param  Request  $request
      * @return void
      */
     public function logout(Request $request): void
