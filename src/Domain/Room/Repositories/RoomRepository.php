@@ -2,19 +2,36 @@
 
 namespace Domain\Room\Repositories;
 
+use Shared\Cache\CacheKeyPattern;
+use Shared\Cache\CacheTtl;
 use Domain\Room\Dtos\CreateRoomDto;
 use Domain\Room\Dtos\GetRoomDto;
 use Domain\Room\Dtos\GetRoomsFilterDto;
 use Domain\Room\Dtos\UpdateRoomDto;
 use Domain\Room\Interfaces\RoomRepositoryInterface;
 use Domain\Room\Models\Room;
+use Illuminate\Support\Facades\Cache;
 
 class RoomRepository implements RoomRepositoryInterface
 {
 
     public function getRooms(GetRoomsFilterDto $data)
     {
-        return Room::query()
+        $keyHash = md5(json_encode([
+            'search' => $data->search,
+            'class'  => $data->class,
+            'page'   => request()->input('page', 1),
+        ]));
+        $cacheKey = sprintf(CacheKeyPattern::ROOM_ALL_FILTERED, $keyHash);
+
+        // Register key into the registry (read-modify-write, skip if already present)
+        $keys = Cache::get(CacheKeyPattern::ROOM_KEYS_REGISTRY, []);
+        if (!in_array($cacheKey, $keys)) {
+            $keys[] = $cacheKey;
+            Cache::put(CacheKeyPattern::ROOM_KEYS_REGISTRY, $keys, CacheTtl::MASTER);
+        }
+
+        return Cache::remember($cacheKey, CacheTtl::MASTER, fn () => Room::query()
             ->when($data->search !== null, function ($query) use ($data) {
                 $query->where(function ($subQuery) use ($data) {
                     $subQuery->where('name', 'like', '%' . $data->search . '%')
@@ -27,7 +44,8 @@ class RoomRepository implements RoomRepositoryInterface
             ->orderBy('class')
             ->orderBy('name')
             ->paginate(10)
-            ->withQueryString();
+            ->withQueryString()
+        );
     }
 
     public function createRoom(CreateRoomDto $data)

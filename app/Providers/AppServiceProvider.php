@@ -14,6 +14,8 @@ use Domain\User\Interfaces\PasswordHistoryRepositoryInterface;
 use Domain\User\Interfaces\UserRepositoryInterface;
 use Domain\User\Repositories\PasswordHistoryRepository;
 use Domain\User\Repositories\UserRepository;
+use Domain\Room\Models\Room;
+use Domain\Room\Observers\RoomCacheObserver;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
@@ -53,5 +55,8 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultView('components.pagination.default');
 
         View::composer('components.sidebar.sidebar', SidebarComposer::class);
+
+        // Cache Observers
+        Room::observe(RoomCacheObserver::class);
     }
 }
