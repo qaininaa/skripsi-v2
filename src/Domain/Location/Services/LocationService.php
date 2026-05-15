@@ -9,6 +9,12 @@ use Domain\Location\Dtos\UpdateLocationDto;
 use Domain\Location\Interfaces\LocationRepositoryInterface;
 use Domain\Location\Models\Location;
 
+/**
+ * Handles business logic for the Location domain.
+ *
+ * Enforces uniqueness rules (room + loc_number combination must be unique)
+ * and delegates all data access to the LocationRepositoryInterface.
+ */
 class LocationService
 {
     protected LocationRepositoryInterface $repository;
@@ -18,6 +24,12 @@ class LocationService
         $this->repository = $repository;
     }
 
+    /**
+     * Retrieve a paginated, filtered list of locations.
+     *
+     * @param  GetLocationsFilterDto  $dto  Filter parameters (search, room_id).
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
     public function getDataLocations(GetLocationsFilterDto $dto)
     {
         try {
@@ -27,6 +39,15 @@ class LocationService
         }
     }
 
+    /**
+     * Create a new location, or return the existing one if the combination already exists.
+     *
+     * Checks for an existing location with the same room_id and loc_number.
+     * If found, returns it without creating a duplicate.
+     *
+     * @param  CreateLocationDto  $dto  Data for the new location.
+     * @return Location                 The newly created or existing location.
+     */
     public function createLocation(CreateLocationDto $dto): Location
     {
         try {
@@ -45,6 +66,18 @@ class LocationService
         }
     }
 
+    /**
+     * Update an existing location.
+     *
+     * Validates that the new room_id + loc_number combination is not already
+     * taken by a different location. Throws RuntimeException if a conflict is found.
+     *
+     * @param  Location           $location  The location model to update.
+     * @param  UpdateLocationDto  $dto       New data for the location.
+     * @return void
+     *
+     * @throws \RuntimeException  If another location with the same room and number already exists.
+     */
     public function updateLocation(Location $location, UpdateLocationDto $dto): void
     {
         try {
@@ -64,6 +97,12 @@ class LocationService
         }
     }
 
+    /**
+     * Delete a location.
+     *
+     * @param  Location  $location  The location model to delete.
+     * @return void
+     */
     public function deleteLocation(Location $location): void
     {
         try {

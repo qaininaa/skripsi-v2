@@ -9,8 +9,22 @@ use Domain\Location\Dtos\UpdateLocationDto;
 use Domain\Location\Interfaces\LocationRepositoryInterface;
 use Domain\Location\Models\Location;
 
+/**
+ * Eloquent implementation of LocationRepositoryInterface.
+ *
+ * All database access for the Location domain goes through this class.
+ */
 class LocationRepository implements LocationRepositoryInterface
 {
+    /**
+     * Retrieve a paginated list of locations with optional search and room filter.
+     *
+     * Results are joined with the rooms table and ordered by room name then loc_number.
+     * Each result eagerly loads the related room.
+     *
+     * @param  GetLocationsFilterDto  $data  Filter parameters (search, room_id).
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
     public function getLocations(GetLocationsFilterDto $data)
     {
         return Location::query()
@@ -34,6 +48,15 @@ class LocationRepository implements LocationRepositoryInterface
             ->withQueryString();
     }
 
+    /**
+     * Find a location by room ID and location number (case-insensitive).
+     *
+     * Optionally excludes a specific location ID to support update uniqueness checks.
+     * Returns null if both room_id and loc_number are null.
+     *
+     * @param  GetLocationDto  $data  DTO with room_id, loc_number, and optional excludeId.
+     * @return Location|null          The matching location, or null if not found.
+     */
     public function getLocationByRoomAndNumber(GetLocationDto $data): ?Location
     {
         if ($data->room_id === null && $data->loc_number === null) {
@@ -49,6 +72,12 @@ class LocationRepository implements LocationRepositoryInterface
             ->first();
     }
 
+    /**
+     * Persist a new location to the database.
+     *
+     * @param  CreateLocationDto  $data  Data for the new location.
+     * @return Location                  The newly created location model.
+     */
     public function createLocation(CreateLocationDto $data): Location
     {
         $location = new Location();
@@ -65,6 +94,13 @@ class LocationRepository implements LocationRepositoryInterface
         return $location;
     }
 
+    /**
+     * Update an existing location with new data.
+     *
+     * @param  Location           $location  The location model to update.
+     * @param  UpdateLocationDto  $data      New values to apply.
+     * @return void
+     */
     public function updateLocation(Location $location, UpdateLocationDto $data): void
     {
         $location->room_id            = $data->room_id;
@@ -78,6 +114,12 @@ class LocationRepository implements LocationRepositoryInterface
         $location->save();
     }
 
+    /**
+     * Delete a location from the database.
+     *
+     * @param  Location  $location  The location model to delete.
+     * @return void
+     */
     public function deleteLocation(Location $location): void
     {
         $location->delete();

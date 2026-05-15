@@ -10,9 +10,21 @@ use Domain\User\Dtos\UpdateUserPasswordDto;
 use Domain\User\Models\User;
 use Domain\User\Interfaces\UserRepositoryInterface;
 
+/**
+ * Eloquent implementation of UserRepositoryInterface.
+ *
+ * All database access for the User domain goes through this class.
+ */
 class UserRepository implements UserRepositoryInterface
 {
-
+    /**
+     * Retrieve a paginated list of users with optional search and role filter.
+     *
+     * Results are ordered by creation date descending (newest first).
+     *
+     * @param  GetUsersFilterDto  $data  Filter parameters (search, role).
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
     public function getUsers(GetUsersFilterDto $data)
     {
         return User::query()
@@ -30,7 +42,16 @@ class UserRepository implements UserRepositoryInterface
             ->withQueryString();
     }
 
-    public function createUser(CreateUserDto $data)
+    /**
+     * Persist a new user to the database.
+     *
+     * Password is hashed with bcrypt. password_changed_at is set to null
+     * to force a password change on first login.
+     *
+     * @param  CreateUserDto  $data  Data for the new user.
+     * @return User                  The newly created user model.
+     */
+    public function createUser(CreateUserDto $data): User
     {
         $user = new User();
         $user->name = $data->name;
@@ -42,12 +63,29 @@ class UserRepository implements UserRepositoryInterface
         return $user;
     }
 
-    public function getUserByUsername(GetUserDto $data)
+    /**
+     * Find a user by their username.
+     *
+     * Returns null if no user with the given username exists.
+     *
+     * @param  GetUserDto  $data  DTO containing the username to look up.
+     * @return User|null          The matching user, or null if not found.
+     */
+    public function getUserByUsername(GetUserDto $data): ?User
     {
-        $user = User::where('username', $data->username)->first();
-        return $user;
+        return User::where('username', $data->username)->first();
     }
 
+    /**
+     * Update an existing user's profile data.
+     *
+     * If the DTO indicates a password reset (hasPasswordReset() === true),
+     * the password is updated and password_changed_at is reset to null.
+     *
+     * @param  User           $user  The user model to update.
+     * @param  UpdateUserDto  $data  New values to apply.
+     * @return void
+     */
     public function updateUser(User $user, UpdateUserDto $data): void
     {
         $user->name = $data->name;
@@ -61,11 +99,25 @@ class UserRepository implements UserRepositoryInterface
         $user->save();
     }
 
+    /**
+     * Delete a user from the database.
+     *
+     * @param  User  $user  The user model to delete.
+     * @return void
+     */
     public function deleteUser(User $user): void
     {
         $user->delete();
     }
 
+    /**
+     * Update a user's password and record the timestamp of the change.
+     *
+     * Called exclusively by ChangePasswordService within a DB transaction.
+     *
+     * @param  UpdateUserPasswordDto  $data  DTO containing the user, new hashed password, and changedAt timestamp.
+     * @return void
+     */
     public function updatePassword(UpdateUserPasswordDto $data): void
     {
         $data->user->password = $data->newPassword;
