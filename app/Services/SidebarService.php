@@ -103,7 +103,7 @@ class SidebarService
                 'items' => [
                     $this->item('Ruangan', 'rooms.index', 'rooms.*', 'icons/sidebar/building.svg'),
                     $this->item('Lokasi', 'location.index', 'location.*', 'icons/sidebar/location.svg'),
-                    $this->item('Manajemen Laporan', 'report-types.index', 'report-types.*', 'icons/sidebar/reports.svg'),
+                    $this->item('Manajemen Laporan', 'report-templates.index', 'report-templates.*', 'icons/sidebar/reports.svg'),
                 ],
             ];
 
