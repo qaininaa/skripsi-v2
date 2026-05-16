@@ -14,6 +14,7 @@ class CreateSectionDto
     public ?string $column_label;
     public string $time_slot_type;
     public bool $has_machine_setup;
+    public int $order;
 
     public function __construct(array $data)
     {
@@ -24,5 +25,6 @@ class CreateSectionDto
         $this->column_label       = $data['column_label'] ?? null;
         $this->time_slot_type     = $data['time_slot_type'];
         $this->has_machine_setup  = (bool) ($data['has_machine_setup'] ?? false);
+        $this->order              = (int) ($data['order'] ?? 1);
     }
 }

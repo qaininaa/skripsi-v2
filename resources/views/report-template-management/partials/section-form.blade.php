@@ -124,6 +124,22 @@
         </label>
     </div>
 
+    {{-- Order --}}
+    <div class="mt-3">
+        <label class="mb-1 block text-xs font-medium text-gray-700">
+            Urutan <span class="text-red-500">*</span>
+        </label>
+        <input
+            type="number"
+            name="order"
+            value="{{ old('order', $section->order ?? 1) }}"
+            min="1"
+            required
+            class="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+        >
+        <p class="mt-1 text-xs text-gray-400">Menentukan urutan tampil section (1 = paling atas).</p>
+    </div>
+
     {{-- Actions --}}
     <div class="mt-4 flex justify-end gap-2">
         <button
