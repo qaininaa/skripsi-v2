@@ -14,8 +14,10 @@ return new class extends Migration
         Schema::create('medium_entries', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('report_id')->constrained('reports')->cascadeOnDelete();
-            $table->foreignUuid('medium_id')->constrained('medium_templates')->cascadeOnDelete();
+            // Nullable to allow virtual entries like "Swab Kit" that don't map to a MediumTemplate.
+            $table->foreignUuid('medium_id')->nullable()->constrained('medium_templates')->cascadeOnDelete();
             $table->string('name')->nullable();
+            $table->boolean('is_swab')->default(false);
             $table->string('batch_number')->nullable();
             $table->string('gpt_number')->nullable();
             $table->date('expiration_date')->nullable();

@@ -11,12 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('env_section_instances', function (Blueprint $table) {
+        Schema::create('section_instances', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('location_id')->constrained('locations')->cascadeOnDelete();
             $table->foreignUuid('report_id')->constrained('reports')->cascadeOnDelete();
+            $table->foreignUuid('section_id')->constrained('sections')->cascadeOnDelete();
+            $table->foreignUuid('location_id')->nullable()->constrained('locations')->nullOnDelete();
             $table->foreignUuid('parent_instance_id')->nullable()->constrained('section_instances')->cascadeOnDelete();
             $table->timestamps();
+
+            $table->index(['report_id', 'section_id']);
         });
     }
 

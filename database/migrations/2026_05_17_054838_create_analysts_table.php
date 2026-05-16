@@ -11,14 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('incubators', function (Blueprint $table) {
+        Schema::create('analysts', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignUuid('report_id')->constrained('reports')->cascadeOnDelete();
-            $table->foreignUuid('incubator_template_id')->constrained('incubator_templates')->cascadeOnDelete();
-            $table->string('no_id')->nullable();
-            $table->date('calibration_date')->nullable();
-            $table->date('due_date_calibration')->nullable();
+            $table->enum('type', ['monitoring', 'reading']);
             $table->timestamps();
+
+            // Each analyst can only have one role per report
+            $table->unique(['report_id', 'user_id', 'type']);
         });
     }
 
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('incubators');
+        Schema::dropIfExists('analysts');
     }
 };

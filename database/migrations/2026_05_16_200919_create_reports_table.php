@@ -14,10 +14,12 @@ return new class extends Migration
         Schema::create('reports', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('report_template_id')->constrained('report_templates')->cascadeOnDelete();
+            $table->foreignUuid('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignUuid('locked_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('product_name');
             $table->string('batch_number');
             $table->string('status', 30)->default('pending');
+            $table->timestamp('monitoring_started_at')->nullable();
             $table->timestamp('printed_at')->nullable();
             $table->foreignUuid('printed_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
