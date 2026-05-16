@@ -104,7 +104,7 @@
                                 <div class="text-xs text-gray-500">{{ $location->room->room_number }} &middot; Kelas {{ $location->room->class }}</div>
                             </td>
                             <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">{{ $location->loc_number }}</td>
-                            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">{{ $location->measurement_type }}</td>
+                            <td class="whitespace-nowrap px-4 py-4 text-sm"><x-badges.measurement-type :type="$location->measurement_type" /></td>
                             <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
                                 {{ $frequencyLabels[$location->frequency] ?? $location->frequency }}
                             </td>
