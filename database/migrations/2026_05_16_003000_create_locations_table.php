@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('locations', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            // $table->foreignUuid('section_id')->nullable()->constrained('sections')->cascadeOnDelete();
+            $table->foreignUuid('section_id')->nullable()->constrained('sections')->cascadeOnDelete();
             $table->foreignUuid('room_id')->constrained('rooms')->cascadeOnDelete();
             $table->enum('frequency', ['operational', 'daily', 'weekly', 'monthly', 'semi_annual']);
             $table->string('loc_number', 50);
