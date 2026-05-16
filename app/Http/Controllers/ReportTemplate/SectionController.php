@@ -27,7 +27,12 @@ class SectionController extends Controller
     {
         $reportTemplate = $this->sectionService->getTemplateWithSections($reportTemplate);
 
-        return view('report-template-management.show', compact('reportTemplate'));
+        // Pre-load available locations per section for the inline select
+        $sectionAvailable = $reportTemplate->sections->mapWithKeys(
+            fn ($section) => [$section->id => $this->sectionService->getAvailableLocations($section)]
+        );
+
+        return view('report-template-management.show', compact('reportTemplate', 'sectionAvailable'));
     }
 
     /**
@@ -81,18 +86,21 @@ class SectionController extends Controller
     }
 
     /**
-     * Assign a location to a section.
-     * Called via JSON fetch from the modal — returns JSON response.
+     * Assign a location to a section via inline form POST.
      */
-    public function assignLocation(SectionAssignLocationRequest $request, ReportTemplate $reportTemplate, Section $section)
+    public function assignLocation(SectionAssignLocationRequest $request, ReportTemplate $reportTemplate, Section $section): RedirectResponse
     {
         try {
             $this->sectionService->assignLocation($section, $request->validated('location_id'));
         } catch (\RuntimeException $e) {
-            return response()->json(['message' => $e->getMessage()], 422);
+            return redirect()
+                ->back()
+                ->with('error', $e->getMessage());
         }
 
-        return response()->json(['message' => 'Berhasil menambahkan lokasi ke section.']);
+        return redirect()
+            ->route('report-templates.show', $reportTemplate)
+            ->with('success', 'Berhasil menambahkan lokasi ke section.');
     }
 
     /**
@@ -111,21 +119,5 @@ class SectionController extends Controller
         return redirect()
             ->route('report-templates.show', $reportTemplate)
             ->with('success', 'Berhasil menghapus lokasi dari section.');
-    }
-
-    /**
-     * Get available locations for a section (used for the add-location modal).
-     * Returns JSON for Alpine.js to consume.
-     */
-    public function availableLocations(ReportTemplate $reportTemplate, Section $section)
-    {
-        $locations = $this->sectionService->getAvailableLocations($section);
-
-        return response()->json($locations->map(fn ($loc) => [
-            'id'         => $loc->id,
-            'label'      => $loc->room->name . ' — ' . $loc->loc_number,
-            'room_name'  => $loc->room->name,
-            'loc_number' => $loc->loc_number,
-        ]));
     }
 }

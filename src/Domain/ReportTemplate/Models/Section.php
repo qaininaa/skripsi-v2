@@ -52,13 +52,16 @@ class Section extends Model
     }
 
     /**
-     * Get all locations assigned to this section.
+     * Get all locations assigned to this section,
+     * ordered by section_assigned_at (oldest → newest).
      *
      * @return HasMany<Location>
      */
     public function locations(): HasMany
     {
-        return $this->hasMany(Location::class, 'section_id');
+        return $this->hasMany(Location::class, 'section_id')
+            ->orderBy('section_assigned_at', 'asc')
+            ->orderBy('created_at', 'asc');
     }
 
     /**
