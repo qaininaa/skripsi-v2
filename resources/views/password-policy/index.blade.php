@@ -10,11 +10,7 @@
             <p class="mt-1 text-sm text-gray-500">Konfigurasi kebijakan keamanan akun pengguna.</p>
         </div>
 
-        @if (session('success'))
-            <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-                {{ session('success') }}
-            </div>
-        @endif
+        <x-messages.success-message />
 
         <form action="{{ route('settings.update') }}" method="POST" class="space-y-6">
             @csrf
@@ -62,15 +58,7 @@
                 </div>
             </div>
 
-            @if ($errors->any())
-                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    <ul class="list-disc pl-4">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+            <x-messages.validation-errors />
 
             <div class="flex justify-end">
                 <button

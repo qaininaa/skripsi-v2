@@ -4,21 +4,8 @@
 @section('page-title', 'Manajemen Ruangan')
 
 @section('content')
-    @php
-        $classColors = [
-            'A' => 'bg-rose-100 text-rose-700',
-            'B' => 'bg-blue-100 text-blue-700',
-            'C' => 'bg-green-100 text-green-700',
-            'D' => 'bg-amber-100 text-amber-700',
-            'E' => 'bg-slate-100 text-slate-700',
-        ];
-    @endphp
 
-    @if (session('success'))
-        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            {{ session('success') }}
-        </div>
-    @endif
+    <x-messages.success-message />
 
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -88,11 +75,9 @@
                                 {{ $room->name }}
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{{ $room->room_number }}</td>
-                            <td class="whitespace-nowrap px-6 py-4 text-center">
-                                <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-semibold {{ $classColors[$room->class] ?? 'bg-gray-100 text-gray-700' }}">
-                                    {{ $room->class }}
-                                </span>
-                            </td>
+                                <td class="whitespace-nowrap px-6 py-4 text-center">
+                                    <x-badges.room-class :class="$room->class" />
+                                </td>
                             <td class="whitespace-nowrap px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
                                     <x-buttons.edit :href="route('rooms.edit', $room)" />

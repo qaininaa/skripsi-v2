@@ -8,6 +8,16 @@ use Domain\User\Dtos\CheckPasswordExpirationDto;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Enforces the password change requirement before allowing access to protected routes.
+ *
+ * Two scenarios trigger a redirect to the password change form:
+ * 1. Initial password - password_changed_at is null (new user, never changed password).
+ * 2. Expired password - password_changed_at is set but the expiration period has passed.
+ *
+ * The 'super' role is exempt from this check.
+ *
+ */
 class EnsurePasswordChanged
 {
     public function __construct(
@@ -15,6 +25,13 @@ class EnsurePasswordChanged
     ) {
     }
 
+    /**
+     * Handle an incoming request.
+     *
+     * @param  Request  $request  
+     * @param  Closure  $next    
+     * @return Response
+     */
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
