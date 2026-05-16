@@ -31,14 +31,14 @@ class ReportTemplateStoreRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'medium_templates.required'              => 'Minimal 1 medium template harus diisi.',
-            'medium_templates.min'                   => 'Minimal 1 medium template harus diisi.',
+            'medium_templates.required'              => 'Minimal 1 medium harus diisi.',
+            'medium_templates.min'                   => 'Minimal 1 medium harus diisi.',
             'medium_templates.*.name.required'       => 'Nama medium tidak boleh kosong.',
             'incubator_templates.required'           => 'Minimal 1 inkubator harus diisi.',
             'incubator_templates.min'                => 'Minimal 1 inkubator harus diisi.',
-            'incubator_templates.*.label.required'   => 'Label suhu inkubator tidak boleh kosong.',
+            'incubator_templates.*.label.required'   => 'Suhu inkubator tidak boleh kosong.',
             'incubator_templates.*.min_day.required' => 'Minimum hari inkubator tidak boleh kosong.',
-            'incubator_templates.*.min_day.min'      => 'Minimum hari harus lebih dari 0.',
+            'incubator_templates.*.min_day.min'      => 'Minimum hari adalah 1.',
         ];
     }
 
