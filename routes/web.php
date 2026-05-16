@@ -67,6 +67,5 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::delete('/report-templates/{reportTemplate}/sections/{section}', [SectionController::class, 'destroy'])->name('report-templates.sections.destroy');
         Route::post('/report-templates/{reportTemplate}/sections/{section}/locations', [SectionController::class, 'assignLocation'])->name('report-templates.sections.locations.assign');
         Route::delete('/report-templates/{reportTemplate}/sections/{section}/locations/{location}', [SectionController::class, 'removeLocation'])->name('report-templates.sections.locations.remove');
-        Route::get('/report-templates/{reportTemplate}/sections/{section}/available-locations', [SectionController::class, 'availableLocations'])->name('report-templates.sections.available-locations');
     });
 });
