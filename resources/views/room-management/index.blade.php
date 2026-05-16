@@ -5,11 +5,7 @@
 
 @section('content')
 
-    @if (session('success'))
-        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            {{ session('success') }}
-        </div>
-    @endif
+    <x-messages.success-message />
 
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>

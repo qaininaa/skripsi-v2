@@ -14,17 +14,8 @@
         ];
     @endphp
 
-    @if (session('success'))
-        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if (session('error'))
-        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ session('error') }}
-        </div>
-    @endif
+    <x-messages.success-message />
+    <x-messages.error-message />
 
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
