@@ -20,6 +20,7 @@ return new class extends Migration
             $table->string('column_label', 50)->nullable();
             $table->enum('time_slot_type', ['by_location', 'start_end', 'start_end_ab', 'start_end_multi'])->default('start_end');
             $table->boolean('has_machine_setup')->default(false);
+            $table->unsignedSmallInteger('order')->default(1);
             $table->timestamps();
         });
     }

@@ -22,6 +22,7 @@ class SectionStoreRequest extends FormRequest
             'column_label'      => ['nullable', 'string', 'max:50'],
             'time_slot_type'    => ['required', Rule::in(['by_location', 'start_end', 'start_end_ab', 'start_end_multi'])],
             'has_machine_setup' => ['nullable'],
+            'order'             => ['required', 'integer', 'min:1'],
         ];
     }
 

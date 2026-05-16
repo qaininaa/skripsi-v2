@@ -27,6 +27,7 @@ class SectionRepository implements SectionRepositoryInterface
         $section->column_label       = $data->column_label;
         $section->time_slot_type     = $data->time_slot_type;
         $section->has_machine_setup  = $data->has_machine_setup;
+        $section->order              = $data->order;
         $section->save();
 
         return $section;
@@ -47,6 +48,7 @@ class SectionRepository implements SectionRepositoryInterface
         $section->column_label      = $data->column_label;
         $section->time_slot_type    = $data->time_slot_type;
         $section->has_machine_setup = $data->has_machine_setup;
+        $section->order             = $data->order;
         $section->save();
     }
 

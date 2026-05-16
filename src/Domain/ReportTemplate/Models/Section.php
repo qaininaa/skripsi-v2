@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $column_label
  * @property string  $time_slot_type     by_location|start_end|start_end_ab|start_end_multi
  * @property bool    $has_machine_setup
+ * @property int     $order
  * @property Carbon  $created_at
  * @property Carbon  $updated_at
  */

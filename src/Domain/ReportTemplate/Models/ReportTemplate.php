@@ -57,12 +57,14 @@ class ReportTemplate extends Model
     }
 
     /**
-     * Get all section templates belonging to this report template.
+     * Get all section templates belonging to this report template, ordered by display order.
      *
      * @return HasMany<Section>
      */
     public function sections(): HasMany
     {
-        return $this->hasMany(Section::class, 'report_template_id');
+        return $this->hasMany(Section::class, 'report_template_id')
+            ->orderBy('order')
+            ->orderBy('created_at');
     }
 }
