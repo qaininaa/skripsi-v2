@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\PasswordPolicy\PasswordPolicyController;
 use App\Http\Controllers\Location\LocationController;
+use App\Http\Controllers\Report\ReportController;
 use App\Http\Controllers\ReportTemplate\ReportTemplateController;
 use App\Http\Controllers\ReportTemplate\SectionController;
 use App\Http\Controllers\Room\RoomController;
@@ -67,5 +68,13 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::delete('/report-templates/{reportTemplate}/sections/{section}', [SectionController::class, 'destroy'])->name('report-templates.sections.destroy');
         Route::post('/report-templates/{reportTemplate}/sections/{section}/locations', [SectionController::class, 'assignLocation'])->name('report-templates.sections.locations.assign');
         Route::delete('/report-templates/{reportTemplate}/sections/{section}/locations/{location}', [SectionController::class, 'removeLocation'])->name('report-templates.sections.locations.remove');
+
+        // Report assignment (Tugas Pelaporan)
+        Route::get('/report-assignment', [ReportController::class, 'index'])->name('report-assignment.index');
+        Route::get('/report-assignment/create', [ReportController::class, 'create'])->name('report-assignment.create');
+        Route::post('/report-assignment/store', [ReportController::class, 'store'])->name('report-assignment.store');
+        Route::get('/report-assignment/{report}/edit', [ReportController::class, 'edit'])->name('report-assignment.edit');
+        Route::put('/report-assignment/{report}', [ReportController::class, 'update'])->name('report-assignment.update');
+        Route::delete('/report-assignment/{report}', [ReportController::class, 'destroy'])->name('report-assignment.destroy');
     });
 });

@@ -2,6 +2,7 @@
 
 namespace Domain\ReportTemplate\Models;
 
+use Domain\Report\Models\Report;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -66,5 +67,15 @@ class ReportTemplate extends Model
         return $this->hasMany(Section::class, 'report_template_id')
             ->orderBy('order')
             ->orderBy('created_at');
+    }
+
+    /**
+     * Get all report belonging to this report template.
+     *
+     * @return HasMany<Report>
+     */
+    public function Report(): HasMany
+    {
+        return $this->hasMany(Report::class, 'report_template_id');
     }
 }
