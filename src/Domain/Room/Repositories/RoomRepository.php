@@ -10,14 +10,13 @@ use Domain\Room\Dtos\GetRoomsFilterDto;
 use Domain\Room\Dtos\UpdateRoomDto;
 use Domain\Room\Interfaces\RoomRepositoryInterface;
 use Domain\Room\Models\Room;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
 
 /**
  * Eloquent implementation of RoomRepositoryInterface with read-through caching.
  *
- * getRooms() results are cached using a key registry pattern to support
- * bulk invalidation when any room is created, updated, or deleted.
- * validation and must always return fresh data.
  */
 class RoomRepository implements RoomRepositoryInterface
 {
@@ -26,17 +25,22 @@ class RoomRepository implements RoomRepositoryInterface
      *
      * Generates a unique cache key from the filter parameters and current page.
      * Registers the key in the ROOM_KEYS_REGISTRY so the observer can invalidate it.
-     * On cache miss, executes the Eloquent query and stores the result for 24 hours.
+     *
+     * Only raw data (items + total) is cached. The paginator instance is rebuilt
      *
      * @param  GetRoomsFilterDto  $data  Filter parameters (search, class).
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getRooms(GetRoomsFilterDto $data)
     {
+        $perPage = 10;
+        $page    = (int) (request()->input('page', 1) ?: 1);
+
         $keyHash = md5(json_encode([
             'search' => $data->search,
             'class'  => $data->class,
-            'page'   => request()->input('page', 1),
+            'page'   => $page,
+            'per'    => $perPage,
         ]));
         $cacheKey = sprintf(CacheKeyPattern::ROOM_ALL_FILTERED, $keyHash);
 
@@ -47,21 +51,44 @@ class RoomRepository implements RoomRepositoryInterface
             Cache::put(CacheKeyPattern::ROOM_KEYS_REGISTRY, $keys, CacheTtl::MASTER);
         }
 
-        return Cache::remember($cacheKey, CacheTtl::MASTER, fn () => Room::query()
-            ->when($data->search !== null, function ($query) use ($data) {
-                $query->where(function ($subQuery) use ($data) {
-                    $subQuery->where('name', 'like', '%' . $data->search . '%')
-                        ->orWhere('room_number', 'like', '%' . $data->search . '%');
-                });
-            })
-            ->when($data->class !== null, function ($query) use ($data) {
-                $query->where('class', $data->class);
-            })
-            ->orderBy('class')
-            ->orderBy('name')
-            ->paginate(10)
-            ->withQueryString()
+        $cached = Cache::remember($cacheKey, CacheTtl::MASTER, function () use ($data, $perPage, $page) {
+            $query = Room::query()
+                ->when($data->search !== null, function ($query) use ($data) {
+                    $query->where(function ($subQuery) use ($data) {
+                        $subQuery->where('name', 'like', '%' . $data->search . '%')
+                            ->orWhere('room_number', 'like', '%' . $data->search . '%');
+                    });
+                })
+                ->when($data->class !== null, function ($query) use ($data) {
+                    $query->where('class', $data->class);
+                })
+                ->orderBy('class')
+                ->orderBy('name');
+
+            $total = (clone $query)->toBase()->getCountForPagination();
+            $items = $total
+                ? $query->forPage($page, $perPage)->get()
+                : Room::query()->whereRaw('0 = 1')->get();
+
+            return [
+                'items' => $items,
+                'total' => $total,
+            ];
+        });
+
+        // Rebuild paginator per request so path and query string follow the current URL.
+        $paginator = new LengthAwarePaginator(
+            $cached['items'],
+            $cached['total'],
+            $perPage,
+            $page,
+            [
+                'path'     => Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
         );
+
+        return $paginator->withQueryString();
     }
 
     /**
@@ -70,8 +97,8 @@ class RoomRepository implements RoomRepositoryInterface
      * Triggers the 'created' Eloquent event, which causes RoomCacheObserver
      * to invalidate all related cache entries.
      *
-     * @param  CreateRoomDto  $data  Data for the new room.
-     * @return Room                  The newly created room model.
+     * @param  CreateRoomDto  $data  
+     * @return Room                  
      */
     public function createRoom(CreateRoomDto $data): Room
     {
@@ -90,8 +117,8 @@ class RoomRepository implements RoomRepositoryInterface
      * Intentionally NOT cached - must always return fresh data to prevent false negatives.
      * Optionally excludes a specific room ID to support update uniqueness checks.
      *
-     * @param  GetRoomDto  $data  DTO with name, room_number, and optional excludeId.
-     * @return Room|null          The matching room, or null if not found.
+     * @param  GetRoomDto  $data  
+     * @return Room|null       
      */
     public function getRoomByName(GetRoomDto $data): ?Room
     {
@@ -115,8 +142,8 @@ class RoomRepository implements RoomRepositoryInterface
      * Triggers the 'updated' Eloquent event, which causes RoomCacheObserver
      * to invalidate all related cache entries.
      *
-     * @param  Room           $room  The room model to update.
-     * @param  UpdateRoomDto  $data  New values to apply.
+     * @param  Room            
+     * @param  UpdateRoomDto    
      * @return void
      */
     public function updateRoom(Room $room, UpdateRoomDto $data): void
