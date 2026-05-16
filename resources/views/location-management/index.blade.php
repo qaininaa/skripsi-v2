@@ -14,17 +14,8 @@
         ];
     @endphp
 
-    @if (session('success'))
-        <div class="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    @if (session('error'))
-        <div class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {{ session('error') }}
-        </div>
-    @endif
+    <x-messages.success-message />
+    <x-messages.error-message />
 
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -104,7 +95,7 @@
                                 <div class="text-xs text-gray-500">{{ $location->room->room_number }} &middot; Kelas {{ $location->room->class }}</div>
                             </td>
                             <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">{{ $location->loc_number }}</td>
-                            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">{{ $location->measurement_type }}</td>
+                            <td class="whitespace-nowrap px-4 py-4 text-sm"><x-badges.measurement-type :type="$location->measurement_type" /></td>
                             <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
                                 {{ $frequencyLabels[$location->frequency] ?? $location->frequency }}
                             </td>

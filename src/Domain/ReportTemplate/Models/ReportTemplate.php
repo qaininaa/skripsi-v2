@@ -55,4 +55,14 @@ class ReportTemplate extends Model
     {
         return $this->hasMany(IncubatorTemplate::class, 'report_template_id');
     }
+
+    /**
+     * Get all section templates belonging to this report template.
+     *
+     * @return HasMany<Section>
+     */
+    public function sections(): HasMany
+    {
+        return $this->hasMany(Section::class, 'report_template_id');
+    }
 }

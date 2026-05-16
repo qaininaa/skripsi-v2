@@ -9,7 +9,9 @@ use Domain\PasswordPolicy\Interfaces\PasswordPolicyRepositoryInterface;
 use Domain\PasswordPolicy\Repositories\PasswordPolicyRepository;
 use Domain\PasswordPolicy\Services\PasswordPolicyService;
 use Domain\ReportTemplate\Interfaces\ReportTemplateRepositoryInterface;
+use Domain\ReportTemplate\Interfaces\SectionRepositoryInterface;
 use Domain\ReportTemplate\Repositories\ReportTemplateRepository;
+use Domain\ReportTemplate\Repositories\SectionRepository;
 use Domain\Room\Interfaces\RoomRepositoryInterface;
 use Domain\Room\Models\Room;
 use Domain\Room\Observers\RoomCacheObserver;
@@ -36,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
             RoomRepositoryInterface::class               => RoomRepository::class,
             LocationRepositoryInterface::class           => LocationRepository::class,
             ReportTemplateRepositoryInterface::class     => ReportTemplateRepository::class,
+            SectionRepositoryInterface::class            => SectionRepository::class,
         ];
 
         foreach ($bindings as $interface => $implementation) {

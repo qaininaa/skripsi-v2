@@ -6,6 +6,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\PasswordPolicy\PasswordPolicyController;
 use App\Http\Controllers\Location\LocationController;
 use App\Http\Controllers\ReportTemplate\ReportTemplateController;
+use App\Http\Controllers\ReportTemplate\SectionController;
 use App\Http\Controllers\Room\RoomController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
@@ -55,8 +56,16 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/report-templates', [ReportTemplateController::class, 'index'])->name('report-templates.index');
         Route::get('/report-templates/create', [ReportTemplateController::class, 'create'])->name('report-templates.create');
         Route::post('/report-templates/store', [ReportTemplateController::class, 'store'])->name('report-templates.store');
+        Route::get('/report-templates/{reportTemplate}', [SectionController::class, 'show'])->name('report-templates.show');
         Route::get('/report-templates/{reportTemplate}/edit', [ReportTemplateController::class, 'edit'])->name('report-templates.edit');
         Route::put('/report-templates/{reportTemplate}', [ReportTemplateController::class, 'update'])->name('report-templates.update');
         Route::delete('/report-templates/{reportTemplate}', [ReportTemplateController::class, 'destroy'])->name('report-templates.destroy');
+
+        // Section routes (nested under report-templates)
+        Route::post('/report-templates/{reportTemplate}/sections', [SectionController::class, 'store'])->name('report-templates.sections.store');
+        Route::put('/report-templates/{reportTemplate}/sections/{section}', [SectionController::class, 'update'])->name('report-templates.sections.update');
+        Route::delete('/report-templates/{reportTemplate}/sections/{section}', [SectionController::class, 'destroy'])->name('report-templates.sections.destroy');
+        Route::post('/report-templates/{reportTemplate}/sections/{section}/locations', [SectionController::class, 'assignLocation'])->name('report-templates.sections.locations.assign');
+        Route::delete('/report-templates/{reportTemplate}/sections/{section}/locations/{location}', [SectionController::class, 'removeLocation'])->name('report-templates.sections.locations.remove');
     });
 });

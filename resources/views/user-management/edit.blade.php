@@ -8,15 +8,7 @@
         <h1 class="text-xl font-bold text-gray-900">Edit Pengguna</h1>
         <p class="mt-1 text-sm text-gray-500">Perbarui informasi akun pengguna.</p>
 
-        @if ($errors->any())
-            <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                <ul class="list-disc pl-4">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <x-messages.validation-errors />
 
         <form action="{{ route('users.update', $user) }}" method="POST" class="mt-6 space-y-4">
             @csrf
