@@ -67,7 +67,7 @@
                                 </span>
                             </td>
                             <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{{ $template->sop_code }}</td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-800 max-w-xs truncate">{{ $template->name }}</td>
+                            <td class="px-6 py-4 text-sm font-semibold text-gray-800">{{ $template->name }}</td>
                             <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-600">
                                 {{ $template->medium_templates_count }}
                             </td>

@@ -18,7 +18,8 @@ class DatabaseSeeder extends Seeder
             AccountSeeder::class,
             PasswordSettingSeeder::class,
             RoomSeeder::class,
-            LocationSeeder::class
+            LocationSeeder::class,
+            ReportTemplateSeeder::class,
         ]);
     }
 }
