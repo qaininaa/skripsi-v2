@@ -15,11 +15,8 @@
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
     <h2 class="mb-4 text-base font-bold text-gray-800">2. Identitas Instrumen</h2>
 
-    @if ($instrumentEntries->isEmpty())
-        <p class="text-sm italic text-gray-400">Belum ada data instrumen. Laporan perlu dimulai terlebih dahulu.</p>
-    @else
-        <div class="space-y-6">
-            @foreach ($instrumentEntries as $instrument)
+    <div class="space-y-6">
+        @foreach ($instrumentEntries as $instrument)
                 <div class="grid gap-4 lg:grid-cols-4">
                     <div>
                         <label class="mb-1 block text-xs font-medium text-gray-500">Nama Alat</label>
@@ -63,6 +60,5 @@
                     </div>
                 </div>
             @endforeach
-        </div>
-    @endif
+    </div>
 </section>

@@ -5,12 +5,69 @@
 
 @section('content')
     @php
-        $template          = $report->reportTemplate;
+        use Domain\Report\Models\Incubator;
+        use Domain\Report\Models\IncubatorEntry;
+        use Domain\Report\Models\InstrumentEntry;
+        use Domain\Report\Models\MediumEntry;
+
+        $template = $report->reportTemplate;
+        $hasSwab  = $template?->hasSwab() ?? false;
+
+        // Section 2: Identitas Instrumen
+        // Air Sampler is the single instrument tracked under this section.
+        // If no real entries exist yet, render a preview row from the constant.
         $instrumentEntries = $report->instrumentEntries
-            ->sortBy(fn ($i) => $i->tool_name === 'Swab Kit' ? 1 : 0)->values();
-        $mediumEntries     = $report->mediumEntries
-            ->sortBy(fn ($m) => $m->is_swab ? 1 : 0)->values();
-        $hasSwab           = $template?->hasSwab() ?? false;
+            ->sortBy(fn ($i) => $i->tool_name === 'Swab Kit' ? 1 : 0)
+            ->values();
+
+        if ($instrumentEntries->isEmpty()) {
+            $instrumentEntries = collect([
+                new InstrumentEntry(['tool_name' => 'Air Sampler']),
+            ]);
+        }
+
+        // Section 3: Identitas Medium
+        // Fall back to MediumTemplate rows so the form structure is visible.
+        $mediumEntries = $report->mediumEntries
+            ->sortBy(fn ($m) => $m->is_swab ? 1 : 0)
+            ->values();
+
+        if ($mediumEntries->isEmpty() && $template) {
+            $mediumEntries = $template->mediumTemplates->map(function ($mt) {
+                $entry          = new MediumEntry();
+                $entry->id      = 'preview-' . $mt->id;
+                $entry->name    = $mt->name;
+                $entry->is_swab = str_contains(strtolower($mt->name), 'swab');
+                return $entry;
+            })->sortBy(fn ($m) => $m->is_swab ? 1 : 0)->values();
+        }
+
+        // Section 4: Inkubasi
+        // Build preview Incubators (with empty IncubatorEntries) from IncubatorTemplate.
+        $incubators = $report->incubators;
+
+        if ($incubators->isEmpty() && $template) {
+            $incubators = $template->incubatorTemplates->map(function ($it) use ($hasSwab) {
+                $incubator             = new Incubator();
+                $incubator->id         = 'preview-' . $it->id;
+                $incubator->setRelation('template', $it);
+
+                $entries = collect();
+                $entries->push(tap(new IncubatorEntry(), function ($e) use ($it) {
+                    $e->id          = 'preview-mon-' . $it->id;
+                    $e->medium_type = 'monitoring';
+                }));
+                if ($hasSwab) {
+                    $entries->push(tap(new IncubatorEntry(), function ($e) use ($it) {
+                        $e->id          = 'preview-swab-' . $it->id;
+                        $e->medium_type = 'swab';
+                    }));
+                }
+                $incubator->setRelation('entries', $entries);
+
+                return $incubator;
+            });
+        }
     @endphp
 
     {{-- Header --}}
@@ -67,6 +124,6 @@
 
         <x-monitoring.section-identitas-medium :medium-entries="$mediumEntries" :readonly="$readonly" />
 
-        <x-monitoring.section-inkubasi :incubators="$report->incubators" :has-swab="$hasSwab" :readonly="$readonly" />
+        <x-monitoring.section-inkubasi :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly" />
     </form>
 @endsection

@@ -15,11 +15,8 @@
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
     <h2 class="mb-4 text-base font-bold text-gray-800">3. Identitas Medium</h2>
 
-    @if ($mediumEntries->isEmpty())
-        <p class="text-sm italic text-gray-400">Belum ada data medium. Laporan perlu dimulai terlebih dahulu.</p>
-    @else
-        <div class="grid gap-6 lg:grid-cols-3">
-            @foreach ($mediumEntries as $medium)
+    <div class="grid gap-6 lg:grid-cols-3">
+        @foreach ($mediumEntries as $medium)
                 <div class="space-y-3">
                     <h3 class="text-sm font-semibold uppercase tracking-wide text-blue-500">
                         {{ strtoupper($medium->name ?? '—') }}
@@ -65,6 +62,5 @@
                     </div>
                 </div>
             @endforeach
-        </div>
-    @endif
+    </div>
 </section>
