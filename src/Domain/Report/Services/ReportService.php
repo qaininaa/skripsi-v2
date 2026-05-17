@@ -3,6 +3,7 @@
 namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\CreateReportDto;
+use Domain\Report\Dtos\GetAnalystReportsFilterDto;
 use Domain\Report\Dtos\GetReportsFilterDto;
 use Domain\Report\Dtos\UpdateReportDto;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
@@ -23,18 +24,34 @@ class ReportService
     }
 
     /**
-     * Retrieve a paginated, filtered list of reports.
+     * Retrieve a paginated, filtered list of reports (admin scope).
      *
      * @param  GetReportsFilterDto  $dto  Filter parameters (search, status).
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function getReports(GetReportsFilterDto $dto)
     {
-        try {
-            return $this->repository->getReports($dto);
-        } catch (\Throwable $th) {
-            throw $th;
-        }
+        return $this->repository->getReports($dto);
+    }
+
+    /**
+     * Analyst inbox listing.
+     *
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function getReportsForAnalyst(GetAnalystReportsFilterDto $dto)
+    {
+        return $this->repository->getReportsForAnalyst($dto);
+    }
+
+    /**
+     * Counts per analyst tab, used to render the tab badges.
+     *
+     * @return array<string, int>
+     */
+    public function countByAnalystTab(): array
+    {
+        return $this->repository->countByAnalystTab();
     }
 
     /**
@@ -45,57 +62,38 @@ class ReportService
      */
     public function createReport(CreateReportDto $dto): Report
     {
-        try {
-            return $this->repository->createReport($dto);
-        } catch (\Throwable $th) {
-            throw $th;
-        }
+        return $this->repository->createReport($dto);
     }
 
     /**
      * Update an existing report.
      *
-     * Only pending reports may be edited. Throws RuntimeException if report is not pending.
+     * Only pending reports may be edited.
      *
-     * @param  Report           $report  The report model to update.
-     * @param  UpdateReportDto  $dto     New data for the report.
-     * @return void
-     *
-     * @throws \RuntimeException  If the report is not in pending status.
+     * @throws \RuntimeException
      */
     public function updateReport(Report $report, UpdateReportDto $dto): void
     {
-        try {
-            if ($report->status !== 'pending') {
-                throw new \RuntimeException('Hanya laporan dengan status pending yang dapat diubah.');
-            }
-
-            $this->repository->updateReport($report, $dto);
-        } catch (\Throwable $th) {
-            throw $th;
+        if ($report->status !== Report::STATUS_PENDING) {
+            throw new \RuntimeException('Hanya laporan dengan status pending yang dapat diubah.');
         }
+
+        $this->repository->updateReport($report, $dto);
     }
 
     /**
      * Delete a report.
      *
-     * Only pending reports may be deleted. Throws RuntimeException if report is not pending.
+     * Only pending reports may be deleted.
      *
-     * @param  Report  $report  The report model to delete.
-     * @return void
-     *
-     * @throws \RuntimeException  If the report is not in pending status.
+     * @throws \RuntimeException
      */
     public function deleteReport(Report $report): void
     {
-        try {
-            if ($report->status !== 'pending') {
-                throw new \RuntimeException('Hanya laporan dengan status pending yang dapat dihapus.');
-            }
-
-            $this->repository->deleteReport($report);
-        } catch (\Throwable $th) {
-            throw $th;
+        if ($report->status !== Report::STATUS_PENDING) {
+            throw new \RuntimeException('Hanya laporan dengan status pending yang dapat dihapus.');
         }
+
+        $this->repository->deleteReport($report);
     }
 }

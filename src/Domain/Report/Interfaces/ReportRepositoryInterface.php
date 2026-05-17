@@ -3,6 +3,7 @@
 namespace Domain\Report\Interfaces;
 
 use Domain\Report\Dtos\CreateReportDto;
+use Domain\Report\Dtos\GetAnalystReportsFilterDto;
 use Domain\Report\Dtos\GetReportsFilterDto;
 use Domain\Report\Dtos\UpdateReportDto;
 use Domain\Report\Models\Report;
@@ -13,12 +14,28 @@ use Domain\Report\Models\Report;
 interface ReportRepositoryInterface
 {
     /**
-     * Retrieve a paginated, filtered list of reports.
+     * Retrieve a paginated, filtered list of reports (admin scope).
      *
      * @param  GetReportsFilterDto  $data  Filter parameters (search, status).
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function getReports(GetReportsFilterDto $data);
+
+    /**
+     * Retrieve a paginated list of reports for the analyst inbox view.
+     * Filters by tab (all, belum_dikerjakan, sedang_dimonitoring, ...).
+     *
+     * @param  GetAnalystReportsFilterDto  $data
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function getReportsForAnalyst(GetAnalystReportsFilterDto $data);
+
+    /**
+     * Count reports in each analyst tab. Returns map: tab => count.
+     *
+     * @return array<string, int>
+     */
+    public function countByAnalystTab(): array;
 
     /**
      * Persist a new report to the database.

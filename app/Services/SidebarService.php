@@ -119,7 +119,7 @@ class SidebarService
             $sections[] = [
                 'label' => 'Laporan',
                 'items' => [
-                    $this->item('Laporan', 'laporan.index', 'laporan.*', 'icons/sidebar/reports.svg'),
+                    $this->item('Tugas Pelaporan', 'analyst.reports.index', 'analyst.reports.*', 'icons/sidebar/reports.svg'),
                 ],
             ];
         }

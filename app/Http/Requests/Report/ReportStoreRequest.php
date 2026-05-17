@@ -25,7 +25,7 @@ class ReportStoreRequest extends FormRequest
     {
         return new CreateReportDto(array_merge($this->validated(), [
             'status'     => 'pending',
-            'locked_by'  => $this->user()?->id,
+            'created_by' => $this->user()?->id,
         ]));
     }
 }
