@@ -40,10 +40,22 @@ class Report extends Model
 {
     use HasUuids;
 
-    public const STATUS_PENDING     = 'pending';
-    public const STATUS_IN_PROGRESS = 'in_progress';
-    public const STATUS_COMPLETED   = 'completed';
-    public const STATUS_ARCHIVED    = 'archived';
+    public const STATUS_PENDING                = 'pending';
+    public const STATUS_IN_PROGRESS_MONITORING = 'in_progress_monitoring';
+    public const STATUS_IN_PROGRESS_READING    = 'in_progress_reading';
+    public const STATUS_PENDING_REVIEW         = 'pending_review';
+    public const STATUS_PENDING_APPROVAL       = 'pending_approval';
+    public const STATUS_COMPLETED              = 'completed';
+    public const STATUS_ARCHIVED               = 'archived';
+
+    /**
+     * Backwards-compat alias: the old generic in_progress status was split
+     * into two finer-grained states. Code that still references the old
+     * constant should be updated to one of the specific statuses.
+     *
+     * @deprecated Use STATUS_IN_PROGRESS_MONITORING / STATUS_IN_PROGRESS_READING.
+     */
+    public const STATUS_IN_PROGRESS = self::STATUS_IN_PROGRESS_MONITORING;
 
     protected $fillable = [
         'report_template_id',
@@ -133,10 +145,37 @@ class Report extends Model
     }
 
     /**
+     * Section blocks of this report (template sections, plus any duplicates
+     * Admin QC has produced).
+     *
+     * @return HasMany<SectionInstance>
+     */
+    public function sectionInstances(): HasMany
+    {
+        return $this->hasMany(SectionInstance::class, 'report_id');
+    }
+
+    /**
      * Get the analyst pivot of the given role, if any.
      */
     public function analystOfType(string $type): ?Analyst
     {
         return $this->analysts->firstWhere('type', $type);
+    }
+
+    /**
+     * Whether the report is currently in the monitoring phase.
+     */
+    public function isMonitoringPhase(): bool
+    {
+        return $this->status === self::STATUS_IN_PROGRESS_MONITORING;
+    }
+
+    /**
+     * Whether the report is currently in the reading phase.
+     */
+    public function isReadingPhase(): bool
+    {
+        return $this->status === self::STATUS_IN_PROGRESS_READING;
     }
 }

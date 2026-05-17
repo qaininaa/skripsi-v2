@@ -8,6 +8,7 @@ use Domain\Report\Dtos\GetReportsFilterDto;
 use Domain\Report\Dtos\UpdateReportDto;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Models\Report;
+use Domain\Report\Services\SectionInstanceService;
 
 /**
  * Handles business logic for the Report domain.
@@ -18,8 +19,10 @@ class ReportService
 {
     protected ReportRepositoryInterface $repository;
 
-    public function __construct(ReportRepositoryInterface $repository)
-    {
+    public function __construct(
+        ReportRepositoryInterface $repository,
+        protected SectionInstanceService $sectionInstanceService,
+    ) {
         $this->repository = $repository;
     }
 
@@ -57,12 +60,22 @@ class ReportService
     /**
      * Create a new report.
      *
+     * Bootstraps section_instances + locations + entries for the chosen
+     * template so analysts can immediately fill in once they "Mulai".
+     *
      * @param  CreateReportDto  $dto  Data for the new report.
      * @return Report
      */
     public function createReport(CreateReportDto $dto): Report
     {
-        return $this->repository->createReport($dto);
+        $report = $this->repository->createReport($dto);
+
+        // Eager-load template + sections so the bootstrap can iterate without
+        // an extra round-trip per section.
+        $report->load('reportTemplate.sections');
+        $this->sectionInstanceService->bootstrapForReport($report);
+
+        return $report;
     }
 
     /**

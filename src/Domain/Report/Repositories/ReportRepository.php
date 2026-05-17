@@ -89,15 +89,20 @@ class ReportRepository implements ReportRepositoryInterface
     {
         return match ($tab) {
             'belum_dikerjakan'    => $query->where('status', Report::STATUS_PENDING),
-            'sedang_dimonitoring' => $query->where('status', Report::STATUS_IN_PROGRESS)
-                                        ->whereDoesntHave('analysts', fn ($q) => $q->where('type', 'reading')),
-            'sedang_dibaca'       => $query->where('status', Report::STATUS_IN_PROGRESS)
-                                        ->whereHas('analysts', fn ($q) => $q->where('type', 'reading')),
-            'dikirim'             => $query->where('status', Report::STATUS_COMPLETED),
+            'sedang_dimonitoring' => $query->where('status', Report::STATUS_IN_PROGRESS_MONITORING),
+            'sedang_dibaca'       => $query->where('status', Report::STATUS_IN_PROGRESS_READING),
+            'dikirim'             => $query->whereIn('status', [
+                Report::STATUS_PENDING_REVIEW,
+                Report::STATUS_PENDING_APPROVAL,
+                Report::STATUS_COMPLETED,
+            ]),
             'dikembalikan'        => $query->whereRaw('1 = 0'), // placeholder for revision flow
             default               => $query->whereIn('status', [
                 Report::STATUS_PENDING,
-                Report::STATUS_IN_PROGRESS,
+                Report::STATUS_IN_PROGRESS_MONITORING,
+                Report::STATUS_IN_PROGRESS_READING,
+                Report::STATUS_PENDING_REVIEW,
+                Report::STATUS_PENDING_APPROVAL,
                 Report::STATUS_COMPLETED,
             ]),
         };
