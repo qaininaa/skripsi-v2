@@ -9,6 +9,7 @@
         use Domain\Report\Models\IncubatorEntry;
         use Domain\Report\Models\InstrumentEntry;
         use Domain\Report\Models\MediumEntry;
+        use Domain\Report\Models\Report;
 
         $template = $report->reportTemplate;
         $hasSwab  = $template?->hasSwab() ?? false;
@@ -64,6 +65,34 @@
                 return $incubator;
             });
         }
+
+        // Phase-driven submit handlers.
+        $phase ??= $report->isReadingPhase() ? 'reading' : 'monitoring';
+
+        $formAction = $phase === 'reading'
+            ? route('analyst.reports.save-reading', $report)
+            : route('analyst.reports.save-monitoring', $report);
+
+        // Inline "Simpan Draft" button keeps the lock and stays on this page.
+        $draftAction        = 'draft';
+
+        // Modal "Simpan & Serahkan" → first option releases the lock to others.
+        $releaseAction      = 'release';
+        $releaseLabel       = $phase === 'reading' ? 'Simpan Pembacaan' : 'Simpan Monitoring';
+        $releaseDescription = $phase === 'reading'
+            ? 'Draft tersimpan, analis lain bisa melanjutkan pembacaan.'
+            : 'Draft tersimpan, analis lain bisa melanjutkan monitoring.';
+
+        // Modal second option — finalize the phase.
+        $finalizeAction      = $phase === 'reading' ? 'finalize_reading' : 'finalize_monitoring';
+        $finalizeLabel       = $phase === 'reading'
+            ? 'Selesaikan Pembacaan & Kirim Review'
+            : 'Selesaikan Monitoring & Mulai Pembacaan';
+        $finalizeDescription = $phase === 'reading'
+            ? 'Data pembacaan sudah lengkap, kirim ke supervisor untuk review.'
+            : 'Data monitoring sudah lengkap, lanjut ke tahap baca.';
+
+        $isAdmin = optional(auth()->user())->role === 'admin';
     @endphp
 
     {{-- Header --}}
@@ -79,6 +108,7 @@
                         <span class="font-bold text-gray-700">{{ $template->annex_number }}</span>
                         <span class="text-gray-400">—</span>
                         <span>{{ $template->name }}</span>
+                        <x-badges.report-status :status="$report->status" />
                     </div>
                 @endif
                 <div class="mt-1 text-xs text-gray-500">
@@ -89,13 +119,35 @@
 
         @unless ($readonly)
             <div class="flex items-center gap-2">
-                <button type="submit" form="report-form" name="action" value="draft"
-                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                <button
+                    type="button"
+                    @click.prevent="$store.saveConfirmModal.open({
+                        formId: 'report-form',
+                        kind: 'draft',
+                        title: 'Konfirmasi Simpan Draft',
+                        draftAction: @js($draftAction),
+                        submitLabel: 'Simpan',
+                    })"
+                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                >
                     <span>💾</span><span>Simpan Draft</span>
                 </button>
-                <button type="submit" form="report-form" name="action" value="finalize"
-                        class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600">
-                    <span>💾</span><span>Simpan & Selesaikan</span>
+                <button
+                    type="button"
+                    @click.prevent="$store.saveConfirmModal.open({
+                        formId: 'report-form',
+                        kind: 'finalize',
+                        title: 'Simpan & Serahkan Laporan',
+                        draftAction: @js($releaseAction),
+                        finalizeAction: @js($finalizeAction),
+                        draftLabel: @js($releaseLabel),
+                        finalizeLabel: @js($finalizeLabel),
+                        draftDescription: @js($releaseDescription),
+                        finalizeDescription: @js($finalizeDescription),
+                    })"
+                    class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600"
+                >
+                    <span>📤</span><span>Simpan & Serahkan</span>
                 </button>
             </div>
         @endunless
@@ -107,7 +159,7 @@
 
     <form
         id="report-form"
-        action="{{ route('analyst.reports.save', $report) }}"
+        action="{{ $formAction }}"
         method="POST"
         class="space-y-6"
     >
@@ -116,10 +168,42 @@
 
         <x-report-form.section-pemantauan-ruang :report="$report" :readonly="$readonly" />
 
-        <x-report-form.section-identitas-instrumen :instrument-entries="$instrumentEntries" :readonly="$readonly" />
+        <x-report-form.section-identitas-instrumen :instrument-entries="$instrumentEntries" :readonly="$readonly || $phase === 'reading'" />
 
-        <x-report-form.section-identitas-medium :medium-entries="$mediumEntries" :readonly="$readonly" />
+        <x-report-form.section-identitas-medium :medium-entries="$mediumEntries" :readonly="$readonly || $phase === 'reading'" />
 
-        <x-report-form.section-inkubasi :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly" />
+        <x-report-form.section-inkubasi :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly || $phase === 'reading'" />
+
+        @foreach ($sectionInstances as $instance)
+            <x-report-form.section-instance
+                :instance="$instance"
+                :report="$report"
+                :phase="$phase"
+                :readonly="$readonly"
+                :is-admin="false"
+            />
+        @endforeach
     </form>
+
+    @push('scripts')
+        <script>
+            // Live border-red feedback for microbial value inputs.
+            (function () {
+                const PATTERN = /^(\d+|<1|tntc)$/i;
+                const inputs = document.querySelectorAll('input[data-microbial]');
+                const validate = (el) => {
+                    const v = (el.value || '').trim();
+                    const ok = v === '' || PATTERN.test(v);
+                    el.classList.toggle('border-red-500', !ok);
+                    el.classList.toggle('ring-2',          !ok);
+                    el.classList.toggle('ring-red-100',    !ok);
+                };
+                inputs.forEach((el) => {
+                    validate(el);
+                    el.addEventListener('input', () => validate(el));
+                    el.addEventListener('blur',  () => validate(el));
+                });
+            })();
+        </script>
+    @endpush
 @endsection

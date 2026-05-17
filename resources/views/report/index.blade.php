@@ -15,10 +15,13 @@
         ];
 
         $statusBadge = [
-            'pending'     => ['label' => 'Belum Dikerjakan',    'class' => 'bg-blue-50 text-blue-600'],
-            'in_progress' => ['label' => 'Sedang Dimonitoring', 'class' => 'bg-yellow-50 text-yellow-700'],
-            'completed'   => ['label' => 'Dikirim',             'class' => 'bg-emerald-50 text-emerald-700'],
-            'archived'    => ['label' => 'Diarsipkan',          'class' => 'bg-gray-100 text-gray-600'],
+            'pending'                 => ['label' => 'Belum Dikerjakan',    'class' => 'bg-blue-50 text-blue-600'],
+            'in_progress_monitoring'  => ['label' => 'Sedang Dimonitoring', 'class' => 'bg-yellow-50 text-yellow-700'],
+            'in_progress_reading'     => ['label' => 'Sedang Dibaca',       'class' => 'bg-amber-50 text-amber-700'],
+            'pending_review'          => ['label' => 'Menunggu Review',     'class' => 'bg-purple-50 text-purple-700'],
+            'pending_approval'        => ['label' => 'Menunggu Persetujuan','class' => 'bg-indigo-50 text-indigo-700'],
+            'completed'               => ['label' => 'Dikirim',             'class' => 'bg-emerald-50 text-emerald-700'],
+            'archived'                => ['label' => 'Diarsipkan',          'class' => 'bg-gray-100 text-gray-600'],
         ];
     @endphp
 
@@ -87,24 +90,31 @@
                                 <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $badge['class'] }}">
                                     {{ $badge['label'] }}
                                 </span>
-                                @if ($readingAnalyst !== null)
-                                    <div class="mt-1 text-xs text-gray-400">oleh {{ $readingAnalyst->name }}</div>
-                                @elseif ($monitoringAnalyst !== null)
-                                    <div class="mt-1 text-xs text-gray-400">oleh {{ $monitoringAnalyst->name }}</div>
+                                @if ($report->lockedByUser !== null)
+                                    <div class="mt-1 text-xs text-gray-400">oleh {{ $report->lockedByUser->name }}</div>
                                 @endif
                             </td>
                             <td class="whitespace-nowrap px-6 py-5">
+                                @php
+                                    $isLocker      = $report->locked_by === auth()->id();
+                                    $isUnlocked    = $report->locked_by === null;
+                                    $isPending     = $report->status === 'pending';
+                                    $inMonitoring  = $report->status === 'in_progress_monitoring';
+                                    $inReading     = $report->status === 'in_progress_reading';
+                                    $canStart      = ($isPending || (($inMonitoring || $inReading) && $isUnlocked));
+                                    $canResume     = $isLocker && ($inMonitoring || $inReading);
+                                @endphp
                                 <div class="flex items-center justify-center gap-2">
                                     <x-buttons.view :href="route('analyst.reports.show', $report)" />
 
-                                    @if ($report->status === 'pending')
+                                    @if ($canResume)
+                                        <x-buttons.resume :href="route('analyst.reports.fill', $report)" />
+                                    @elseif ($canStart)
                                         <x-buttons.start
                                             :action="route('analyst.reports.start', $report)"
                                             :product-name="$report->product_name"
                                             :batch-number="$report->batch_number"
                                         />
-                                    @elseif ($isMine && $report->status === 'in_progress')
-                                        <x-buttons.resume :href="route('analyst.reports.fill', $report)" />
                                     @endif
                                 </div>
                             </td>

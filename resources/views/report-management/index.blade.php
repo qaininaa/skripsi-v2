@@ -36,10 +36,13 @@
                 class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
             >
                 <option value="">Semua Status</option>
-                <option value="pending"     @selected(request('status') === 'pending')>Pending</option>
-                <option value="in_progress" @selected(request('status') === 'in_progress')>Dikerjakan</option>
-                <option value="completed"   @selected(request('status') === 'completed')>Selesai</option>
-                <option value="archived"    @selected(request('status') === 'archived')>Diarsipkan</option>
+                <option value="pending"                 @selected(request('status') === 'pending')>Pending</option>
+                <option value="in_progress_monitoring" @selected(request('status') === 'in_progress_monitoring')>Monitoring</option>
+                <option value="in_progress_reading"    @selected(request('status') === 'in_progress_reading')>Pembacaan</option>
+                <option value="pending_review"         @selected(request('status') === 'pending_review')>Review</option>
+                <option value="pending_approval"       @selected(request('status') === 'pending_approval')>Approval</option>
+                <option value="completed"              @selected(request('status') === 'completed')>Selesai</option>
+                <option value="archived"               @selected(request('status') === 'archived')>Diarsipkan</option>
             </select>
 
             <button
@@ -95,6 +98,7 @@
                             </td>
                             <td class="whitespace-nowrap px-4 py-4">
                                 <div class="flex items-center justify-center gap-2">
+                                    <x-buttons.detail :href="route('report-assignment.show', $report)" />
                                     @if ($report->status === 'pending')
                                         <x-buttons.edit :href="route('report-assignment.edit', $report)" />
                                         <x-buttons.delete
@@ -103,8 +107,6 @@
                                             title="Hapus Tugas Pelaporan"
                                             warning="Tugas pelaporan yang dihapus tidak dapat dikembalikan."
                                         />
-                                    @else
-                                        <x-buttons.detail :href="route('report-assignment.edit', $report)" />
                                     @endif
                                 </div>
                             </td>
