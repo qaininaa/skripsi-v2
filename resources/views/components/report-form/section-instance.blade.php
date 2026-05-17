@@ -184,7 +184,7 @@
                 {{-- Row 1: top --}}
                 <tr class="text-center">
                     <th rowspan="3" class="border-b border-r border-sky-100 px-2 py-2 align-middle">No.</th>
-                    <th rowspan="3" class="border-b border-r border-sky-100 px-2 py-2 align-middle text-left">Nama<br>Ruangan</th>
+                    <th rowspan="3" class="border-b border-r border-sky-100 px-2 py-2 align-middle text-center min-w-[10rem]">Nama<br>Ruangan</th>
                     <th rowspan="3" class="border-b border-r border-sky-100 px-2 py-2 align-middle">Kelas</th>
                     <th rowspan="3" class="border-b border-r border-sky-100 px-2 py-2 align-middle">No.<br>Ruangan</th>
                     <th rowspan="3" class="border-b border-r border-sky-100 px-2 py-2 align-middle">No.<br>Lokasi</th>
@@ -225,16 +225,18 @@
                                     $spEntry      = $headerEntry($col['column_index'], $col['sub_columns'][0] ?? null);
                                     $spLockedBy   = $spEntry ? $lockOwner('section_entries', $spEntry->id, 'sp_value') : null;
                                     $spLocked     = $spEntry ? $isLockedByOther('section_entries', $spEntry->id, 'sp_value') : false;
+                                    $isSettlePlate = $section->measurement_type === 'settle_plate';
+                                    $spLabel       = $isSettlePlate ? 'SP:' : 'Shift:';
                                 @endphp
                                 <div class="mt-1 flex items-center justify-center gap-1 text-[10px]">
-                                    <span class="text-gray-500">SP:</span>
+                                    <span class="text-gray-500">{{ $spLabel }}</span>
                                     @if ($canEditMonitoring && ! $spLocked)
                                         <input
                                             type="text"
                                             name="{{ $colNamePrefix }}[sp_value]"
                                             value="{{ old("sections.{$instance->id}.columns.{$col['column_index']}.sp_value", $spEntry?->sp_value) }}"
                                             class="w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
-                                            placeholder="SP"
+                                            placeholder="{{ $isSettlePlate ? 'SP' : 'Shift' }}"
                                         >
                                     @elseif ($canEditMonitoring && $spLocked)
                                         <input
@@ -280,14 +282,14 @@
                                                 type="time"
                                                 name="{{ $slotName }}[time_start]"
                                                 value="{{ $valStart }}"
-                                                class="w-[5.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
+                                                class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             >
                                         @elseif ($canEditMonitoring && $startLocked)
                                             <input
                                                 type="time"
                                                 value="{{ $valStart }}"
                                                 disabled
-                                                class="w-[5.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
+                                                class="w-[4.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
                                             >
                                         @else
                                             <span class="text-gray-600">{{ $valStart ?: '--:--' }}</span>
@@ -298,14 +300,14 @@
                                                 type="time"
                                                 name="{{ $slotName }}[time_end]"
                                                 value="{{ $valEnd }}"
-                                                class="w-[5.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
+                                                class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             >
                                         @elseif ($canEditMonitoring && $endLocked)
                                             <input
                                                 type="time"
                                                 value="{{ $valEnd }}"
                                                 disabled
-                                                class="w-[5.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
+                                                class="w-[4.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
                                             >
                                         @else
                                             <span class="text-gray-600">{{ $valEnd ?: '--:--' }}</span>
@@ -371,7 +373,7 @@
                         @endphp
                         <tr class="border-b border-gray-100 hover:bg-gray-50/40">
                             <td class="border-r border-gray-100 px-2 py-2">{{ $loop->iteration }}</td>
-                            <td class="border-r border-gray-100 px-2 py-2 text-left text-gray-700">{{ $room?->name ?? 'N/A' }}</td>
+                            <td class="border-r border-gray-100 px-2 py-2 text-left text-gray-700 min-w-[10rem]">{{ $room?->name ?? 'N/A' }}</td>
                             <td class="border-r border-gray-100 px-2 py-2">
                                 @if ($room?->class)
                                     <x-badges.room-class :class="$room->class" />
@@ -567,3 +569,4 @@
         </div>
     </div>
 </section>
+
