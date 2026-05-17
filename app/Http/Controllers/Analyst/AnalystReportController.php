@@ -12,10 +12,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 /**
- * Analyst inbox + monitoring entry point.
+ * Analyst inbox + report fill-in entry point.
  *
- * Routes here belong to the analyst role. Admin-side report management lives
- * in App\Http\Controllers\Report\ReportController.
+ * The fill-in form is shared between monitoring and reading phases — the same
+ * blade view is reused with the readonly flag flipped based on ownership.
  */
 class AnalystReportController extends Controller
 {
@@ -34,7 +34,7 @@ class AnalystReportController extends Controller
         $reports = $this->reportService->getReportsForAnalyst($dto);
         $counts  = $this->reportService->countByAnalystTab();
 
-        return view('analyst.report-inbox.index', [
+        return view('report.index', [
             'reports'   => $reports,
             'counts'    => $counts,
             'activeTab' => $dto->tab,
@@ -43,7 +43,7 @@ class AnalystReportController extends Controller
 
     /**
      * Click "Mulai" → lock the report to current analyst, bootstrap entries,
-     * then redirect to the monitoring form.
+     * then redirect to the fill-in form.
      */
     public function start(Report $report): RedirectResponse
     {
@@ -55,7 +55,7 @@ class AnalystReportController extends Controller
                 ->with('error', $e->getMessage());
         }
 
-        return redirect()->route('analyst.reports.monitoring.edit', $report);
+        return redirect()->route('analyst.reports.fill', $report);
     }
 
     /**
@@ -63,54 +63,34 @@ class AnalystReportController extends Controller
      */
     public function show(Report $report): View
     {
-        $report->load([
-            'reportTemplate.mediumTemplates',
-            'reportTemplate.incubatorTemplates',
-            'lockedByUser',
-            'analysts.user',
-            'instrumentEntries',
-            'mediumEntries.template',
-            'incubators.template',
-            'incubators.entries.incubatedBy',
-            'incubators.entries.removedBy',
-        ]);
+        $report->load($this->fillRelations());
 
-        return view('analyst.report-inbox.monitoring', [
+        return view('report.fill', [
             'report'   => $report,
             'readonly' => true,
         ]);
     }
 
     /**
-     * Monitoring form (Section 1–4). Read-only when the current user is not
-     * the locking analyst.
+     * Fill-in form (sections 1–4). Editable when current user is the
+     * locking analyst, read-only otherwise.
      */
-    public function editMonitoring(Report $report): View
+    public function fill(Report $report): View
     {
-        $report->load([
-            'reportTemplate.mediumTemplates',
-            'reportTemplate.incubatorTemplates',
-            'lockedByUser',
-            'analysts.user',
-            'instrumentEntries',
-            'mediumEntries.template',
-            'incubators.template',
-            'incubators.entries.incubatedBy',
-            'incubators.entries.removedBy',
-        ]);
+        $report->load($this->fillRelations());
 
         $isOwner = $report->locked_by !== null && $report->locked_by === $this->currentAnalystId();
 
-        return view('analyst.report-inbox.monitoring', [
+        return view('report.fill', [
             'report'   => $report,
             'readonly' => ! $isOwner,
         ]);
     }
 
     /**
-     * Save monitoring form (draft or final).
+     * Save the fill-in form (draft or final).
      */
-    public function saveMonitoring(SaveMonitoringRequest $request, Report $report): RedirectResponse
+    public function save(SaveMonitoringRequest $request, Report $report): RedirectResponse
     {
         try {
             $this->monitoringService->saveMonitoring(
@@ -126,8 +106,28 @@ class AnalystReportController extends Controller
         }
 
         return redirect()
-            ->route('analyst.reports.monitoring.edit', $report)
-            ->with('success', 'Data monitoring berhasil disimpan.');
+            ->route('analyst.reports.fill', $report)
+            ->with('success', 'Data laporan berhasil disimpan.');
+    }
+
+    /**
+     * Relations needed by the fill-in view to render the full form.
+     *
+     * @return array<int, string>
+     */
+    private function fillRelations(): array
+    {
+        return [
+            'reportTemplate.mediumTemplates',
+            'reportTemplate.incubatorTemplates',
+            'lockedByUser',
+            'analysts.user',
+            'instrumentEntries',
+            'mediumEntries.template',
+            'incubators.template',
+            'incubators.entries.incubatedBy',
+            'incubators.entries.removedBy',
+        ];
     }
 
     private function currentAnalystId(): string

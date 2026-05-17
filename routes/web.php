@@ -83,7 +83,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/reports', [AnalystReportController::class, 'index'])->name('reports.index');
         Route::post('/reports/{report}/start', [AnalystReportController::class, 'start'])->name('reports.start');
         Route::get('/reports/{report}', [AnalystReportController::class, 'show'])->name('reports.show');
-        Route::get('/reports/{report}/monitoring', [AnalystReportController::class, 'editMonitoring'])->name('reports.monitoring.edit');
-        Route::put('/reports/{report}/monitoring', [AnalystReportController::class, 'saveMonitoring'])->name('reports.monitoring.save');
+        Route::get('/reports/{report}/fill', [AnalystReportController::class, 'fill'])->name('reports.fill');
+        Route::put('/reports/{report}/fill', [AnalystReportController::class, 'save'])->name('reports.save');
     });
 });

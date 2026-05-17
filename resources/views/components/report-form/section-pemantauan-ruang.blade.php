@@ -1,8 +1,8 @@
 {{--
     Section 1: Pemantauan Ruang
     Props:
-      $report          — Report model (eager-loaded with analysts.user)
-      $readonly        — bool
+      $report   — Report model (eager-loaded with analysts.user)
+      $readonly — bool
 --}}
 @props(['report', 'readonly' => true])
 

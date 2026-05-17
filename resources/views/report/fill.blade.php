@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Pemantauan Ruangan')
-@section('page-title', 'Pemantauan Ruangan')
+@section('title', 'Pengisian Laporan')
+@section('page-title', 'Pengisian Laporan')
 
 @section('content')
     @php
@@ -13,9 +13,7 @@
         $template = $report->reportTemplate;
         $hasSwab  = $template?->hasSwab() ?? false;
 
-        // Section 2: Identitas Instrumen
-        // Air Sampler is the single instrument tracked under this section.
-        // If no real entries exist yet, render a preview row from the constant.
+        // Section 2: Identitas Instrumen — Air Sampler is the only tracked instrument.
         $instrumentEntries = $report->instrumentEntries
             ->sortBy(fn ($i) => $i->tool_name === 'Swab Kit' ? 1 : 0)
             ->values();
@@ -26,8 +24,7 @@
             ]);
         }
 
-        // Section 3: Identitas Medium
-        // Fall back to MediumTemplate rows so the form structure is visible.
+        // Section 3: Identitas Medium — fall back to MediumTemplate rows.
         $mediumEntries = $report->mediumEntries
             ->sortBy(fn ($m) => $m->is_swab ? 1 : 0)
             ->values();
@@ -42,8 +39,7 @@
             })->sortBy(fn ($m) => $m->is_swab ? 1 : 0)->values();
         }
 
-        // Section 4: Inkubasi
-        // Build preview Incubators (with empty IncubatorEntries) from IncubatorTemplate.
+        // Section 4: Inkubasi — build preview Incubators from IncubatorTemplate.
         $incubators = $report->incubators;
 
         if ($incubators->isEmpty() && $template) {
@@ -93,11 +89,11 @@
 
         @unless ($readonly)
             <div class="flex items-center gap-2">
-                <button type="submit" form="monitoring-form" name="action" value="draft"
+                <button type="submit" form="report-form" name="action" value="draft"
                         class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
                     <span>💾</span><span>Simpan Draft</span>
                 </button>
-                <button type="submit" form="monitoring-form" name="action" value="finalize"
+                <button type="submit" form="report-form" name="action" value="finalize"
                         class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600">
                     <span>💾</span><span>Simpan & Selesaikan</span>
                 </button>
@@ -110,20 +106,20 @@
     <x-messages.validation-errors />
 
     <form
-        id="monitoring-form"
-        action="{{ route('analyst.reports.monitoring.save', $report) }}"
+        id="report-form"
+        action="{{ route('analyst.reports.save', $report) }}"
         method="POST"
         class="space-y-6"
     >
         @csrf
         @method('PUT')
 
-        <x-monitoring.section-pemantauan-ruang :report="$report" :readonly="$readonly" />
+        <x-report-form.section-pemantauan-ruang :report="$report" :readonly="$readonly" />
 
-        <x-monitoring.section-identitas-instrumen :instrument-entries="$instrumentEntries" :readonly="$readonly" />
+        <x-report-form.section-identitas-instrumen :instrument-entries="$instrumentEntries" :readonly="$readonly" />
 
-        <x-monitoring.section-identitas-medium :medium-entries="$mediumEntries" :readonly="$readonly" />
+        <x-report-form.section-identitas-medium :medium-entries="$mediumEntries" :readonly="$readonly" />
 
-        <x-monitoring.section-inkubasi :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly" />
+        <x-report-form.section-inkubasi :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly" />
     </form>
 @endsection

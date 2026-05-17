@@ -104,7 +104,7 @@
                                             :batch-number="$report->batch_number"
                                         />
                                     @elseif ($isMine && $report->status === 'in_progress')
-                                        <x-buttons.resume :href="route('analyst.reports.monitoring.edit', $report)" />
+                                        <x-buttons.resume :href="route('analyst.reports.fill', $report)" />
                                     @endif
                                 </div>
                             </td>
