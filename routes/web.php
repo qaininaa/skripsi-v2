@@ -7,6 +7,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\PasswordPolicy\PasswordPolicyController;
 use App\Http\Controllers\Location\LocationController;
 use App\Http\Controllers\Report\ReportController;
+use App\Http\Controllers\Report\SectionInstanceController;
 use App\Http\Controllers\ReportTemplate\ReportTemplateController;
 use App\Http\Controllers\ReportTemplate\SectionController;
 use App\Http\Controllers\Room\RoomController;
@@ -74,9 +75,16 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/report-assignment', [ReportController::class, 'index'])->name('report-assignment.index');
         Route::get('/report-assignment/create', [ReportController::class, 'create'])->name('report-assignment.create');
         Route::post('/report-assignment/store', [ReportController::class, 'store'])->name('report-assignment.store');
+        Route::get('/report-assignment/{report}', [ReportController::class, 'show'])->name('report-assignment.show');
         Route::get('/report-assignment/{report}/edit', [ReportController::class, 'edit'])->name('report-assignment.edit');
         Route::put('/report-assignment/{report}', [ReportController::class, 'update'])->name('report-assignment.update');
         Route::delete('/report-assignment/{report}', [ReportController::class, 'destroy'])->name('report-assignment.destroy');
+
+        // Per-report section instance actions (duplicate)
+        Route::post(
+            '/report-assignment/{report}/sections/{instance}/duplicate',
+            [SectionInstanceController::class, 'duplicate'],
+        )->name('report-assignment.sections.duplicate');
     });
 
     Route::middleware('role:analyst')->prefix('analyst')->name('analyst.')->group(function () {
@@ -84,6 +92,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::post('/reports/{report}/start', [AnalystReportController::class, 'start'])->name('reports.start');
         Route::get('/reports/{report}', [AnalystReportController::class, 'show'])->name('reports.show');
         Route::get('/reports/{report}/fill', [AnalystReportController::class, 'fill'])->name('reports.fill');
-        Route::put('/reports/{report}/fill', [AnalystReportController::class, 'save'])->name('reports.save');
+        Route::put('/reports/{report}/monitoring', [AnalystReportController::class, 'saveMonitoring'])->name('reports.save-monitoring');
+        Route::put('/reports/{report}/reading', [AnalystReportController::class, 'saveReading'])->name('reports.save-reading');
     });
 });
