@@ -78,4 +78,13 @@ class ReportTemplate extends Model
     {
         return $this->hasMany(Report::class, 'report_template_id');
     }
+
+    /**
+     * Whether this report template includes at least one section
+     * with measurement_type = 'swab'.
+     */
+    public function hasSwab(): bool
+    {
+        return $this->sections()->where('measurement_type', 'swab')->exists();
+    }
 }
