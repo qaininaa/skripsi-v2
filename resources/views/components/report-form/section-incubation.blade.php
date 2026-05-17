@@ -185,9 +185,41 @@
                         $timeInOwner   = $entryReal ? $lockOwner('incubator_entries', $entryId, 'time_in')  : null;
                         $dateOutOwner  = $entryReal ? $lockOwner('incubator_entries', $entryId, 'date_out') : null;
                         $timeOutOwner  = $entryReal ? $lockOwner('incubator_entries', $entryId, 'time_out') : null;
+
+                        // Initial Alpine state for the live "Diinkubasi/Dikeluarkan oleh" preview.
+                        $initDateIn  = old("incubators.{$incubator->id}.entries.{$mediumType}.date_in",  optional($entry->date_in)->format('Y-m-d')) ?? '';
+                        $initTimeIn  = old("incubators.{$incubator->id}.entries.{$mediumType}.time_in",  $entry->time_in)  ?? '';
+                        $initDateOut = old("incubators.{$incubator->id}.entries.{$mediumType}.date_out", optional($entry->date_out)->format('Y-m-d')) ?? '';
+                        $initTimeOut = old("incubators.{$incubator->id}.entries.{$mediumType}.time_out", $entry->time_out) ?? '';
+
+                        // Names to fall back to when the analyst changes the inputs.
+                        $existingIncubatedName = $entry->incubatedBy?->name;
+                        $existingRemovedName   = $entry->removedBy?->name;
+                        $currentUserName       = optional(auth()->user())->name ?? '';
                     @endphp
 
-                    <div class="mt-6">
+                    <div
+                        class="mt-6"
+                        x-data="{
+                            dateIn:  @js($initDateIn),
+                            timeIn:  @js($initTimeIn),
+                            dateOut: @js($initDateOut),
+                            timeOut: @js($initTimeOut),
+                            existingIncubatedName: @js($existingIncubatedName),
+                            existingRemovedName:   @js($existingRemovedName),
+                            currentUserName:       @js($currentUserName),
+                            get hasIn()  { return (this.dateIn  || '').trim() !== '' || (this.timeIn  || '').trim() !== ''; },
+                            get hasOut() { return (this.dateOut || '').trim() !== '' || (this.timeOut || '').trim() !== ''; },
+                            get incubatedByName() {
+                                if (! this.hasIn) return '';
+                                return this.existingIncubatedName || this.currentUserName;
+                            },
+                            get removedByName() {
+                                if (! this.hasOut) return '';
+                                return this.existingRemovedName || this.currentUserName;
+                            },
+                        }"
+                    >
                         <h4 class="mb-3 text-sm font-semibold text-blue-500">
                             {{ $mediumTypeLabels[$mediumType] ?? $mediumType }}
                             @if ($minDay)
@@ -199,13 +231,13 @@
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Diinkubasi oleh</label>
                                 <div class="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500">
-                                    {{ $entry->incubatedBy?->name ?? 'N/A' }}
+                                    <span x-text="incubatedByName || 'N/A'"></span>
                                 </div>
                             </div>
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Dikeluarkan oleh</label>
                                 <div class="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500">
-                                    {{ $entry->removedBy?->name ?? 'N/A' }}
+                                    <span x-text="removedByName || 'N/A'"></span>
                                 </div>
                             </div>
 
@@ -216,7 +248,8 @@
                                     <input
                                         type="date"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_in]"
-                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.date_in', optional($entry->date_in)->format('Y-m-d')) }}"
+                                        value="{{ $initDateIn }}"
+                                        x-model="dateIn"
                                         class="{{ $editableClass }}"
                                     >
                                 @elseif (! $readonly && $dateInLocked)
@@ -244,7 +277,8 @@
                                     <input
                                         type="date"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_out]"
-                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.date_out', optional($entry->date_out)->format('Y-m-d')) }}"
+                                        value="{{ $initDateOut }}"
+                                        x-model="dateOut"
                                         class="{{ $editableClass }}"
                                     >
                                 @elseif (! $readonly && $dateOutLocked)
@@ -272,7 +306,8 @@
                                     <input
                                         type="time"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_in]"
-                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.time_in', $entry->time_in) }}"
+                                        value="{{ $initTimeIn }}"
+                                        x-model="timeIn"
                                         class="{{ $editableClass }}"
                                     >
                                 @elseif (! $readonly && $timeInLocked)
@@ -300,7 +335,8 @@
                                     <input
                                         type="time"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_out]"
-                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.time_out', $entry->time_out) }}"
+                                        value="{{ $initTimeOut }}"
+                                        x-model="timeOut"
                                         class="{{ $editableClass }}"
                                     >
                                 @elseif (! $readonly && $timeOutLocked)
