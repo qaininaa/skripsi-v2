@@ -21,6 +21,7 @@ class SaveReadingRequest extends FormRequest
         return [
             'action'   => ['required', Rule::in([
                 ReadingService::ACTION_DRAFT,
+                ReadingService::ACTION_RELEASE,
                 ReadingService::ACTION_FINALIZE,
             ])],
             'username' => ['required', 'string', 'max:255'],

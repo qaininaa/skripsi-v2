@@ -104,7 +104,11 @@ class AnalystReportController extends Controller
     }
 
     /**
-     * Save the monitoring form (draft or finalize → reading).
+     * Save the monitoring form (draft / release / finalize).
+     *
+     * draft    → keep lock, kembali ke fill dengan flash success.
+     * release  → lepas lock, ke index.
+     * finalize → sign + transition ke reading, ke index.
      */
     public function saveMonitoring(SaveMonitoringRequest $request, Report $report): RedirectResponse
     {
@@ -122,13 +126,21 @@ class AnalystReportController extends Controller
                 ->with('error', $e->getMessage());
         }
 
-        return redirect()
-            ->route('analyst.reports.index')
-            ->with('success', 'Data monitoring berhasil disimpan.');
+        return match ($request->action()) {
+            \Domain\Report\Services\MonitoringService::ACTION_FINALIZE => redirect()
+                ->route('analyst.reports.index')
+                ->with('success', 'Monitoring selesai. Laporan berlanjut ke tahap pembacaan.'),
+            \Domain\Report\Services\MonitoringService::ACTION_RELEASE  => redirect()
+                ->route('analyst.reports.index')
+                ->with('success', 'Monitoring tersimpan. Analis lain dapat melanjutkan.'),
+            default => redirect()
+                ->route('analyst.reports.fill', $report)
+                ->with('success', 'Draft monitoring berhasil disimpan.'),
+        };
     }
 
     /**
-     * Save the reading form (draft or finalize → review).
+     * Save the reading form (draft / release / finalize).
      */
     public function saveReading(SaveReadingRequest $request, Report $report): RedirectResponse
     {
@@ -146,9 +158,17 @@ class AnalystReportController extends Controller
                 ->with('error', $e->getMessage());
         }
 
-        return redirect()
-            ->route('analyst.reports.index')
-            ->with('success', 'Data pembacaan berhasil disimpan.');
+        return match ($request->action()) {
+            \Domain\Report\Services\ReadingService::ACTION_FINALIZE => redirect()
+                ->route('analyst.reports.index')
+                ->with('success', 'Pembacaan selesai. Laporan dikirim untuk review.'),
+            \Domain\Report\Services\ReadingService::ACTION_RELEASE  => redirect()
+                ->route('analyst.reports.index')
+                ->with('success', 'Pembacaan tersimpan. Analis lain dapat melanjutkan.'),
+            default => redirect()
+                ->route('analyst.reports.fill', $report)
+                ->with('success', 'Draft pembacaan berhasil disimpan.'),
+        };
     }
 
     /**

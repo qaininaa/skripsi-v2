@@ -21,6 +21,7 @@ class SaveMonitoringRequest extends FormRequest
         return [
             'action'      => ['required', Rule::in([
                 MonitoringService::ACTION_DRAFT,
+                MonitoringService::ACTION_RELEASE,
                 MonitoringService::ACTION_FINALIZE,
             ])],
             'username'    => ['required', 'string', 'max:255'],
