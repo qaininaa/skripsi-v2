@@ -27,6 +27,7 @@
     'phase'    => 'monitoring',
     'readonly' => true,
     'isAdmin'  => false,
+    'lockMap'  => [],
 ])
 
 @php
@@ -38,6 +39,28 @@
 
     $canEditMonitoring = ! $readonly && $phase === 'monitoring';
     $canEditReading    = ! $readonly && $phase === 'reading';
+
+    $currentUserId = (string) (auth()->id() ?? '');
+
+    /*
+     * Lock helpers — `$lockMap` is shaped as
+     *   [table_name][row_id][field_name] => FieldLock
+     * and is pre-computed by the repository.
+     */
+    $isLockedByOther = function (string $table, ?string $rowId, string $field) use ($lockMap, $currentUserId) {
+        if ($rowId === null) {
+            return false;
+        }
+        $lock = $lockMap[$table][$rowId][$field] ?? null;
+        return $lock !== null && (string) $lock->filled_by !== $currentUserId;
+    };
+    $lockOwner = function (string $table, ?string $rowId, string $field) use ($lockMap) {
+        if ($rowId === null) {
+            return null;
+        }
+        $lock = $lockMap[$table][$rowId][$field] ?? null;
+        return $lock?->filler?->name;
+    };
 
     /*
      * Index entries by [instance_location_id][column_index][sub_column_key].
@@ -198,10 +221,14 @@
 
                             {{-- SP single, only on non-machine-setup columns --}}
                             @if (! $col['is_setup'])
-                                @php $spEntry = $headerEntry($col['column_index'], $col['sub_columns'][0] ?? null); @endphp
+                                @php
+                                    $spEntry      = $headerEntry($col['column_index'], $col['sub_columns'][0] ?? null);
+                                    $spLockedBy   = $spEntry ? $lockOwner('section_entries', $spEntry->id, 'sp_value') : null;
+                                    $spLocked     = $spEntry ? $isLockedByOther('section_entries', $spEntry->id, 'sp_value') : false;
+                                @endphp
                                 <div class="mt-1 flex items-center justify-center gap-1 text-[10px]">
                                     <span class="text-gray-500">SP:</span>
-                                    @if ($canEditMonitoring)
+                                    @if ($canEditMonitoring && ! $spLocked)
                                         <input
                                             type="text"
                                             name="{{ $colNamePrefix }}[sp_value]"
@@ -209,10 +236,22 @@
                                             class="w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             placeholder="SP"
                                         >
+                                    @elseif ($canEditMonitoring && $spLocked)
+                                        <input
+                                            type="text"
+                                            value="{{ $spEntry?->sp_value }}"
+                                            disabled
+                                            class="w-14 cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
+                                        >
                                     @else
                                         <span class="font-medium text-gray-700">{{ $spEntry?->sp_value ?: 'N/A' }}</span>
                                     @endif
                                 </div>
+                                @if ($canEditMonitoring && $spLocked)
+                                    <div class="mt-0.5 text-center text-[9px] italic text-gray-400">
+                                        Diisi oleh {{ $spLockedBy }}
+                                    </div>
+                                @endif
                             @else
                                 {{-- Reserve vertical space so MS header lines up with SP rows in other columns --}}
                                 <div class="mt-1 h-[18px] text-[10px] text-gray-300">N/A</div>
@@ -227,31 +266,56 @@
                                         $slotName  = "{$colNamePrefix}[slots][{$slotKey}]";
                                         $valStart  = old("sections.{$instance->id}.columns.{$col['column_index']}.slots.{$slotKey}.time_start", $entry?->time_start);
                                         $valEnd    = old("sections.{$instance->id}.columns.{$col['column_index']}.slots.{$slotKey}.time_end",   $entry?->time_end);
+                                        $startLockedBy = $entry ? $lockOwner('section_entries', $entry->id, 'time_start') : null;
+                                        $endLockedBy   = $entry ? $lockOwner('section_entries', $entry->id, 'time_end')   : null;
+                                        $startLocked   = $entry ? $isLockedByOther('section_entries', $entry->id, 'time_start') : false;
+                                        $endLocked     = $entry ? $isLockedByOther('section_entries', $entry->id, 'time_end')   : false;
                                     @endphp
                                     <div class="flex items-center justify-center gap-1 whitespace-nowrap text-[10px]">
                                         @if ($sub !== null)
                                             <span class="font-semibold text-gray-700">{{ $sub }}:</span>
                                         @endif
-                                        @if ($canEditMonitoring)
+                                        @if ($canEditMonitoring && ! $startLocked)
                                             <input
                                                 type="time"
                                                 name="{{ $slotName }}[time_start]"
                                                 value="{{ $valStart }}"
                                                 class="w-[5.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             >
-                                            <span class="text-gray-400">—</span>
+                                        @elseif ($canEditMonitoring && $startLocked)
+                                            <input
+                                                type="time"
+                                                value="{{ $valStart }}"
+                                                disabled
+                                                class="w-[5.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
+                                            >
+                                        @else
+                                            <span class="text-gray-600">{{ $valStart ?: '--:--' }}</span>
+                                        @endif
+                                        <span class="text-gray-400">—</span>
+                                        @if ($canEditMonitoring && ! $endLocked)
                                             <input
                                                 type="time"
                                                 name="{{ $slotName }}[time_end]"
                                                 value="{{ $valEnd }}"
                                                 class="w-[5.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             >
+                                        @elseif ($canEditMonitoring && $endLocked)
+                                            <input
+                                                type="time"
+                                                value="{{ $valEnd }}"
+                                                disabled
+                                                class="w-[5.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
+                                            >
                                         @else
-                                            <span class="text-gray-600">{{ $valStart ?: '--:--' }}</span>
-                                            <span class="text-gray-400">—</span>
                                             <span class="text-gray-600">{{ $valEnd ?: '--:--' }}</span>
                                         @endif
                                     </div>
+                                    @if ($canEditMonitoring && ($startLocked || $endLocked))
+                                        <div class="mt-0.5 text-center text-[9px] italic text-gray-400">
+                                            Diisi oleh {{ $startLockedBy ?? $endLockedBy }}
+                                        </div>
+                                    @endif
                                 @endforeach
 
                                 {{-- Pad MS header so its height matches other columns --}}
@@ -328,12 +392,16 @@
                                     $b          = is_numeric($oldB) ? (int) $oldB : null;
                                     $f          = is_numeric($oldF) ? (int) $oldF : null;
                                     $tt         = ($b !== null || $f !== null) ? ((int)($b ?? 0) + (int)($f ?? 0)) : null;
+                                    $bLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'reading_total') : null;
+                                    $fLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'reading_fungi') : null;
+                                    $bLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'reading_total') : false;
+                                    $fLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'reading_fungi') : false;
                                 @endphp
                                 <td class="border-x border-gray-100 px-1 py-1">
                                     <div class="grid grid-cols-3 gap-x-1 text-[11px]">
                                         {{-- B --}}
                                         <div>
-                                            @if ($canEditReading && $hasTime)
+                                            @if ($canEditReading && $hasTime && ! $bLocked)
                                                 <input
                                                     type="text"
                                                     name="{{ $readName }}[reading_total]"
@@ -341,6 +409,14 @@
                                                     data-microbial
                                                     class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
                                                     placeholder="N/A"
+                                                >
+                                            @elseif ($canEditReading && $hasTime && $bLocked)
+                                                <input
+                                                    type="text"
+                                                    value="{{ $oldB }}"
+                                                    disabled
+                                                    title="Diisi oleh {{ $bLockedBy }}"
+                                                    class="w-full min-w-[2.25rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-gray-400"
                                                 >
                                             @elseif ($oldB !== null && $oldB !== '')
                                                 {{ $oldB }}
@@ -350,7 +426,7 @@
                                         </div>
                                         {{-- F --}}
                                         <div>
-                                            @if ($canEditReading && $hasTime)
+                                            @if ($canEditReading && $hasTime && ! $fLocked)
                                                 <input
                                                     type="text"
                                                     name="{{ $readName }}[reading_fungi]"
@@ -358,6 +434,14 @@
                                                     data-microbial
                                                     class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
                                                     placeholder="N/A"
+                                                >
+                                            @elseif ($canEditReading && $hasTime && $fLocked)
+                                                <input
+                                                    type="text"
+                                                    value="{{ $oldF }}"
+                                                    disabled
+                                                    title="Diisi oleh {{ $fLockedBy }}"
+                                                    class="w-full min-w-[2.25rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-gray-400"
                                                 >
                                             @elseif ($oldF !== null && $oldF !== '')
                                                 {{ $oldF }}
@@ -420,7 +504,11 @@
     {{-- Catatan --}}
     <div class="mt-4">
         <label class="mb-1 block text-xs font-medium text-gray-500">Catatan</label>
-        @if ($canEditMonitoring)
+        @php
+            $noteLockedBy = $lockOwner('section_instances', $instance->id, 'note');
+            $noteLocked   = $isLockedByOther('section_instances', $instance->id, 'note');
+        @endphp
+        @if ($canEditMonitoring && ! $noteLocked)
             <textarea
                 name="{{ $namePrefix }}[note]"
                 rows="2"
@@ -428,6 +516,13 @@
                 class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                 placeholder="Catatan untuk section ini..."
             >{{ old("sections.{$instance->id}.note", $instance->note) }}</textarea>
+        @elseif ($canEditMonitoring && $noteLocked)
+            <textarea
+                rows="2"
+                disabled
+                class="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-400"
+            >{{ $instance->note }}</textarea>
+            <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $noteLockedBy }}</p>
         @else
             <div class="min-h-[2.5rem] rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
                 {{ $instance->note ?: 'N/A' }}

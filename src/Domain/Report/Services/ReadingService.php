@@ -8,6 +8,7 @@ use Domain\Report\Models\Analyst;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionInstance;
 use Domain\Report\Models\SectionSignature;
+use Domain\Report\Services\FieldLockService;
 use Domain\Report\Support\LocationConclusion;
 use Domain\Report\Support\MicrobialValue;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,7 @@ class ReadingService
 
     public function __construct(
         protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
+        protected FieldLockService $fieldLocks,
     ) {
     }
 
@@ -146,6 +148,16 @@ class ReadingService
      */
     private function saveReadingForInstance(SectionInstance $instance, array $rows, string $analystId): void
     {
+        // Bulk-fetch field locks for every entry under this instance to
+        // avoid an N+1 storm inside the row/reading loops below.
+        $entryIds = [];
+        foreach ($instance->instanceLocations as $row) {
+            foreach ($row->entries as $entry) {
+                $entryIds[] = $entry->id;
+            }
+        }
+        $entryLocksMap = $this->fieldLocks->getForRowsKeyed('section_entries', $entryIds);
+
         foreach ($instance->instanceLocations as $row) {
             $payload = $rows[$row->id] ?? null;
             if ($payload === null) {
@@ -174,11 +186,29 @@ class ReadingService
                     continue;
                 }
 
-                $target->fill([
-                    'reading_total'     => MicrobialValue::normalise($values['reading_total'] ?? null),
-                    'reading_fungi'     => MicrobialValue::normalise($values['reading_fungi'] ?? null),
-                    'filled_by_reading' => $target->filled_by_reading ?? $analystId,
-                ])->save();
+                $newValues = [
+                    'reading_total' => MicrobialValue::normalise($values['reading_total'] ?? null),
+                    'reading_fungi' => MicrobialValue::normalise($values['reading_fungi'] ?? null),
+                ];
+
+                $entryLocks = $entryLocksMap[$target->id] ?? collect();
+
+                $fillable = [];
+                foreach ($newValues as $field => $value) {
+                    if ($this->fieldLocks->canEdit($entryLocks, $field, $analystId)) {
+                        $fillable[$field] = $value;
+                    }
+                }
+
+                $fillable['filled_by_reading'] = $target->filled_by_reading ?? $analystId;
+
+                $target->fill($fillable)->save();
+
+                foreach ($newValues as $field => $value) {
+                    if (array_key_exists($field, $fillable)) {
+                        $this->fieldLocks->lockField('section_entries', $target->id, $field, $analystId, $value);
+                    }
+                }
             }
         }
     }

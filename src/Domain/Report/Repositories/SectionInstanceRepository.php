@@ -2,7 +2,9 @@
 
 namespace Domain\Report\Repositories;
 
+use Domain\Report\Interfaces\FieldLockRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
+use Domain\Report\Models\FieldLock;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionEntry;
 use Domain\Report\Models\SectionInstance;
@@ -10,6 +12,11 @@ use Illuminate\Support\Collection;
 
 class SectionInstanceRepository implements SectionInstanceRepositoryInterface
 {
+    public function __construct(
+        protected FieldLockRepositoryInterface $fieldLockRepository,
+    ) {
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -32,6 +39,62 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
                 fn ($a, $b) => $a->instance_number <=> $b->instance_number,
             ])
             ->values();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getInstancesForReportWithLocks(Report $report): array
+    {
+        $instances = $this->getInstancesForReport($report);
+
+        // Section-level IDs
+        $entryIds    = [];
+        $instanceIds = [];
+        foreach ($instances as $instance) {
+            $instanceIds[] = $instance->id;
+            foreach ($instance->instanceLocations as $loc) {
+                foreach ($loc->entries as $entry) {
+                    $entryIds[] = $entry->id;
+                }
+            }
+        }
+
+        // Header-section IDs (instruments / mediums / incubators)
+        $report->loadMissing(['instrumentEntries', 'mediumEntries', 'incubators.entries']);
+
+        $instrumentIds     = $report->instrumentEntries->pluck('id')->all();
+        $mediumIds         = $report->mediumEntries->pluck('id')->all();
+        $incubatorIds      = $report->incubators->pluck('id')->all();
+        $incubatorEntryIds = $report->incubators
+            ->flatMap(fn ($incubator) => $incubator->entries->pluck('id'))
+            ->all();
+
+        $byTable = [
+            'section_entries'    => $entryIds,
+            'section_instances'  => $instanceIds,
+            'instrument_entries' => $instrumentIds,
+            'medium_entries'     => $mediumIds,
+            'incubators'         => $incubatorIds,
+            'incubator_entries'  => $incubatorEntryIds,
+        ];
+
+        $locks = [];
+        foreach ($byTable as $table => $ids) {
+            $locks[$table] = [];
+            if (empty($ids)) {
+                continue;
+            }
+            $rows = $this->fieldLockRepository->getForRows($table, $ids)->load('filler');
+            foreach ($rows as $lock) {
+                $locks[$table][$lock->row_id][$lock->field_name] = $lock;
+            }
+        }
+
+        return [
+            'instances' => $instances,
+            'locks'     => $locks,
+        ];
     }
 
     /**

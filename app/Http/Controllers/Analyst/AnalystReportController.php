@@ -77,11 +77,14 @@ class AnalystReportController extends Controller
     {
         $report->load($this->fillRelations());
 
+        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+
         return view('report.fill', [
-            'report'         => $report,
-            'readonly'       => true,
-            'phase'          => $this->currentPhase($report),
-            'sectionInstances' => $this->sectionInstances->getInstancesForReport($report),
+            'report'           => $report,
+            'readonly'         => true,
+            'phase'            => $this->currentPhase($report),
+            'sectionInstances' => $bundle['instances'],
+            'lockMap'          => $bundle['locks'],
         ]);
     }
 
@@ -95,11 +98,14 @@ class AnalystReportController extends Controller
 
         $isOwner = $report->locked_by !== null && $report->locked_by === $this->currentAnalystId();
 
+        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+
         return view('report.fill', [
             'report'           => $report,
             'readonly'         => ! $isOwner,
             'phase'            => $this->currentPhase($report),
-            'sectionInstances' => $this->sectionInstances->getInstancesForReport($report),
+            'sectionInstances' => $bundle['instances'],
+            'lockMap'          => $bundle['locks'],
         ]);
     }
 

@@ -155,7 +155,7 @@
 
     <x-messages.success-message />
     <x-messages.error-message />
-    <x-messages.validation-errors />
+    <x-messages.validation-errors :except="['username', 'password']" />
 
     <form
         id="report-form"
@@ -168,11 +168,24 @@
 
         <x-report-form.section-room-monitoring :report="$report" :readonly="$readonly" />
 
-        <x-report-form.section-instrument-identity :instrument-entries="$instrumentEntries" :readonly="$readonly || $phase === 'reading'" />
+        <x-report-form.section-instrument-identity
+            :instrument-entries="$instrumentEntries"
+            :readonly="$readonly || $phase === 'reading'"
+            :lock-map="$lockMap ?? []"
+        />
 
-        <x-report-form.section-medium-identity :medium-entries="$mediumEntries" :readonly="$readonly || $phase === 'reading'" />
+        <x-report-form.section-medium-identity
+            :medium-entries="$mediumEntries"
+            :readonly="$readonly || $phase === 'reading'"
+            :lock-map="$lockMap ?? []"
+        />
 
-        <x-report-form.section-incubation :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly || $phase === 'reading'" />
+        <x-report-form.section-incubation
+            :incubators="$incubators"
+            :has-swab="$hasSwab"
+            :readonly="$readonly || $phase === 'reading'"
+            :lock-map="$lockMap ?? []"
+        />
 
         @foreach ($sectionInstances as $instance)
             <x-report-form.section-instance
@@ -181,11 +194,72 @@
                 :phase="$phase"
                 :readonly="$readonly"
                 :is-admin="false"
+                :lock-map="$lockMap ?? []"
             />
         @endforeach
     </form>
 
     @push('scripts')
+        @php
+            $usernameError = $errors->first('username');
+            $passwordError = $errors->first('password');
+            $hasAuthError  = $usernameError !== '' || $passwordError !== '';
+            $oldUsername   = old('username', '');
+            $oldAction     = old('action', $draftAction);
+            $modalKind     = old('action') === $finalizeAction || old('action') === $releaseAction
+                ? 'finalize'
+                : 'draft';
+            $modalTitle    = $modalKind === 'finalize'
+                ? 'Simpan & Serahkan Laporan'
+                : 'Konfirmasi Simpan Draft';
+            $effectiveDraftAction = $modalKind === 'finalize' ? $releaseAction : $draftAction;
+        @endphp
+
+        @if ($hasAuthError)
+            <div
+                id="save-confirm-rehydrate"
+                data-form-id="report-form"
+                data-kind="{{ $modalKind }}"
+                data-title="{{ $modalTitle }}"
+                data-draft-action="{{ $effectiveDraftAction }}"
+                data-finalize-action="{{ $finalizeAction }}"
+                data-draft-label="{{ $releaseLabel }}"
+                data-finalize-label="{{ $finalizeLabel }}"
+                data-draft-description="{{ $releaseDescription }}"
+                data-finalize-description="{{ $finalizeDescription }}"
+                data-username="{{ $oldUsername }}"
+                data-username-error="{{ $usernameError }}"
+                data-password-error="{{ $passwordError }}"
+                data-selected-action="{{ $oldAction }}"
+                hidden
+            ></div>
+            <script>
+                document.addEventListener('alpine:initialized', () => {
+                    if (! window.Alpine) return;
+                    const el = document.getElementById('save-confirm-rehydrate');
+                    if (! el) return;
+                    const d = el.dataset;
+                    const store = Alpine.store('saveConfirmModal');
+                    store.open({
+                        formId:              d.formId,
+                        kind:                d.kind,
+                        title:               d.title,
+                        draftAction:         d.draftAction,
+                        finalizeAction:      d.finalizeAction,
+                        draftLabel:          d.draftLabel,
+                        finalizeLabel:       d.finalizeLabel,
+                        draftDescription:    d.draftDescription,
+                        finalizeDescription: d.finalizeDescription,
+                        username:            d.username,
+                        usernameError:       d.usernameError,
+                        passwordError:       d.passwordError,
+                    });
+                    // Re-select the previously chosen action.
+                    store.selectedAction = d.selectedAction;
+                });
+            </script>
+        @endif
+
         <script>
             // Live border-red feedback for microbial value inputs.
             (function () {

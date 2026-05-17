@@ -1,21 +1,45 @@
 {{--
     Section 4: Proses Inkubasi Medium Monitoring
+
     Props:
       $incubators — Collection<Incubator> with template + entries.incubatedBy + entries.removedBy
       $hasSwab    — bool
       $readonly   — bool
+      $lockMap    — [table][row_id][field_name] => FieldLock
+
+    Tables involved:
+      incubators           → no_id, calibration_date, due_date_calibration
+      incubator_entries    → date_in, time_in, date_out, time_out
 --}}
-@props(['incubators', 'hasSwab' => false, 'readonly' => true])
+@props([
+    'incubators',
+    'hasSwab'  => false,
+    'readonly' => true,
+    'lockMap'  => [],
+])
 
 @php
-    $inputClass = $readonly
-        ? 'w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-400 cursor-not-allowed'
-        : 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $currentUserId = (string) (auth()->id() ?? '');
+
+    $isLocked = function (string $table, string $rowId, string $field) use ($lockMap, $currentUserId) {
+        $lock = $lockMap[$table][$rowId][$field] ?? null;
+        return $lock !== null && (string) $lock->filled_by !== $currentUserId;
+    };
+    $lockOwner = function (string $table, string $rowId, string $field) use ($lockMap) {
+        $lock = $lockMap[$table][$rowId][$field] ?? null;
+        return $lock?->filler?->name;
+    };
+
+    $editableClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $readonlyClass = 'w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-400 cursor-not-allowed';
+    $lockedClass   = 'flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700';
 
     $mediumTypeLabels = [
         'monitoring' => 'Tanggal Inkubasi Medium Monitoring',
         'swab'       => 'Tanggal Inkubasi Swab',
     ];
+
+    $isPreviewId = fn ($id) => is_string($id) && str_starts_with($id, 'preview-');
 @endphp
 
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
@@ -28,11 +52,22 @@
                 $minDay        = $incubator->template?->min_day ?? null;
                 $entriesByType = $incubator->entries->keyBy('medium_type');
                 $rowOrder      = $hasSwab ? ['monitoring', 'swab'] : ['monitoring'];
+
+                $incubatorId   = (string) ($incubator->id ?? '');
+                $incubatorReal = ! $isPreviewId($incubatorId);
+
+                $noIdLocked  = $incubatorReal && $isLocked('incubators', $incubatorId, 'no_id');
+                $calibLocked = $incubatorReal && $isLocked('incubators', $incubatorId, 'calibration_date');
+                $dueLocked   = $incubatorReal && $isLocked('incubators', $incubatorId, 'due_date_calibration');
+
+                $noIdOwner   = $incubatorReal ? $lockOwner('incubators', $incubatorId, 'no_id') : null;
+                $calibOwner  = $incubatorReal ? $lockOwner('incubators', $incubatorId, 'calibration_date') : null;
+                $dueOwner    = $incubatorReal ? $lockOwner('incubators', $incubatorId, 'due_date_calibration') : null;
             @endphp
 
             <div class="rounded-xl border border-gray-100 bg-gray-50/50 p-5">
                 <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-blue-500">
-                    {{ strtoupper($incubatorName) }}
+                    Incubator {{ strtoupper($incubatorName) }}
                 </h3>
 
                 {{-- Incubator identity --}}
@@ -46,36 +81,90 @@
                             class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
                         >
                     </div>
+
+                    {{-- No. ID Inkubator --}}
                     <div>
                         <label class="mb-1 block text-xs font-medium text-gray-500">No. ID Inkubator</label>
-                        <input
-                            type="text"
-                            name="incubators[{{ $incubator->id }}][no_id]"
-                            value="{{ old('incubators.' . $incubator->id . '.no_id', $incubator->no_id) }}"
-                            placeholder="{{ $readonly ? '—' : '' }}"
-                            @disabled($readonly)
-                            class="{{ $inputClass }}"
-                        >
+                        @if (! $readonly && ! $noIdLocked)
+                            <input
+                                type="text"
+                                name="incubators[{{ $incubator->id }}][no_id]"
+                                value="{{ old('incubators.' . $incubator->id . '.no_id', $incubator->no_id) }}"
+                                class="{{ $editableClass }}"
+                            >
+                        @elseif (! $readonly && $noIdLocked)
+                            <input
+                                type="text"
+                                value="{{ $incubator->no_id }}"
+                                disabled
+                                class="{{ $readonlyClass }}"
+                            >
+                            <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $noIdOwner }}</p>
+                        @else
+                            <input
+                                type="text"
+                                value="{{ $incubator->no_id }}"
+                                placeholder="—"
+                                disabled
+                                class="{{ $readonlyClass }}"
+                            >
+                        @endif
                     </div>
+
+                    {{-- Tanggal Kalibrasi --}}
                     <div>
                         <label class="mb-1 block text-xs font-medium text-gray-500">Tanggal Kalibrasi Inkubator</label>
-                        <input
-                            type="date"
-                            name="incubators[{{ $incubator->id }}][calibration_date]"
-                            value="{{ old('incubators.' . $incubator->id . '.calibration_date', optional($incubator->calibration_date)->format('Y-m-d')) }}"
-                            @disabled($readonly)
-                            class="{{ $inputClass }}"
-                        >
+                        @if (! $readonly && ! $calibLocked)
+                            <input
+                                type="date"
+                                name="incubators[{{ $incubator->id }}][calibration_date]"
+                                value="{{ old('incubators.' . $incubator->id . '.calibration_date', optional($incubator->calibration_date)->format('Y-m-d')) }}"
+                                class="{{ $editableClass }}"
+                            >
+                        @elseif (! $readonly && $calibLocked)
+                            <input
+                                type="date"
+                                value="{{ optional($incubator->calibration_date)->format('Y-m-d') }}"
+                                disabled
+                                class="{{ $readonlyClass }}"
+                            >
+                            <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $calibOwner }}</p>
+                        @else
+                            <input
+                                type="date"
+                                value="{{ optional($incubator->calibration_date)->format('Y-m-d') }}"
+                                disabled
+                                class="{{ $readonlyClass }}"
+                            >
+                        @endif
                     </div>
+
+                    {{-- Due Date --}}
                     <div>
                         <label class="mb-1 block text-xs font-medium text-gray-500">Tgl Due Date Kalibrasi Inkubator</label>
-                        <input
-                            type="date"
-                            name="incubators[{{ $incubator->id }}][due_date_calibration]"
-                            value="{{ old('incubators.' . $incubator->id . '.due_date_calibration', optional($incubator->due_date_calibration)->format('Y-m-d')) }}"
-                            @disabled($readonly)
-                            class="{{ $inputClass }}"
-                        >
+                        @if (! $readonly && ! $dueLocked)
+                            <input
+                                type="date"
+                                name="incubators[{{ $incubator->id }}][due_date_calibration]"
+                                value="{{ old('incubators.' . $incubator->id . '.due_date_calibration', optional($incubator->due_date_calibration)->format('Y-m-d')) }}"
+                                class="{{ $editableClass }}"
+                            >
+                        @elseif (! $readonly && $dueLocked)
+                            <input
+                                type="date"
+                                value="{{ optional($incubator->due_date_calibration)->format('Y-m-d') }}"
+                                disabled
+                                class="{{ $readonlyClass }}"
+                            >
+                            <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dueOwner }}</p>
+                        @else
+                            <input
+                                type="date"
+                                value="{{ optional($incubator->due_date_calibration)->format('Y-m-d') }}"
+                                disabled
+                                class="{{ $readonlyClass }}"
+                            >
+                        @endif
                     </div>
                 </div>
 
@@ -83,6 +172,20 @@
                 @foreach ($rowOrder as $mediumType)
                     @php $entry = $entriesByType[$mediumType] ?? null; @endphp
                     @if ($entry === null) @continue @endif
+                    @php
+                        $entryId    = (string) ($entry->id ?? '');
+                        $entryReal  = ! $isPreviewId($entryId);
+
+                        $dateInLocked  = $entryReal && $isLocked('incubator_entries', $entryId, 'date_in');
+                        $timeInLocked  = $entryReal && $isLocked('incubator_entries', $entryId, 'time_in');
+                        $dateOutLocked = $entryReal && $isLocked('incubator_entries', $entryId, 'date_out');
+                        $timeOutLocked = $entryReal && $isLocked('incubator_entries', $entryId, 'time_out');
+
+                        $dateInOwner   = $entryReal ? $lockOwner('incubator_entries', $entryId, 'date_in')  : null;
+                        $timeInOwner   = $entryReal ? $lockOwner('incubator_entries', $entryId, 'time_in')  : null;
+                        $dateOutOwner  = $entryReal ? $lockOwner('incubator_entries', $entryId, 'date_out') : null;
+                        $timeOutOwner  = $entryReal ? $lockOwner('incubator_entries', $entryId, 'time_out') : null;
+                    @endphp
 
                     <div class="mt-6">
                         <h4 class="mb-3 text-sm font-semibold text-blue-500">
@@ -105,45 +208,117 @@
                                     {{ $entry->removedBy?->name ?? 'N/A' }}
                                 </div>
                             </div>
+
+                            {{-- Tanggal Masuk --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Tanggal Masuk Inkubator</label>
-                                <input
-                                    type="date"
-                                    name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_in]"
-                                    value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.date_in', optional($entry->date_in)->format('Y-m-d')) }}"
-                                    @disabled($readonly)
-                                    class="{{ $inputClass }}"
-                                >
+                                @if (! $readonly && ! $dateInLocked)
+                                    <input
+                                        type="date"
+                                        name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_in]"
+                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.date_in', optional($entry->date_in)->format('Y-m-d')) }}"
+                                        class="{{ $editableClass }}"
+                                    >
+                                @elseif (! $readonly && $dateInLocked)
+                                    <input
+                                        type="date"
+                                        value="{{ optional($entry->date_in)->format('Y-m-d') }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dateInOwner }}</p>
+                                @else
+                                    <input
+                                        type="date"
+                                        value="{{ optional($entry->date_in)->format('Y-m-d') }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                @endif
                             </div>
+
+                            {{-- Tanggal Keluar --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Tanggal Keluar Inkubator</label>
-                                <input
-                                    type="date"
-                                    name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_out]"
-                                    value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.date_out', optional($entry->date_out)->format('Y-m-d')) }}"
-                                    @disabled($readonly)
-                                    class="{{ $inputClass }}"
-                                >
+                                @if (! $readonly && ! $dateOutLocked)
+                                    <input
+                                        type="date"
+                                        name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_out]"
+                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.date_out', optional($entry->date_out)->format('Y-m-d')) }}"
+                                        class="{{ $editableClass }}"
+                                    >
+                                @elseif (! $readonly && $dateOutLocked)
+                                    <input
+                                        type="date"
+                                        value="{{ optional($entry->date_out)->format('Y-m-d') }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dateOutOwner }}</p>
+                                @else
+                                    <input
+                                        type="date"
+                                        value="{{ optional($entry->date_out)->format('Y-m-d') }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                @endif
                             </div>
+
+                            {{-- Jam Masuk --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Jam Masuk</label>
-                                <input
-                                    type="time"
-                                    name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_in]"
-                                    value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.time_in', $entry->time_in) }}"
-                                    @disabled($readonly)
-                                    class="{{ $inputClass }}"
-                                >
+                                @if (! $readonly && ! $timeInLocked)
+                                    <input
+                                        type="time"
+                                        name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_in]"
+                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.time_in', $entry->time_in) }}"
+                                        class="{{ $editableClass }}"
+                                    >
+                                @elseif (! $readonly && $timeInLocked)
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_in }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $timeInOwner }}</p>
+                                @else
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_in }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                @endif
                             </div>
+
+                            {{-- Jam Keluar --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Jam Keluar</label>
-                                <input
-                                    type="time"
-                                    name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_out]"
-                                    value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.time_out', $entry->time_out) }}"
-                                    @disabled($readonly)
-                                    class="{{ $inputClass }}"
-                                >
+                                @if (! $readonly && ! $timeOutLocked)
+                                    <input
+                                        type="time"
+                                        name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_out]"
+                                        value="{{ old('incubators.' . $incubator->id . '.entries.' . $mediumType . '.time_out', $entry->time_out) }}"
+                                        class="{{ $editableClass }}"
+                                    >
+                                @elseif (! $readonly && $timeOutLocked)
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_out }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $timeOutOwner }}</p>
+                                @else
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_out }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                @endif
                             </div>
                         </div>
                     </div>

@@ -2,7 +2,8 @@
 
 namespace App\Http\Requests\Analyst;
 
-use App\Rules\CurrentUserCredentials;
+use App\Rules\CurrentUserPassword;
+use App\Rules\CurrentUserUsername;
 use App\Rules\MicrobialCount;
 use Domain\Report\Dtos\SaveMonitoringDto;
 use Domain\Report\Services\MonitoringService;
@@ -24,8 +25,8 @@ class SaveMonitoringRequest extends FormRequest
                 MonitoringService::ACTION_RELEASE,
                 MonitoringService::ACTION_FINALIZE,
             ])],
-            'username'    => ['required', 'string', 'max:255'],
-            'password'    => ['required', 'string', new CurrentUserCredentials('username')],
+            'username'    => ['required', 'string', 'max:255', new CurrentUserUsername()],
+            'password'    => ['required', 'string', new CurrentUserPassword()],
 
             'instruments'                              => ['nullable', 'array'],
             'instruments.*.no_id'                      => ['nullable', 'string', 'max:255'],

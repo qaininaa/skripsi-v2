@@ -12,6 +12,7 @@ use Domain\Report\Models\MediumEntry;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionInstance;
 use Domain\Report\Models\SectionSignature;
+use Domain\Report\Services\FieldLockService;
 use Domain\Report\Support\MicrobialValue;
 use Illuminate\Support\Facades\DB;
 
@@ -50,6 +51,7 @@ class MonitoringService
 
     public function __construct(
         protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
+        protected FieldLockService $fieldLocks,
     ) {
     }
 
@@ -127,8 +129,8 @@ class MonitoringService
         }
 
         DB::transaction(function () use ($report, $dto, $analystId, $action) {
-            $this->saveInstrumentRows($report, $dto);
-            $this->saveMediumRows($report, $dto);
+            $this->saveInstrumentRows($report, $dto, $analystId);
+            $this->saveMediumRows($report, $dto, $analystId);
             $this->saveIncubatorRows($report, $dto, $analystId);
             $this->saveSectionMonitoringRows($report, $dto, $analystId);
 
@@ -170,37 +172,78 @@ class MonitoringService
         $report->save();
     }
 
-    private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto): void
+    private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto, string $analystId): void
     {
         foreach ($dto->instruments as $toolName => $row) {
             $instrument = $report->instrumentEntries()->where('tool_name', $toolName)->first();
             if ($instrument === null) {
                 continue;
             }
-            $instrument->fill([
+
+            $table = $this->fieldLocks->tableOf($instrument);
+            $locks = $this->fieldLocks->getForRow($table, $instrument->id);
+
+            $values = [
                 'no_id'            => $row['no_id']            ?? null,
                 'calibration_date' => $row['calibration_date'] ?? null,
                 'due_date'         => $row['due_date']         ?? null,
-            ])->save();
+            ];
+
+            $payload = [];
+            foreach ($values as $field => $value) {
+                if ($this->fieldLocks->canEdit($locks, $field, $analystId)) {
+                    $payload[$field] = $value;
+                }
+            }
+
+            if (! empty($payload)) {
+                $instrument->fill($payload)->save();
+            }
+
+            foreach ($values as $field => $value) {
+                if (array_key_exists($field, $payload)) {
+                    $this->fieldLocks->lockField($table, $instrument->id, $field, $analystId, $value);
+                }
+            }
         }
     }
 
-    private function saveMediumRows(Report $report, SaveMonitoringDto $dto): void
+    private function saveMediumRows(Report $report, SaveMonitoringDto $dto, string $analystId): void
     {
         foreach ($dto->mediums as $entryId => $row) {
             $entry = $report->mediumEntries()->whereKey($entryId)->first();
             if ($entry === null) {
                 continue;
             }
-            $payload = [
+
+            $table = $this->fieldLocks->tableOf($entry);
+            $locks = $this->fieldLocks->getForRow($table, $entry->id);
+
+            $values = [
                 'batch_number'    => $row['batch_number']    ?? null,
                 'expiration_date' => $row['expiration_date'] ?? null,
             ];
             // Swab Kit must never carry a GPT number.
             if (! $entry->is_swab) {
-                $payload['gpt_number'] = $row['gpt_number'] ?? null;
+                $values['gpt_number'] = $row['gpt_number'] ?? null;
             }
-            $entry->fill($payload)->save();
+
+            $payload = [];
+            foreach ($values as $field => $value) {
+                if ($this->fieldLocks->canEdit($locks, $field, $analystId)) {
+                    $payload[$field] = $value;
+                }
+            }
+
+            if (! empty($payload)) {
+                $entry->fill($payload)->save();
+            }
+
+            foreach ($values as $field => $value) {
+                if (array_key_exists($field, $payload)) {
+                    $this->fieldLocks->lockField($table, $entry->id, $field, $analystId, $value);
+                }
+            }
         }
     }
 
@@ -211,11 +254,32 @@ class MonitoringService
             if ($incubator === null) {
                 continue;
             }
-            $incubator->fill([
+
+            $incubatorTable = $this->fieldLocks->tableOf($incubator);
+            $incubatorLocks = $this->fieldLocks->getForRow($incubatorTable, $incubator->id);
+
+            $incubatorValues = [
                 'no_id'                => $row['no_id']                ?? null,
                 'calibration_date'     => $row['calibration_date']     ?? null,
                 'due_date_calibration' => $row['due_date_calibration'] ?? null,
-            ])->save();
+            ];
+
+            $incubatorPayload = [];
+            foreach ($incubatorValues as $field => $value) {
+                if ($this->fieldLocks->canEdit($incubatorLocks, $field, $analystId)) {
+                    $incubatorPayload[$field] = $value;
+                }
+            }
+
+            if (! empty($incubatorPayload)) {
+                $incubator->fill($incubatorPayload)->save();
+            }
+
+            foreach ($incubatorValues as $field => $value) {
+                if (array_key_exists($field, $incubatorPayload)) {
+                    $this->fieldLocks->lockField($incubatorTable, $incubator->id, $field, $analystId, $value);
+                }
+            }
 
             foreach (($row['entries'] ?? []) as $mediumType => $entryRow) {
                 $entry = $incubator->entries()->where('medium_type', $mediumType)->first();
@@ -223,17 +287,40 @@ class MonitoringService
                     continue;
                 }
 
-                $hasIn  = ! empty($entryRow['date_in'])  || ! empty($entryRow['time_in']);
-                $hasOut = ! empty($entryRow['date_out']) || ! empty($entryRow['time_out']);
+                $entryTable = $this->fieldLocks->tableOf($entry);
+                $entryLocks = $this->fieldLocks->getForRow($entryTable, $entry->id);
 
-                $entry->fill([
-                    'date_in'      => $entryRow['date_in']  ?? null,
-                    'time_in'      => $entryRow['time_in']  ?? null,
-                    'date_out'     => $entryRow['date_out'] ?? null,
-                    'time_out'     => $entryRow['time_out'] ?? null,
-                    'incubated_by' => $hasIn  ? ($entry->incubated_by ?? $analystId) : $entry->incubated_by,
-                    'removed_by'   => $hasOut ? ($entry->removed_by   ?? $analystId) : $entry->removed_by,
-                ])->save();
+                $entryValues = [
+                    'date_in'  => $entryRow['date_in']  ?? null,
+                    'time_in'  => $entryRow['time_in']  ?? null,
+                    'date_out' => $entryRow['date_out'] ?? null,
+                    'time_out' => $entryRow['time_out'] ?? null,
+                ];
+
+                $entryPayload = [];
+                foreach ($entryValues as $field => $value) {
+                    if ($this->fieldLocks->canEdit($entryLocks, $field, $analystId)) {
+                        $entryPayload[$field] = $value;
+                    }
+                }
+
+                $hasIn = array_key_exists('date_in', $entryPayload)
+                    ? ! empty($entryPayload['date_in'])  || ! empty($entryPayload['time_in'])
+                    : false;
+                $hasOut = array_key_exists('date_out', $entryPayload)
+                    ? ! empty($entryPayload['date_out']) || ! empty($entryPayload['time_out'])
+                    : false;
+
+                $entryPayload['incubated_by'] = $hasIn  ? ($entry->incubated_by ?? $analystId) : $entry->incubated_by;
+                $entryPayload['removed_by']   = $hasOut ? ($entry->removed_by   ?? $analystId) : $entry->removed_by;
+
+                $entry->fill($entryPayload)->save();
+
+                foreach ($entryValues as $field => $value) {
+                    if (array_key_exists($field, $entryPayload)) {
+                        $this->fieldLocks->lockField($entryTable, $entry->id, $field, $analystId, $value);
+                    }
+                }
             }
         }
     }
@@ -261,9 +348,25 @@ class MonitoringService
             }
 
             if (array_key_exists('note', $row)) {
-                $instance->note = $row['note'];
-                $instance->save();
+                $instanceTable = $this->fieldLocks->tableOf($instance);
+                $instanceLocks = $this->fieldLocks->getForRow($instanceTable, $instance->id);
+
+                if ($this->fieldLocks->canEdit($instanceLocks, 'note', $analystId)) {
+                    $instance->note = $row['note'];
+                    $instance->save();
+                    $this->fieldLocks->lockField($instanceTable, $instance->id, 'note', $analystId, $row['note']);
+                }
             }
+
+            // Bulk-fetch field locks for every entry under this instance to
+            // avoid an N+1 storm inside the column/slot/row loops below.
+            $entryIds = [];
+            foreach ($instance->instanceLocations as $loc) {
+                foreach ($loc->entries as $entry) {
+                    $entryIds[] = $entry->id;
+                }
+            }
+            $entryLocksMap = $this->fieldLocks->getForRowsKeyed('section_entries', $entryIds);
 
             $columns = $row['columns'] ?? [];
             foreach ($columns as $colIdx => $colData) {
@@ -279,15 +382,35 @@ class MonitoringService
                         $slotKey = $entry->sub_column ?? '_';
                         $slot    = $slots[$slotKey] ?? null;
 
-                        $timeStart = $slot['time_start'] ?? null;
-                        $timeEnd   = $slot['time_end']   ?? null;
+                        $rawTimeStart = $slot['time_start'] ?? null;
+                        $rawTimeEnd   = $slot['time_end']   ?? null;
+                        $timeStart    = ($rawTimeStart !== null && $rawTimeStart !== '') ? $rawTimeStart : null;
+                        $timeEnd      = ($rawTimeEnd   !== null && $rawTimeEnd   !== '') ? $rawTimeEnd   : null;
 
-                        $entry->fill([
-                            'sp_value'             => $spValue,
-                            'time_start'           => $timeStart !== '' ? $timeStart : null,
-                            'time_end'             => $timeEnd   !== '' ? $timeEnd   : null,
-                            'filled_by_monitoring' => $entry->filled_by_monitoring ?? $analystId,
-                        ])->save();
+                        $values = [
+                            'time_start' => $timeStart,
+                            'time_end'   => $timeEnd,
+                            'sp_value'   => $spValue,
+                        ];
+
+                        $entryLocks = $entryLocksMap[$entry->id] ?? collect();
+
+                        $payload = [];
+                        foreach ($values as $field => $value) {
+                            if ($this->fieldLocks->canEdit($entryLocks, $field, $analystId)) {
+                                $payload[$field] = $value;
+                            }
+                        }
+
+                        $payload['filled_by_monitoring'] = $entry->filled_by_monitoring ?? $analystId;
+
+                        $entry->fill($payload)->save();
+
+                        foreach ($values as $field => $value) {
+                            if (array_key_exists($field, $payload)) {
+                                $this->fieldLocks->lockField('section_entries', $entry->id, $field, $analystId, $value);
+                            }
+                        }
                     }
                 }
             }

@@ -2,7 +2,8 @@
 
 namespace App\Http\Requests\Analyst;
 
-use App\Rules\CurrentUserCredentials;
+use App\Rules\CurrentUserPassword;
+use App\Rules\CurrentUserUsername;
 use App\Rules\MicrobialCount;
 use Domain\Report\Dtos\SaveReadingDto;
 use Domain\Report\Services\ReadingService;
@@ -24,8 +25,8 @@ class SaveReadingRequest extends FormRequest
                 ReadingService::ACTION_RELEASE,
                 ReadingService::ACTION_FINALIZE,
             ])],
-            'username' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', new CurrentUserCredentials('username')],
+            'username' => ['required', 'string', 'max:255', new CurrentUserUsername()],
+            'password' => ['required', 'string', new CurrentUserPassword()],
 
             'sections'                                              => ['nullable', 'array'],
             'sections.*.rows'                                       => ['nullable', 'array'],

@@ -8,8 +8,10 @@ use Domain\Location\Repositories\LocationRepository;
 use Domain\PasswordPolicy\Interfaces\PasswordPolicyRepositoryInterface;
 use Domain\PasswordPolicy\Repositories\PasswordPolicyRepository;
 use Domain\PasswordPolicy\Services\PasswordPolicyService;
+use Domain\Report\Interfaces\FieldLockRepositoryInterface;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
+use Domain\Report\Repositories\FieldLockRepository;
 use Domain\Report\Repositories\ReportRepository;
 use Domain\Report\Repositories\SectionInstanceRepository;
 use Domain\ReportTemplate\Interfaces\ReportTemplateRepositoryInterface;
@@ -45,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
             SectionRepositoryInterface::class            => SectionRepository::class,
             ReportRepositoryInterface::class             => ReportRepository::class,
             SectionInstanceRepositoryInterface::class    => SectionInstanceRepository::class,
+            FieldLockRepositoryInterface::class          => FieldLockRepository::class,
         ];
 
         foreach ($bindings as $interface => $implementation) {

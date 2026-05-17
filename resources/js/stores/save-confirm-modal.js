@@ -37,6 +37,8 @@ export const saveConfirmModalStore = {
     password: "",
     showPassword: false,
     submitLabel: "Simpan",
+    usernameError: "",
+    passwordError: "",
 
     open(config = {}) {
         this.formId              = config.formId              ?? "";
@@ -51,9 +53,11 @@ export const saveConfirmModalStore = {
         this.submitLabel         = config.submitLabel         ?? "Simpan";
 
         this.selectedAction = this.draftAction;
-        this.username       = "";
+        this.username       = config.username ?? "";
         this.password       = "";
         this.showPassword   = false;
+        this.usernameError  = config.usernameError ?? "";
+        this.passwordError  = config.passwordError ?? "";
         this.isOpen         = true;
     },
 
@@ -65,12 +69,24 @@ export const saveConfirmModalStore = {
         const form = document.getElementById(this.formId);
         if (!form) return;
 
+        // Clear any prior auth errors when re-submitting.
+        this.usernameError = "";
+        this.passwordError = "";
+
         // Inject (or update) hidden inputs for action / username / password.
         this.setHidden(form, "action",   this.selectedAction);
         this.setHidden(form, "username", this.username);
         this.setHidden(form, "password", this.password);
 
         form.submit();
+    },
+
+    clearUsernameError() {
+        this.usernameError = "";
+    },
+
+    clearPasswordError() {
+        this.passwordError = "";
     },
 
     setHidden(form, name, value) {

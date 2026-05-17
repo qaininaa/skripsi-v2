@@ -20,6 +20,17 @@ interface SectionInstanceRepositoryInterface
     public function getInstancesForReport(Report $report): Collection;
 
     /**
+     * Same as getInstancesForReport(), but also pre-computes the lock map
+     * for all section_entries + section_instances rows of this report.
+     *
+     * @return array{
+     *     instances: Collection<int, SectionInstance>,
+     *     locks: array<string, array<string, array<string, \Domain\Report\Models\FieldLock>>>,
+     * }
+     */
+    public function getInstancesForReportWithLocks(Report $report): array;
+
+    /**
      * Find a single instance with the relations needed by the form.
      */
     public function findForForm(string $instanceId): ?SectionInstance;

@@ -93,9 +93,17 @@
                     type="text"
                     autocomplete="username"
                     x-model="$store.saveConfirmModal.username"
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                    @input="$store.saveConfirmModal.clearUsernameError()"
+                    :class="$store.saveConfirmModal.usernameError
+                        ? 'w-full rounded-lg border border-red-300 bg-red-50/30 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100'
+                        : 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100'"
                     required
                 >
+                <p
+                    x-show="$store.saveConfirmModal.usernameError"
+                    x-text="$store.saveConfirmModal.usernameError"
+                    class="mt-1 text-xs text-red-600"
+                ></p>
             </div>
 
             <div>
@@ -105,7 +113,10 @@
                         :type="$store.saveConfirmModal.showPassword ? 'text' : 'password'"
                         autocomplete="current-password"
                         x-model="$store.saveConfirmModal.password"
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                        @input="$store.saveConfirmModal.clearPasswordError()"
+                        :class="$store.saveConfirmModal.passwordError
+                            ? 'w-full rounded-lg border border-red-300 bg-red-50/30 px-3 py-2 pr-10 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100'
+                            : 'w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100'"
                         required
                     >
                     <button
@@ -120,6 +131,11 @@
                         </svg>
                     </button>
                 </div>
+                <p
+                    x-show="$store.saveConfirmModal.passwordError"
+                    x-text="$store.saveConfirmModal.passwordError"
+                    class="mt-1 text-xs text-red-600"
+                ></p>
             </div>
 
             <div class="flex justify-end gap-2 pt-2">
