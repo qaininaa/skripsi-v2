@@ -37,8 +37,9 @@ use Illuminate\Support\Facades\DB;
  */
 class MonitoringService
 {
-    public const ACTION_DRAFT    = 'draft';
-    public const ACTION_FINALIZE = 'finalize_monitoring';
+    public const ACTION_DRAFT    = 'draft';                  // save & keep lock; analyst stays on the form.
+    public const ACTION_RELEASE  = 'release';                // save & release lock; analis lain bisa lanjut.
+    public const ACTION_FINALIZE = 'finalize_monitoring';    // sign off + transition to reading phase.
 
     /**
      * Tool names that always appear in section "Identitas Instrumen".
@@ -115,7 +116,7 @@ class MonitoringService
             throw new \RuntimeException('Anda bukan penanggung jawab monitoring laporan ini.');
         }
 
-        if (! in_array($action, [self::ACTION_DRAFT, self::ACTION_FINALIZE], true)) {
+        if (! in_array($action, [self::ACTION_DRAFT, self::ACTION_RELEASE, self::ACTION_FINALIZE], true)) {
             throw new \RuntimeException('Aksi penyimpanan tidak dikenali.');
         }
 
@@ -127,11 +128,12 @@ class MonitoringService
 
             if ($action === self::ACTION_FINALIZE) {
                 $this->finalizeMonitoring($report, $analystId);
-            } else {
-                // Save & release: drop the lock so a fellow analyst may continue.
+            } elseif ($action === self::ACTION_RELEASE) {
+                // Release the lock so a fellow analyst may take over.
                 $report->locked_by = null;
                 $report->save();
             }
+            // ACTION_DRAFT: keep locked_by on the current analyst.
         });
     }
 

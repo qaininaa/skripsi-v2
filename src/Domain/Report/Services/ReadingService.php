@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\DB;
 class ReadingService
 {
     public const ACTION_DRAFT    = 'draft';
+    public const ACTION_RELEASE  = 'release';
     public const ACTION_FINALIZE = 'finalize_reading';
 
     /**
@@ -74,7 +75,7 @@ class ReadingService
         if ($report->locked_by !== $analystId) {
             throw new \RuntimeException('Anda bukan penanggung jawab pembacaan laporan ini.');
         }
-        if (! in_array($action, [self::ACTION_DRAFT, self::ACTION_FINALIZE], true)) {
+        if (! in_array($action, [self::ACTION_DRAFT, self::ACTION_RELEASE, self::ACTION_FINALIZE], true)) {
             throw new \RuntimeException('Aksi penyimpanan tidak dikenali.');
         }
 
@@ -96,10 +97,11 @@ class ReadingService
 
             if ($action === self::ACTION_FINALIZE) {
                 $this->finalizeReading($report, $analystId);
-            } else {
+            } elseif ($action === self::ACTION_RELEASE) {
                 $report->locked_by = null;
                 $report->save();
             }
+            // ACTION_DRAFT: keep locked_by on the current reading analyst.
         });
     }
 

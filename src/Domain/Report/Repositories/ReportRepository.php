@@ -58,7 +58,7 @@ class ReportRepository implements ReportRepositoryInterface
     public function getReportsForAnalyst(GetAnalystReportsFilterDto $data)
     {
         return Report::query()
-            ->with(['reportTemplate', 'analysts.user'])
+            ->with(['reportTemplate', 'analysts.user', 'lockedByUser'])
             ->where(fn (Builder $q) => $this->applyAnalystTab($q, $data->tab))
             ->orderBy('created_at', 'desc')
             ->paginate(10)
