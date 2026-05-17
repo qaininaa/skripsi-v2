@@ -1,110 +1,52 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Tugas Pelaporan')
-@section('page-title', 'Edit Tugas Pelaporan')
+@section('title', 'Edit Jenis Laporan')
+@section('page-title', 'Edit Jenis Laporan')
 
 @section('content')
-    <div class="mb-4">
-        <a
-            href="{{ route('report-assignment.index') }}"
-            class="inline-flex items-center gap-1 text-sm text-gray-500 transition-colors hover:text-gray-700"
-        >
-            <span>&larr;</span>
-            <span>Kembali ke daftar</span>
-        </a>
-    </div>
+    @php
+        $initialMediums = old(
+            'medium_templates',
+            $reportTemplate->mediumTemplates->map(fn ($m) => ['name' => $m->name])->values()->toArray()
+        );
 
-    <div class="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-        <div class="mb-4 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-gray-900">Edit Tugas Pelaporan</h1>
-            <x-badges.report-status :status="$report->status" />
-        </div>
+        $initialIncubators = old(
+            'incubator_templates',
+            $reportTemplate->incubatorTemplates->map(fn ($i) => ['label' => $i->label, 'min_day' => $i->min_day])->values()->toArray()
+        );
+    @endphp
 
+    <div
+        x-data="reportTemplateForm({{ Js::from($initialMediums) }}, {{ Js::from($initialIncubators) }})"
+        class="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100"
+    >
+        <h1 class="text-xl font-bold text-gray-900">Edit Jenis Laporan</h1>
+        <p class="mt-1 text-sm text-gray-500">Perbarui konfigurasi jenis laporan.</p>
+
+        <x-messages.success-message />
         <x-messages.error-message />
         <x-messages.validation-errors />
 
-        @if ($report->status !== 'pending')
-            <div class="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-700">
-                Laporan ini tidak dapat diubah karena statusnya bukan <strong>pending</strong>.
-            </div>
-        @endif
-
-        <form
-            action="{{ route('report-assignment.update', $report) }}"
-            method="POST"
-            class="mt-4 space-y-5 {{ $report->status !== 'pending' ? 'pointer-events-none opacity-60' : '' }}"
-        >
+        <form action="{{ route('report-templates.update', $reportTemplate) }}" method="POST" class="mt-6 space-y-5">
             @csrf
             @method('PUT')
 
-            {{-- Nama Produk --}}
-            <div>
-                <label for="product_name" class="mb-1 block text-sm font-medium text-gray-700">
-                    Nama Produk <span class="text-red-500">*</span>
-                </label>
-                <input
-                    type="text"
-                    id="product_name"
-                    name="product_name"
-                    value="{{ old('product_name', $report->product_name) }}"
-                    placeholder="Masukkan nama produk"
-                    required
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                >
-            </div>
+            @include('report-management.partials.form-fields')
 
-            {{-- Nomor Batch Produk --}}
-            <div>
-                <label for="batch_number" class="mb-1 block text-sm font-medium text-gray-700">
-                    Nomor Batch Produk <span class="text-red-500">*</span>
-                </label>
-                <input
-                    type="text"
-                    id="batch_number"
-                    name="batch_number"
-                    value="{{ old('batch_number', $report->batch_number) }}"
-                    placeholder="Masukkan nomor batch produk"
-                    required
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+            <div class="flex gap-3 pt-2">
+                <a
+                    href="{{ route('report-templates.index') }}"
+                    class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                 >
-            </div>
-
-            {{-- Jenis Laporan --}}
-            <div>
-                <label for="report_template_id" class="mb-1 block text-sm font-medium text-gray-700">
-                    Jenis Laporan <span class="text-red-500">*</span>
-                </label>
-                <select
-                    id="report_template_id"
-                    name="report_template_id"
-                    required
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                    Batal
+                </a>
+                <button
+                    type="submit"
+                    class="inline-flex items-center rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-800 cursor-pointer"
                 >
-                    <option value="">- Pilih Jenis Laporan -</option>
-                    @foreach ($reportTemplates as $template)
-                        <option value="{{ $template->id }}" @selected(old('report_template_id', $report->report_template_id) === $template->id)>
-                            Annex {{ $template->annex_number }} – {{ $template->name }}
-                        </option>
-                    @endforeach
-                </select>
+                    Simpan Perubahan
+                </button>
             </div>
-
-            @if ($report->status === 'pending')
-                <div class="flex justify-end gap-3 pt-2">
-                    <a
-                        href="{{ route('report-assignment.index') }}"
-                        class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                    >
-                        Batal
-                    </a>
-                    <button
-                        type="submit"
-                        class="inline-flex items-center rounded-lg bg-green-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-800 cursor-pointer"
-                    >
-                        Simpan Perubahan
-                    </button>
-                </div>
-            @endif
         </form>
     </div>
 @endsection

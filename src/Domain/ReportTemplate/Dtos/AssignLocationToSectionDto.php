@@ -13,6 +13,6 @@ class AssignLocationToSectionDto
     public function __construct(array $data)
     {
         $this->location_id = $data['location_id'];
-        $this->section_id  = $data['section_id'];
+        $this->section_id  = $data['section_id'] ?? '';
     }
 }

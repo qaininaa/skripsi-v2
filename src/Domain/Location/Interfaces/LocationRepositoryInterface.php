@@ -55,6 +55,13 @@ interface LocationRepositoryInterface
     public function deleteLocation(Location $location): void;
 
     /**
+     * Find a location by its primary key or throw a ModelNotFoundException.
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
+     */
+    public function findOrFail(string $id): Location;
+
+    /**
      * Get all locations assigned to a section, ordered by section_assigned_at
      * then created_at. Used when bootstrapping section instance rows.
      *

@@ -135,4 +135,12 @@ class LocationRepository implements LocationRepositoryInterface
             ->orderBy('created_at')
             ->get();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findOrFail(string $id): Location
+    {
+        return Location::findOrFail($id);
+    }
 }

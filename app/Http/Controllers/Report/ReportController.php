@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\ReportIndexRequest;
 use App\Http\Requests\Report\ReportStoreRequest;
 use App\Http\Requests\Report\ReportUpdateRequest;
+use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Report;
 use Domain\Report\Services\ReportService;
 use Domain\ReportTemplate\Dtos\GetReportTemplatesFilterDto;
@@ -18,6 +19,7 @@ class ReportController extends Controller
     public function __construct(
         protected ReportService $reportService,
         protected ReportTemplateService $reportTemplateService,
+        protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
     ) {
     }
 
@@ -25,14 +27,14 @@ class ReportController extends Controller
     {
         $reports = $this->reportService->getReports($request->toDTO());
 
-        return view('report-management.index', compact('reports'));
+        return view('report-assignment.index', compact('reports'));
     }
 
     public function create(): View
     {
         $reportTemplates = $this->reportTemplateService->getReportTemplates(new GetReportTemplatesFilterDto());
 
-        return view('report-management.create', compact('reportTemplates'));
+        return view('report-assignment.create', compact('reportTemplates'));
     }
 
     public function store(ReportStoreRequest $request): RedirectResponse
@@ -46,7 +48,7 @@ class ReportController extends Controller
     {
         $reportTemplates = $this->reportTemplateService->getReportTemplates(new GetReportTemplatesFilterDto());
 
-        return view('report-management.edit', compact('report', 'reportTemplates'));
+        return view('report-assignment.edit', compact('report', 'reportTemplates'));
     }
 
     /**
@@ -54,10 +56,9 @@ class ReportController extends Controller
      */
     public function show(Report $report): View
     {
-        $instances = app(\Domain\Report\Interfaces\SectionInstanceRepositoryInterface::class)
-            ->getInstancesForReport($report);
+        $instances = $this->sectionInstanceRepository->getInstancesForReport($report);
 
-        return view('report-management.show', compact('report', 'instances'));
+        return view('report-assignment.show', compact('report', 'instances'));
     }
 
     public function update(ReportUpdateRequest $request, Report $report): RedirectResponse

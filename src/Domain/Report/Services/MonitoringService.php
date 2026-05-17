@@ -3,6 +3,7 @@
 namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\SaveMonitoringDto;
+use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Analyst;
 use Domain\Report\Models\Incubator;
 use Domain\Report\Models\IncubatorEntry;
@@ -46,6 +47,11 @@ class MonitoringService
      * The default first row is "Air Sampler" (cannot be edited by name).
      */
     private const DEFAULT_INSTRUMENTS = ['Air Sampler'];
+
+    public function __construct(
+        protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
+    ) {
+    }
 
     /**
      * Lock the report to the given analyst and bootstrap all the entry rows
@@ -249,10 +255,7 @@ class MonitoringService
     private function saveSectionMonitoringRows(Report $report, SaveMonitoringDto $dto, string $analystId): void
     {
         foreach ($dto->sections as $instanceId => $row) {
-            $instance = SectionInstance::with('instanceLocations.entries')
-                ->where('report_id', $report->id)
-                ->whereKey($instanceId)
-                ->first();
+            $instance = $this->sectionInstanceRepository->findByReportAndKey($report->id, $instanceId);
             if ($instance === null) {
                 continue;
             }

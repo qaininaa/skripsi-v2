@@ -71,4 +71,14 @@ interface SectionInstanceRepositoryInterface
      * Update a SectionEntry row with the given attributes.
      */
     public function updateEntry(SectionEntry $entry, array $attributes): void;
+
+    /**
+     * Find a SectionInstance scoped to a report by its primary key.
+     *
+     * @param  string                $reportId
+     * @param  string                $instanceId
+     * @param  array<int, string>    $with       Relations to eager-load.
+     * @return SectionInstance|null
+     */
+    public function findByReportAndKey(string $reportId, string $instanceId, array $with = []): ?SectionInstance;
 }

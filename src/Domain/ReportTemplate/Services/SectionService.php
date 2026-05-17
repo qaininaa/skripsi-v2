@@ -2,6 +2,7 @@
 
 namespace Domain\ReportTemplate\Services;
 
+use Domain\Location\Interfaces\LocationRepositoryInterface;
 use Domain\Location\Models\Location;
 use Domain\ReportTemplate\Dtos\AssignLocationToSectionDto;
 use Domain\ReportTemplate\Dtos\CreateSectionDto;
@@ -17,10 +18,14 @@ use Illuminate\Support\Collection;
 class SectionService
 {
     protected SectionRepositoryInterface $repository;
+    protected LocationRepositoryInterface $locationRepository;
 
-    public function __construct(SectionRepositoryInterface $repository)
-    {
-        $this->repository = $repository;
+    public function __construct(
+        SectionRepositoryInterface $repository,
+        LocationRepositoryInterface $locationRepository,
+    ) {
+        $this->repository         = $repository;
+        $this->locationRepository = $locationRepository;
     }
 
     /**
@@ -84,7 +89,7 @@ class SectionService
      */
     public function assignLocation(Section $section, string $locationId): void
     {
-        $location = Location::findOrFail($locationId);
+        $location = $this->locationRepository->findOrFail($locationId);
 
         if ($location->measurement_type !== $section->measurement_type) {
             throw new \RuntimeException(
@@ -115,7 +120,7 @@ class SectionService
      */
     public function removeLocation(Section $section, string $locationId): void
     {
-        $location = Location::findOrFail($locationId);
+        $location = $this->locationRepository->findOrFail($locationId);
 
         if ($location->section_id !== $section->id) {
             throw new \RuntimeException(

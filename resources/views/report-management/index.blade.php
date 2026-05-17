@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Tugas Pelaporan')
-@section('page-title', 'Tugas Pelaporan')
+@section('title', 'Template Laporan')
+@section('page-title', 'Template Laporan')
 
 @section('content')
     <x-messages.success-message />
@@ -9,51 +9,35 @@
 
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <h2 class="text-2xl font-bold text-gray-900">Tugas Pelaporan</h2>
-            <p class="mt-1 text-sm text-gray-500">Daftar tugas pelaporan yang dibuat.</p>
+            <h2 class="text-2xl font-bold text-gray-900">Daftar Template Laporan</h2>
+            <p class="mt-1 text-sm text-gray-500">Kelola template laporan Annex beserta konfigurasinya.</p>
         </div>
         <a
-            href="{{ route('report-assignment.create') }}"
+            href="{{ route('report-templates.create') }}"
             class="inline-flex items-center justify-center gap-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-green-800"
         >
             <span>+</span>
-            <span>Tambah Tugas</span>
+            <span>Tambah Template Laporan</span>
         </a>
     </div>
 
-    <form method="GET" action="{{ route('report-assignment.index') }}" class="mb-4 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100">
-        <div class="grid gap-3 lg:grid-cols-[1fr_180px_auto_auto]">
+    <form method="GET" action="{{ route('report-templates.index') }}" class="mb-4 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100">
+        <div class="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
             <input
                 type="text"
                 name="search"
                 value="{{ request('search') }}"
-                placeholder="Cari nama atau nomor batch..."
+                placeholder="Cari nama laporan atau kode SOP..."
                 class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 placeholder:text-gray-400 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
             >
-
-            <select
-                name="status"
-                class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-            >
-                <option value="">Semua Status</option>
-                <option value="pending"                 @selected(request('status') === 'pending')>Pending</option>
-                <option value="in_progress_monitoring" @selected(request('status') === 'in_progress_monitoring')>Monitoring</option>
-                <option value="in_progress_reading"    @selected(request('status') === 'in_progress_reading')>Pembacaan</option>
-                <option value="pending_review"         @selected(request('status') === 'pending_review')>Review</option>
-                <option value="pending_approval"       @selected(request('status') === 'pending_approval')>Approval</option>
-                <option value="completed"              @selected(request('status') === 'completed')>Selesai</option>
-                <option value="archived"               @selected(request('status') === 'archived')>Diarsipkan</option>
-            </select>
-
             <button
                 type="submit"
                 class="rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-800 cursor-pointer"
             >
-                Cari
+                Filter
             </button>
-
             <a
-                href="{{ route('report-assignment.index') }}"
+                href="{{ route('report-templates.index') }}"
                 class="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100"
             >
                 Reset
@@ -66,55 +50,47 @@
             <table class="min-w-full">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Tanggal</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Nama Produk</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Batch Produk</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Jenis Laporan</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Dibuat Oleh</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
-                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Aksi</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Annex</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Kode SOP</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Nama</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Medium</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Inkubator</th>
+                        <th class="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                    @forelse ($reports as $report)
+                    @forelse ($reportTemplates as $template)
                         <tr class="hover:bg-gray-50/60">
-                            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                                {{ $report->created_at->format('Y-m-d H:i:s') }}
+                            <td class="whitespace-nowrap px-6 py-4">
+                                <span class="inline-flex rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                                    Annex {{ $template->annex_number }}
+                                </span>
                             </td>
-                            <td class="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
-                                {{ $report->product_name }}
+                            <td class="whitespace-nowrap px-6 py-4 text-sm text-gray-600">{{ $template->sop_code }}</td>
+                            <td class="px-6 py-4 text-sm font-semibold text-gray-800">{{ $template->name }}</td>
+                            <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-600">
+                                {{ $template->medium_templates_count }}
                             </td>
-                            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                                {{ $report->batch_number }}
+                            <td class="whitespace-nowrap px-6 py-4 text-center text-sm text-gray-600">
+                                {{ $template->incubator_templates_count }}
                             </td>
-                            <td class="px-4 py-4 text-sm text-gray-700">
-                                {{ $report->reportTemplate?->name ?? '-' }}
-                            </td>
-                            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                                {{ $report->createdByUser?->name ?? '-' }}
-                            </td>
-                            <td class="whitespace-nowrap px-4 py-4">
-                                <x-badges.report-status :status="$report->status" />
-                            </td>
-                            <td class="whitespace-nowrap px-4 py-4">
+                            <td class="whitespace-nowrap px-6 py-4">
                                 <div class="flex items-center justify-center gap-2">
-                                    <x-buttons.detail :href="route('report-assignment.show', $report)" />
-                                    @if ($report->status === 'pending')
-                                        <x-buttons.edit :href="route('report-assignment.edit', $report)" />
-                                        <x-buttons.delete
-                                            :action="route('report-assignment.destroy', $report)"
-                                            :item-name="$report->product_name"
-                                            title="Hapus Tugas Pelaporan"
-                                            warning="Tugas pelaporan yang dihapus tidak dapat dikembalikan."
-                                        />
-                                    @endif
+                                    <x-buttons.detail :href="route('report-templates.show', $template)" />
+                                    <x-buttons.edit :href="route('report-templates.edit', $template)" />
+                                    <x-buttons.delete
+                                        :action="route('report-templates.destroy', $template)"
+                                        :item-name="$template->name"
+                                        title="Hapus Template Laporan"
+                                        warning="Semua data medium dan inkubator terkait juga akan dihapus."
+                                    />
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-sm text-gray-500">
-                                Data tugas pelaporan tidak ditemukan.
+                            <td colspan="6" class="px-6 py-8 text-center text-sm text-gray-500">
+                                Data template laporan tidak ditemukan.
                             </td>
                         </tr>
                     @endforelse
@@ -123,7 +99,7 @@
         </div>
 
         <div class="border-t border-gray-100 px-4 py-3">
-            {{ $reports->links() }}
+            {{ $reportTemplates->links() }}
         </div>
     </div>
 @endsection

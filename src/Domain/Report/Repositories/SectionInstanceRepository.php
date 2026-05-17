@@ -138,4 +138,17 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
     {
         $entry->fill($attributes)->save();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findByReportAndKey(string $reportId, string $instanceId, array $with = []): ?SectionInstance
+    {
+        return SectionInstance::query()
+            ->where('report_id', $reportId)
+            ->when(! empty($with), fn ($q) => $q->with($with))
+            ->when(empty($with), fn ($q) => $q->with('instanceLocations.entries'))
+            ->whereKey($instanceId)
+            ->first();
+    }
 }

@@ -3,6 +3,7 @@
 namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\SaveReadingDto;
+use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Analyst;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionInstance;
@@ -32,6 +33,11 @@ class ReadingService
     public const ACTION_DRAFT    = 'draft';
     public const ACTION_RELEASE  = 'release';
     public const ACTION_FINALIZE = 'finalize_reading';
+
+    public function __construct(
+        protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
+    ) {
+    }
 
     /**
      * Lock the report to the analyst as the reading owner.
@@ -82,10 +88,11 @@ class ReadingService
         DB::transaction(function () use ($report, $dto, $analystId, $action) {
             foreach ($dto->sections as $instanceId => $payload) {
                 /** @var SectionInstance|null $instance */
-                $instance = SectionInstance::where('report_id', $report->id)
-                    ->with('instanceLocations.entries', 'instanceLocations.location.room')
-                    ->whereKey($instanceId)
-                    ->first();
+                $instance = $this->sectionInstanceRepository->findByReportAndKey(
+                    $report->id,
+                    $instanceId,
+                    ['instanceLocations.entries', 'instanceLocations.location.room'],
+                );
 
                 if ($instance === null) {
                     continue;
