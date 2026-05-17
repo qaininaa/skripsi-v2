@@ -1,0 +1,127 @@
+@extends('layouts.app')
+
+@section('title', 'Tugas Pelaporan')
+@section('page-title', 'Tugas Pelaporan')
+
+@section('content')
+    @php
+        $tabs = [
+            'all'                  => 'Semua',
+            'belum_dikerjakan'     => 'Belum Dikerjakan',
+            'sedang_dimonitoring'  => 'Sedang Dimonitoring',
+            'sedang_dibaca'        => 'Sedang Dibaca',
+            'dikirim'              => 'Dikirim',
+            'dikembalikan'         => 'Dikembalikan',
+        ];
+
+        $statusBadge = [
+            'pending'     => ['label' => 'Belum Dikerjakan',    'class' => 'bg-blue-50 text-blue-600'],
+            'in_progress' => ['label' => 'Sedang Dimonitoring', 'class' => 'bg-yellow-50 text-yellow-700'],
+            'completed'   => ['label' => 'Dikirim',             'class' => 'bg-emerald-50 text-emerald-700'],
+            'archived'    => ['label' => 'Diarsipkan',          'class' => 'bg-gray-100 text-gray-600'],
+        ];
+    @endphp
+
+    <x-messages.success-message />
+    <x-messages.error-message />
+
+    <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
+        {{-- Tabs --}}
+        <div class="overflow-x-auto border-b border-gray-100">
+            <nav class="flex gap-1 px-4">
+                @foreach ($tabs as $key => $label)
+                    @php
+                        $isActive = $activeTab === $key;
+                        $count    = $counts[$key] ?? 0;
+                    @endphp
+                    <a
+                        href="{{ route('analyst.reports.index', ['tab' => $key]) }}"
+                        class="relative inline-flex items-center gap-2 whitespace-nowrap px-4 py-4 text-sm font-medium transition-colors
+                            {{ $isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700' }}"
+                    >
+                        <span>{{ $label }}</span>
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold
+                            {{ $isActive ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
+                            {{ $count }}
+                        </span>
+                        @if ($isActive)
+                            <span class="absolute inset-x-2 -bottom-px h-0.5 bg-blue-500"></span>
+                        @endif
+                    </a>
+                @endforeach
+            </nav>
+        </div>
+
+        {{-- Table --}}
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-white">
+                    <tr class="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                        <th class="px-6 py-3 text-left">Tanggal</th>
+                        <th class="px-6 py-3 text-left">Nama Produk</th>
+                        <th class="px-6 py-3 text-left">Nomor Batch Produk</th>
+                        <th class="px-6 py-3 text-center">Status</th>
+                        <th class="px-6 py-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse ($reports as $report)
+                        @php
+                            $monitoringAnalyst = $report->analystOfType('monitoring')?->user;
+                            $readingAnalyst    = $report->analystOfType('reading')?->user;
+                            $isMine            = $monitoringAnalyst !== null && $monitoringAnalyst->id === auth()->id();
+                            $badge             = $statusBadge[$report->status] ?? ['label' => $report->status, 'class' => 'bg-gray-100 text-gray-600'];
+                        @endphp
+
+                        <tr class="hover:bg-gray-50/60">
+                            <td class="whitespace-nowrap px-6 py-5 text-sm text-gray-700">
+                                {{ $report->created_at->translatedFormat('d M Y') }}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-5 text-sm font-medium text-gray-800">
+                                {{ $report->product_name }}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-5 text-sm text-gray-700">
+                                {{ $report->batch_number }}
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-5 text-center">
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $badge['class'] }}">
+                                    {{ $badge['label'] }}
+                                </span>
+                                @if ($readingAnalyst !== null)
+                                    <div class="mt-1 text-xs text-gray-400">oleh {{ $readingAnalyst->name }}</div>
+                                @elseif ($monitoringAnalyst !== null)
+                                    <div class="mt-1 text-xs text-gray-400">oleh {{ $monitoringAnalyst->name }}</div>
+                                @endif
+                            </td>
+                            <td class="whitespace-nowrap px-6 py-5">
+                                <div class="flex items-center justify-center gap-2">
+                                    <x-buttons.view :href="route('analyst.reports.show', $report)" />
+
+                                    @if ($report->status === 'pending')
+                                        <x-buttons.start
+                                            :action="route('analyst.reports.start', $report)"
+                                            :product-name="$report->product_name"
+                                            :batch-number="$report->batch_number"
+                                        />
+                                    @elseif ($isMine && $report->status === 'in_progress')
+                                        <x-buttons.resume :href="route('analyst.reports.monitoring.edit', $report)" />
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-sm text-gray-500">
+                                Tidak ada tugas pelaporan pada tab ini.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="border-t border-gray-100 px-4 py-3">
+            {{ $reports->links() }}
+        </div>
+    </div>
+@endsection

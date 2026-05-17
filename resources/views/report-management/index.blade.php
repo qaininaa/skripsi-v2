@@ -88,7 +88,7 @@
                                 {{ $report->reportTemplate?->name ?? '-' }}
                             </td>
                             <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
-                                {{ $report->lockedByUser?->name ?? '-' }}
+                                {{ $report->createdByUser?->name ?? '-' }}
                             </td>
                             <td class="whitespace-nowrap px-4 py-4">
                                 <x-badges.report-status :status="$report->status" />

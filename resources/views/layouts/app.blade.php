@@ -52,6 +52,7 @@
         </div>
 
         <x-modals.delete-modal />
+        <x-modals.start-report-modal />
     </div>
 
     @stack('scripts')

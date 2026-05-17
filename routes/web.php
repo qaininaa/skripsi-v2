@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Analyst\AnalystReportController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Dashboard\DashboardController;
@@ -76,5 +77,13 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/report-assignment/{report}/edit', [ReportController::class, 'edit'])->name('report-assignment.edit');
         Route::put('/report-assignment/{report}', [ReportController::class, 'update'])->name('report-assignment.update');
         Route::delete('/report-assignment/{report}', [ReportController::class, 'destroy'])->name('report-assignment.destroy');
+    });
+
+    Route::middleware('role:analyst')->prefix('analyst')->name('analyst.')->group(function () {
+        Route::get('/reports', [AnalystReportController::class, 'index'])->name('reports.index');
+        Route::post('/reports/{report}/start', [AnalystReportController::class, 'start'])->name('reports.start');
+        Route::get('/reports/{report}', [AnalystReportController::class, 'show'])->name('reports.show');
+        Route::get('/reports/{report}/monitoring', [AnalystReportController::class, 'editMonitoring'])->name('reports.monitoring.edit');
+        Route::put('/reports/{report}/monitoring', [AnalystReportController::class, 'saveMonitoring'])->name('reports.monitoring.save');
     });
 });
