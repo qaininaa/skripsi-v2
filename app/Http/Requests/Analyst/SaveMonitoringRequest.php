@@ -2,8 +2,12 @@
 
 namespace App\Http\Requests\Analyst;
 
+use App\Rules\CurrentUserCredentials;
+use App\Rules\MicrobialCount;
 use Domain\Report\Dtos\SaveMonitoringDto;
+use Domain\Report\Services\MonitoringService;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class SaveMonitoringRequest extends FormRequest
 {
@@ -15,6 +19,13 @@ class SaveMonitoringRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'action'      => ['required', Rule::in([
+                MonitoringService::ACTION_DRAFT,
+                MonitoringService::ACTION_FINALIZE,
+            ])],
+            'username'    => ['required', 'string', 'max:255'],
+            'password'    => ['required', 'string', new CurrentUserCredentials('username')],
+
             'instruments'                              => ['nullable', 'array'],
             'instruments.*.no_id'                      => ['nullable', 'string', 'max:255'],
             'instruments.*.calibration_date'           => ['nullable', 'date'],
@@ -34,11 +45,39 @@ class SaveMonitoringRequest extends FormRequest
             'incubators.*.entries.*.time_in'           => ['nullable', 'string', 'max:10'],
             'incubators.*.entries.*.date_out'          => ['nullable', 'date'],
             'incubators.*.entries.*.time_out'          => ['nullable', 'string', 'max:10'],
+
+            // sections[{id}][note]
+            'sections'                                          => ['nullable', 'array'],
+            'sections.*.note'                                   => ['nullable', 'string', 'max:5000'],
+
+            // sections[{id}][columns][{idx}][sp_value]
+            'sections.*.columns'                                => ['nullable', 'array'],
+            'sections.*.columns.*.sp_value'                     => ['nullable', 'string', 'max:20', new MicrobialCount()],
+
+            // sections[{id}][columns][{idx}][slots][{label}][time_*]
+            'sections.*.columns.*.slots'                        => ['nullable', 'array'],
+            'sections.*.columns.*.slots.*.time_start'           => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
+            'sections.*.columns.*.slots.*.time_end'             => ['nullable', 'string', 'regex:/^\d{2}:\d{2}$/'],
         ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'sections.*.columns.*.slots.*.time_start.regex' => 'Format jam harus HH:MM.',
+            'sections.*.columns.*.slots.*.time_end.regex'   => 'Format jam harus HH:MM.',
+        ];
+    }
+
+    public function action(): string
+    {
+        return (string) $this->validated('action');
     }
 
     public function toDTO(): SaveMonitoringDto
     {
-        return new SaveMonitoringDto($this->validated());
+        $data = $this->validated();
+        unset($data['action'], $data['username'], $data['password']);
+        return new SaveMonitoringDto($data);
     }
 }

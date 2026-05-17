@@ -49,6 +49,17 @@ class ReportController extends Controller
         return view('report-management.edit', compact('report', 'reportTemplates'));
     }
 
+    /**
+     * Show: detail laporan + daftar section instances dengan opsi duplikasi.
+     */
+    public function show(Report $report): View
+    {
+        $instances = app(\Domain\Report\Interfaces\SectionInstanceRepositoryInterface::class)
+            ->getInstancesForReport($report);
+
+        return view('report-management.show', compact('report', 'instances'));
+    }
+
     public function update(ReportUpdateRequest $request, Report $report): RedirectResponse
     {
         try {

@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Analyst;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Analyst\AnalystReportIndexRequest;
 use App\Http\Requests\Analyst\SaveMonitoringRequest;
+use App\Http\Requests\Analyst\SaveReadingRequest;
+use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Report;
 use Domain\Report\Services\MonitoringService;
+use Domain\Report\Services\ReadingService;
 use Domain\Report\Services\ReportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -22,6 +25,8 @@ class AnalystReportController extends Controller
     public function __construct(
         protected ReportService $reportService,
         protected MonitoringService $monitoringService,
+        protected ReadingService $readingService,
+        protected SectionInstanceRepositoryInterface $sectionInstances,
     ) {
     }
 
@@ -42,13 +47,20 @@ class AnalystReportController extends Controller
     }
 
     /**
-     * Click "Mulai" → lock the report to current analyst, bootstrap entries,
-     * then redirect to the fill-in form.
+     * Click "Mulai" → lock the report to the current analyst.
+     *
+     * Branches by current report status:
+     *   pending / in_progress_monitoring → enter monitoring phase
+     *   in_progress_reading             → enter reading phase
      */
     public function start(Report $report): RedirectResponse
     {
         try {
-            $this->monitoringService->startMonitoring($report, $this->currentAnalystId());
+            if ($report->status === Report::STATUS_IN_PROGRESS_READING) {
+                $this->readingService->startReading($report, $this->currentAnalystId());
+            } else {
+                $this->monitoringService->startMonitoring($report, $this->currentAnalystId());
+            }
         } catch (\RuntimeException $e) {
             return redirect()
                 ->route('analyst.reports.index')
@@ -66,14 +78,16 @@ class AnalystReportController extends Controller
         $report->load($this->fillRelations());
 
         return view('report.fill', [
-            'report'   => $report,
-            'readonly' => true,
+            'report'         => $report,
+            'readonly'       => true,
+            'phase'          => $this->currentPhase($report),
+            'sectionInstances' => $this->sectionInstances->getInstancesForReport($report),
         ]);
     }
 
     /**
-     * Fill-in form (sections 1–4). Editable when current user is the
-     * locking analyst, read-only otherwise.
+     * Fill-in form. Editable when current user is the locking analyst,
+     * read-only otherwise.
      */
     public function fill(Report $report): View
     {
@@ -82,21 +96,24 @@ class AnalystReportController extends Controller
         $isOwner = $report->locked_by !== null && $report->locked_by === $this->currentAnalystId();
 
         return view('report.fill', [
-            'report'   => $report,
-            'readonly' => ! $isOwner,
+            'report'           => $report,
+            'readonly'         => ! $isOwner,
+            'phase'            => $this->currentPhase($report),
+            'sectionInstances' => $this->sectionInstances->getInstancesForReport($report),
         ]);
     }
 
     /**
-     * Save the fill-in form (draft or final).
+     * Save the monitoring form (draft or finalize → reading).
      */
-    public function save(SaveMonitoringRequest $request, Report $report): RedirectResponse
+    public function saveMonitoring(SaveMonitoringRequest $request, Report $report): RedirectResponse
     {
         try {
             $this->monitoringService->saveMonitoring(
                 $report,
                 $this->currentAnalystId(),
                 $request->toDTO(),
+                $request->action(),
             );
         } catch (\RuntimeException $e) {
             return redirect()
@@ -106,8 +123,40 @@ class AnalystReportController extends Controller
         }
 
         return redirect()
-            ->route('analyst.reports.fill', $report)
-            ->with('success', 'Data laporan berhasil disimpan.');
+            ->route('analyst.reports.index')
+            ->with('success', 'Data monitoring berhasil disimpan.');
+    }
+
+    /**
+     * Save the reading form (draft or finalize → review).
+     */
+    public function saveReading(SaveReadingRequest $request, Report $report): RedirectResponse
+    {
+        try {
+            $this->readingService->saveReading(
+                $report,
+                $this->currentAnalystId(),
+                $request->toDTO(),
+                $request->action(),
+            );
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->route('analyst.reports.index')
+            ->with('success', 'Data pembacaan berhasil disimpan.');
+    }
+
+    /**
+     * Tells the view which phase to render: 'monitoring' or 'reading'.
+     */
+    private function currentPhase(Report $report): string
+    {
+        return $report->isReadingPhase() ? 'reading' : 'monitoring';
     }
 
     /**
