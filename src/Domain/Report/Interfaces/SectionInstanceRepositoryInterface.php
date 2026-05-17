@@ -3,29 +3,38 @@
 namespace Domain\Report\Interfaces;
 
 use Domain\Report\Models\Report;
+use Domain\Report\Models\SectionEntry;
 use Domain\Report\Models\SectionInstance;
 use Illuminate\Support\Collection;
 
 /**
  * Contract for SectionInstance + child rows data access.
- *
- * Includes both reads (eager-loaded for the form view) and writes
- * (bootstrap on report creation, duplicate, save monitoring/reading).
  */
 interface SectionInstanceRepositoryInterface
 {
     /**
-     * Eager-load all section instances for a report, including the data
-     * needed by the fill-in form (sections, locations, entries, signatures).
+     * Eager-load all section instances for a report.
      *
      * @return Collection<int, SectionInstance>
      */
     public function getInstancesForReport(Report $report): Collection;
 
     /**
-     * Find a single instance with all relations needed for the form.
+     * Find a single instance with the relations needed by the form.
      */
     public function findForForm(string $instanceId): ?SectionInstance;
+
+    /**
+     * Find an instance scoped to a report. Optionally eager-load relations.
+     *
+     * @param  array<int, string>  $with
+     */
+    public function findInstanceForReport(string $reportId, string $instanceId, array $with = []): ?SectionInstance;
+
+    /**
+     * Whether a (report, section, instance_number=1) row already exists.
+     */
+    public function bootstrapInstanceExists(string $reportId, string $sectionId): bool;
 
     /**
      * Next instance_number for a (report, section) pair.
@@ -40,6 +49,11 @@ interface SectionInstanceRepositoryInterface
     public function createInstance(array $attributes): SectionInstance;
 
     /**
+     * Update an instance with the given attributes.
+     */
+    public function updateInstance(SectionInstance $instance, array $attributes): void;
+
+    /**
      * Persist N section_instance_locations rows for an instance.
      *
      * @param  array<int, array{location_id: string, display_order: int}>  $rows
@@ -52,4 +66,9 @@ interface SectionInstanceRepositoryInterface
      * @param  array<int, array<string, mixed>>  $rows
      */
     public function createEntries(string $instanceLocationId, array $rows): void;
+
+    /**
+     * Update a SectionEntry row with the given attributes.
+     */
+    public function updateEntry(SectionEntry $entry, array $attributes): void;
 }

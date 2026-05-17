@@ -2,7 +2,8 @@
 
 namespace Domain\Report\Services;
 
-use Domain\Location\Models\Location;
+use Domain\Location\Interfaces\LocationRepositoryInterface;
+use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionInstance;
@@ -20,11 +21,16 @@ use Illuminate\Support\Facades\DB;
  *   - duplicate(): called when Admin QC clicks "Duplicate" on an existing
  *     section block. Copies the locations from the source instance, but
  *     entries (time, readings, sp) start blank.
+ *
+ * All data access goes through repository interfaces; the service holds
+ * business rules and orchestrates the work.
  */
 class SectionInstanceService
 {
     public function __construct(
-        protected SectionInstanceRepositoryInterface $repository,
+        protected SectionInstanceRepositoryInterface $sectionInstances,
+        protected LocationRepositoryInterface $locations,
+        protected ReportRepositoryInterface $reports,
     ) {
     }
 
@@ -35,16 +41,12 @@ class SectionInstanceService
     public function bootstrapForReport(Report $report): void
     {
         $template = $report->reportTemplate()->with('sections')->first();
-
         if ($template === null) {
             return;
         }
 
         foreach ($template->sections as $section) {
-            $exists = SectionInstance::where('report_id', $report->id)
-                ->where('section_id', $section->id)
-                ->exists();
-            if ($exists) {
+            if ($this->sectionInstances->bootstrapInstanceExists($report->id, $section->id)) {
                 continue;
             }
             $this->createInitialInstance($report, $section);
@@ -58,7 +60,7 @@ class SectionInstanceService
      */
     public function duplicate(SectionInstance $source, ?string $reason = null): SectionInstance
     {
-        $report = $source->report ?? Report::find($source->report_id);
+        $report = $source->report ?? $this->reports->findById($source->report_id);
         if ($report === null) {
             throw new \RuntimeException('Laporan tidak ditemukan.');
         }
@@ -73,10 +75,10 @@ class SectionInstanceService
             );
         }
 
-        return DB::transaction(function () use ($source, $report, $reason) {
-            $next = $this->repository->nextInstanceNumber($source->report_id, $source->section_id);
+        return DB::transaction(function () use ($source, $reason) {
+            $next = $this->sectionInstances->nextInstanceNumber($source->report_id, $source->section_id);
 
-            $copy = $this->repository->createInstance([
+            $copy = $this->sectionInstances->createInstance([
                 'report_id'           => $source->report_id,
                 'section_id'          => $source->section_id,
                 'instance_number'     => $next,
@@ -91,9 +93,9 @@ class SectionInstanceService
                 'display_order' => $row->display_order,
             ])->all();
 
-            $this->repository->createInstanceLocations($copy, $rows);
+            $this->sectionInstances->createInstanceLocations($copy, $rows);
 
-            $section = $source->section ?? Section::find($source->section_id);
+            $section = $source->section;
             $copy->loadMissing('instanceLocations');
             foreach ($copy->instanceLocations as $row) {
                 $this->createEmptyEntries($row->id, $section);
@@ -109,22 +111,19 @@ class SectionInstanceService
     private function createInitialInstance(Report $report, Section $section): SectionInstance
     {
         return DB::transaction(function () use ($report, $section) {
-            $instance = $this->repository->createInstance([
+            $instance = $this->sectionInstances->createInstance([
                 'report_id'       => $report->id,
                 'section_id'      => $section->id,
                 'instance_number' => 1,
             ]);
 
-            $locations = Location::where('section_id', $section->id)
-                ->orderBy('section_assigned_at')
-                ->orderBy('created_at')
-                ->get();
+            $locations = $this->locations->getBySection($section->id);
 
             $rows = $locations->values()->map(fn ($loc, $index) => [
                 'location_id'   => $loc->id,
                 'display_order' => $index,
             ])->all();
-            $this->repository->createInstanceLocations($instance, $rows);
+            $this->sectionInstances->createInstanceLocations($instance, $rows);
 
             $instance->loadMissing('instanceLocations');
             foreach ($instance->instanceLocations as $row) {
@@ -150,6 +149,6 @@ class SectionInstanceService
                 ];
             }
         }
-        $this->repository->createEntries($instanceLocationId, $rows);
+        $this->sectionInstances->createEntries($instanceLocationId, $rows);
     }
 }

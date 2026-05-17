@@ -61,4 +61,17 @@ interface ReportRepositoryInterface
      * @return void
      */
     public function deleteReport(Report $report): void;
+
+    /**
+     * Find a report by its primary key.
+     */
+    public function findById(string $id): ?Report;
+
+    /**
+     * Update lock + status fields atomically. Pass null in $status to leave
+     * status unchanged. monitoringStartedAt only set when not already set.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateMeta(Report $report, array $attributes): void;
 }

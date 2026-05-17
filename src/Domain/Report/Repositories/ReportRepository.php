@@ -152,4 +152,20 @@ class ReportRepository implements ReportRepositoryInterface
     {
         $report->delete();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findById(string $id): ?Report
+    {
+        return Report::find($id);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function updateMeta(Report $report, array $attributes): void
+    {
+        $report->fill($attributes)->save();
+    }
 }

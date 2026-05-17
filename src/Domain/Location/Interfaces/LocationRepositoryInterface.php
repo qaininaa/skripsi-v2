@@ -53,4 +53,12 @@ interface LocationRepositoryInterface
      * @return void
      */
     public function deleteLocation(Location $location): void;
+
+    /**
+     * Get all locations assigned to a section, ordered by section_assigned_at
+     * then created_at. Used when bootstrapping section instance rows.
+     *
+     * @return \Illuminate\Support\Collection<int, Location>
+     */
+    public function getBySection(string $sectionId);
 }

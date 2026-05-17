@@ -27,7 +27,6 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
             ->orderBy('section_id')
             ->orderBy('instance_number')
             ->get()
-            // Sort in PHP by section.order so the UI ordering matches the template.
             ->sortBy([
                 fn ($a, $b) => ($a->section?->order ?? 0) <=> ($b->section?->order ?? 0),
                 fn ($a, $b) => $a->instance_number <=> $b->instance_number,
@@ -53,6 +52,29 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
     /**
      * {@inheritDoc}
      */
+    public function findInstanceForReport(string $reportId, string $instanceId, array $with = []): ?SectionInstance
+    {
+        return SectionInstance::query()
+            ->where('report_id', $reportId)
+            ->when(! empty($with), fn ($q) => $q->with($with))
+            ->whereKey($instanceId)
+            ->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function bootstrapInstanceExists(string $reportId, string $sectionId): bool
+    {
+        return SectionInstance::query()
+            ->where('report_id', $reportId)
+            ->where('section_id', $sectionId)
+            ->exists();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function nextInstanceNumber(string $reportId, string $sectionId): int
     {
         $max = SectionInstance::query()
@@ -69,6 +91,14 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
     public function createInstance(array $attributes): SectionInstance
     {
         return SectionInstance::create($attributes);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function updateInstance(SectionInstance $instance, array $attributes): void
+    {
+        $instance->fill($attributes)->save();
     }
 
     /**
@@ -96,9 +126,16 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
             $rows,
         );
 
-        // Use the model so HasUuids fires the boot event for ids.
         foreach ($payload as $attrs) {
             SectionEntry::create($attrs);
         }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function updateEntry(SectionEntry $entry, array $attributes): void
+    {
+        $entry->fill($attributes)->save();
     }
 }

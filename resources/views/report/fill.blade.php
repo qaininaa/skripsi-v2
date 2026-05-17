@@ -166,13 +166,13 @@
         @csrf
         @method('PUT')
 
-        <x-report-form.section-pemantauan-ruang :report="$report" :readonly="$readonly" />
+        <x-report-form.section-room-monitoring :report="$report" :readonly="$readonly" />
 
-        <x-report-form.section-identitas-instrumen :instrument-entries="$instrumentEntries" :readonly="$readonly || $phase === 'reading'" />
+        <x-report-form.section-instrument-identity :instrument-entries="$instrumentEntries" :readonly="$readonly || $phase === 'reading'" />
 
-        <x-report-form.section-identitas-medium :medium-entries="$mediumEntries" :readonly="$readonly || $phase === 'reading'" />
+        <x-report-form.section-medium-identity :medium-entries="$mediumEntries" :readonly="$readonly || $phase === 'reading'" />
 
-        <x-report-form.section-inkubasi :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly || $phase === 'reading'" />
+        <x-report-form.section-incubation :incubators="$incubators" :has-swab="$hasSwab" :readonly="$readonly || $phase === 'reading'" />
 
         @foreach ($sectionInstances as $instance)
             <x-report-form.section-instance
