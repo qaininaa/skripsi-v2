@@ -146,6 +146,98 @@
     $draftMonitoringName = $draftMonitoringId ? ($analystNameById[$draftMonitoringId] ?? null) : null;
     $draftReadingName = $draftReadingId ? ($analystNameById[$draftReadingId] ?? null) : null;
 
+    // Monitoring contributors per section (can be more than one analyst).
+    // Source of truth:
+    //   1) section_signatures.monitoring (official sign-off record)
+    //   2) section_entries.filled_by_monitoring + field_locks timestamps
+    //   3) section_instances.note lock owner
+    $monitoringContributors = [];
+    $registerMonitoringContributor = function (?string $userId, ?string $name = null, $at = null) use (&$monitoringContributors, $analystNameById) {
+        if ($userId === null || $userId === '') {
+            return;
+        }
+
+        $resolvedName = $name
+            ?? ($analystNameById[$userId] ?? null)
+            ?? '-';
+
+        if (! isset($monitoringContributors[$userId])) {
+            $monitoringContributors[$userId] = [
+                'user_id' => $userId,
+                'name'    => $resolvedName,
+                'at'      => $at,
+            ];
+            return;
+        }
+
+        if (($monitoringContributors[$userId]['name'] ?? '-') === '-' && $resolvedName !== '-') {
+            $monitoringContributors[$userId]['name'] = $resolvedName;
+        }
+
+        $currentAt = $monitoringContributors[$userId]['at'] ?? null;
+        if ($at !== null && ($currentAt === null || $at->lt($currentAt))) {
+            $monitoringContributors[$userId]['at'] = $at;
+        }
+    };
+
+    $monitoringSignatures = $instance->signatures
+        ->where('role', 'monitoring')
+        ->sortBy(fn ($sig) => $sig->signed_at?->getTimestamp() ?? PHP_INT_MAX)
+        ->values();
+
+    foreach ($monitoringSignatures as $monitoringSig) {
+        $registerMonitoringContributor(
+            (string) $monitoringSig->signed_by,
+            $monitoringSig->signer?->name,
+            $monitoringSig->signed_at,
+        );
+    }
+
+    foreach ($rows as $r) {
+        foreach ($r->entries as $entry) {
+            if ($entry->filled_by_monitoring !== null) {
+                $entryUserId = (string) $entry->filled_by_monitoring;
+                if (! isset($monitoringContributors[$entryUserId])) {
+                    $registerMonitoringContributor($entryUserId, $analystNameById[$entryUserId] ?? null);
+                }
+            }
+
+            $entryLocks = $lockMap['section_entries'][$entry->id] ?? [];
+            foreach (['time_start', 'time_end', 'sp_value'] as $field) {
+                $lock = $entryLocks[$field] ?? null;
+                if ($lock?->filled_by) {
+                    $lockUserId = (string) $lock->filled_by;
+                    if (! isset($monitoringContributors[$lockUserId])) {
+                        $registerMonitoringContributor(
+                            $lockUserId,
+                            $lock?->filler?->name,
+                            $lock?->filled_at,
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    if ($noteLock?->filled_by) {
+        $noteLockUserId = (string) $noteLock->filled_by;
+        if (! isset($monitoringContributors[$noteLockUserId])) {
+            $registerMonitoringContributor(
+                $noteLockUserId,
+                $noteLock?->filler?->name,
+                $noteLock?->filled_at,
+            );
+        }
+    }
+
+    $monitoringContributors = collect($monitoringContributors)
+        ->sortBy(function (array $item) {
+            $ts = $item['at']?->getTimestamp() ?? PHP_INT_MAX;
+            return sprintf('%010d|%s', $ts, strtolower((string) ($item['name'] ?? '')));
+        })
+        ->values()
+        ->all();
+
     // Fallback when analyst relation is not loaded yet.
     if ($draftMonitoringName === null && $draftMonitoringId !== null && $draftMonitoringId === $currentUserId) {
         $draftMonitoringName = auth()->user()?->name;
@@ -676,15 +768,26 @@
                 @php
                     $sig = $sigByRole->get($sigSlot['role']);
                     $draftName = null;
+                    $roleContributors = [];
                     if (! $sig && $sigSlot['role'] === 'monitoring') {
                         $draftName = $draftMonitoringName;
+                    }
+                    if ($sigSlot['role'] === 'monitoring') {
+                        $roleContributors = $monitoringContributors;
                     } elseif (! $sig && $sigSlot['role'] === 'reading') {
                         $draftName = $draftReadingName;
                     }
                 @endphp
                 <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-center">
                     <div class="text-[11px] font-medium text-gray-500">{{ $sigSlot['label'] }}:</div>
-                    @if ($sig)
+                    @if (! empty($roleContributors))
+                        @foreach ($roleContributors as $contributor)
+                            <div class="mt-1 text-sm font-semibold text-emerald-700">&#10003; {{ $contributor['name'] ?? '-' }}</div>
+                            @if (! empty($contributor['at']))
+                                <div class="text-[10px] text-gray-400">{{ optional($contributor['at'])->translatedFormat('d M Y H:i') }}</div>
+                            @endif
+                        @endforeach
+                    @elseif ($sig)
                         <div class="mt-1 text-sm font-semibold text-emerald-700">&#10003; {{ $sig->signer?->name ?? '-' }}</div>
                         <div class="text-[10px] text-gray-400">{{ optional($sig->signed_at)->translatedFormat('d M Y H:i') }}</div>
                     @elseif ($draftName)

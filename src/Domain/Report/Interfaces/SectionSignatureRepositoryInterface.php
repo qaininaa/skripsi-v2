@@ -10,8 +10,9 @@ use Domain\Report\Models\SectionSignature;
 interface SectionSignatureRepositoryInterface
 {
     /**
-     * Sign a section instance with the given role. Idempotent — returns the
-     * existing signature if one already exists for that role.
+     * Sign a section instance with the given role.
+     * Idempotent per signer: returns the existing signature if this user
+     * already signed the same section and role.
      */
     public function sign(string $sectionInstanceId, string $role, string $userId, \DateTimeInterface $when): SectionSignature;
 }

@@ -28,9 +28,10 @@ use Illuminate\Support\Facades\DB;
  *  via locked_by. Other analysts may only view; only the locking analyst can
  *  continue editing until the report leaves in_progress.
  *
- *  When the analyst chooses "Simpan Monitoring" (draft), locked_by is cleared
- *  so a fellow analyst can take over. The report status remains
- *  in_progress_monitoring.
+ *  When the analyst chooses "Simpan Monitoring" from the handoff modal,
+ *  locked_by is cleared so a fellow analyst can take over. The report status
+ *  remains in_progress_monitoring, and per-section monitoring signatures are
+ *  stamped for sections that already contain monitoring data.
  *
  *  When the analyst chooses "Selesaikan Monitoring & Mulai Pembacaan", the
  *  monitoring signature is recorded for every section instance and the report
@@ -40,7 +41,7 @@ use Illuminate\Support\Facades\DB;
 class MonitoringService
 {
     public const ACTION_DRAFT    = 'draft';                  // save & keep lock; analyst stays on the form.
-    public const ACTION_RELEASE  = 'release';                // save & release lock; analis lain bisa lanjut.
+    public const ACTION_RELEASE  = 'release';                // save + sign sections with data + release lock.
     public const ACTION_FINALIZE = 'finalize_monitoring';    // sign off + transition to reading phase.
 
     /**
@@ -137,6 +138,9 @@ class MonitoringService
             if ($action === self::ACTION_FINALIZE) {
                 $this->finalizeMonitoring($report, $analystId);
             } elseif ($action === self::ACTION_RELEASE) {
+                // "Simpan Monitoring" from the handoff modal should still
+                // stamp per-section monitoring sign-off (without phase move).
+                $this->stampMonitoringSignatures($report, $analystId);
                 // Release the lock so a fellow analyst may take over.
                 $report->locked_by = null;
                 $report->save();
@@ -152,6 +156,23 @@ class MonitoringService
      */
     private function finalizeMonitoring(Report $report, string $analystId): void
     {
+        $this->stampMonitoringSignatures($report, $analystId);
+
+        $report->status    = Report::STATUS_IN_PROGRESS_READING;
+        $report->locked_by = null;
+        $report->save();
+    }
+
+    /**
+     * Records SectionSignature(role=monitoring) for every section that
+     * already has monitoring data (time / SP / note). Empty sections stay
+     * unsigned.
+     *
+     * Signature rows are stored per analyst so handoff history is preserved:
+     * each analyst gets at most one monitoring signature per section.
+     */
+    private function stampMonitoringSignatures(Report $report, string $analystId): void
+    {
         // Force-refresh relations because saveSectionMonitoringRows() touched
         // entries earlier in this transaction; loadMissing would keep the
         // stale (pre-save) collection and skip the signature.
@@ -163,23 +184,17 @@ class MonitoringService
                 continue;
             }
 
-            $signerId = $this->resolveMonitoringSigner($instance) ?? $analystId;
-
             SectionSignature::firstOrCreate(
                 [
                     'section_instance_id' => $instance->id,
                     'role'                => SectionSignature::ROLE_MONITORING,
+                    'signed_by'           => $analystId,
                 ],
                 [
-                    'signed_by' => $signerId,
                     'signed_at' => $now,
                 ],
             );
         }
-
-        $report->status    = Report::STATUS_IN_PROGRESS_READING;
-        $report->locked_by = null;
-        $report->save();
     }
 
     /**
@@ -201,22 +216,6 @@ class MonitoringService
         }
 
         return false;
-    }
-
-    /**
-     * Pick the analyst who first contributed monitoring data to this section.
-     * Falls back to null when the only thing filled is the section note.
-     */
-    private function resolveMonitoringSigner(SectionInstance $instance): ?string
-    {
-        foreach ($instance->instanceLocations as $loc) {
-            foreach ($loc->entries as $entry) {
-                if ($entry->filled_by_monitoring !== null) {
-                    return (string) $entry->filled_by_monitoring;
-                }
-            }
-        }
-        return null;
     }
 
     private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto, string $analystId): void

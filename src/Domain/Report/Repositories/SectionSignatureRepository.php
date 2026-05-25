@@ -16,9 +16,9 @@ class SectionSignatureRepository implements SectionSignatureRepositoryInterface
             [
                 'section_instance_id' => $sectionInstanceId,
                 'role'                => $role,
+                'signed_by'           => $userId,
             ],
             [
-                'signed_by' => $userId,
                 'signed_at' => $when,
             ],
         );
