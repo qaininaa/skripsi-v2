@@ -17,7 +17,7 @@
         $statusBadge = [
             'pending'                 => ['label' => 'Belum Dikerjakan',    'class' => 'bg-blue-50 text-blue-600'],
             'in_progress_monitoring'  => ['label' => 'Sedang Dimonitoring', 'class' => 'bg-yellow-50 text-yellow-700'],
-            'in_progress_reading'     => ['label' => 'Sedang Dibaca',       'class' => 'bg-amber-50 text-amber-700'],
+            'in_progress_reading'     => ['label' => 'Sedang Dibaca',       'class' => 'bg-purple-50 text-purple-700'],
             'pending_review'          => ['label' => 'Menunggu Review',     'class' => 'bg-purple-50 text-purple-700'],
             'pending_approval'        => ['label' => 'Menunggu Persetujuan','class' => 'bg-indigo-50 text-indigo-700'],
             'completed'               => ['label' => 'Dikirim',             'class' => 'bg-emerald-50 text-emerald-700'],
