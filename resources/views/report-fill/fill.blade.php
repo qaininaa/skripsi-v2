@@ -119,6 +119,20 @@
 
         @unless ($readonly)
             <div class="flex items-center gap-2">
+                <x-buttons.save-draft
+                    :form-id="'report-form'"
+                    :draft-action="$draftAction"
+                />
+                <x-buttons.save-submit
+                    :form-id="'report-form'"
+                    :draft-action="$releaseAction"
+                    :finalize-action="$finalizeAction"
+                    :draft-label="$releaseLabel"
+                    :finalize-label="$finalizeLabel"
+                    :draft-description="$releaseDescription"
+                    :finalize-description="$finalizeDescription"
+                />
+                {{--
                 <button
                     type="button"
                     @click.prevent="$store.saveConfirmModal.open({
@@ -149,6 +163,7 @@
                 >
                     <span>📤</span><span>Simpan & Serahkan</span>
                 </button>
+                --}}
             </div>
         @endunless
     </div>
