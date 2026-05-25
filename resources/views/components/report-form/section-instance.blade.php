@@ -109,6 +109,73 @@
 
     $sigByRole = $instance->signatures->keyBy('role');
 
+    // Draft indicator fallback:
+    // if signature row has not been created yet, still show who filled
+    // monitoring/reading fields for this section.
+    $allEntries = $rows->flatMap(fn ($r) => $r->entries);
+    $draftMonitoringId = $allEntries
+        ->pluck('filled_by_monitoring')
+        ->filter()
+        ->map(fn ($id) => (string) $id)
+        ->first();
+    $draftReadingId = $allEntries
+        ->pluck('filled_by_reading')
+        ->filter()
+        ->map(fn ($id) => (string) $id)
+        ->first();
+
+    $noteLock = $lockMap['section_instances'][$instance->id]['note'] ?? null;
+
+    // If only note is filled, monitoring signer can still be inferred
+    // from section_instances.note lock owner.
+    if ($draftMonitoringId === null) {
+        if ($noteLock?->filled_by) {
+            $draftMonitoringId = (string) $noteLock->filled_by;
+        }
+    }
+
+    $analystNameById = $report->analysts
+        ->mapWithKeys(function ($a) {
+            if ($a->user === null) {
+                return [];
+            }
+            return [(string) $a->user_id => $a->user->name];
+        })
+        ->all();
+
+    $draftMonitoringName = $draftMonitoringId ? ($analystNameById[$draftMonitoringId] ?? null) : null;
+    $draftReadingName = $draftReadingId ? ($analystNameById[$draftReadingId] ?? null) : null;
+
+    // Fallback when analyst relation is not loaded yet.
+    if ($draftMonitoringName === null && $draftMonitoringId !== null && $draftMonitoringId === $currentUserId) {
+        $draftMonitoringName = auth()->user()?->name;
+    }
+    if ($draftReadingName === null && $draftReadingId !== null && $draftReadingId === $currentUserId) {
+        $draftReadingName = auth()->user()?->name;
+    }
+
+    $findDraftNameByLocks = function (array $fields) use ($rows, $lockMap) {
+        foreach ($rows as $r) {
+            foreach ($r->entries as $entry) {
+                foreach ($fields as $field) {
+                    $name = $lockMap['section_entries'][$entry->id][$field]?->filler?->name ?? null;
+                    if ($name !== null && $name !== '') {
+                        return $name;
+                    }
+                }
+            }
+        }
+
+        return null;
+    };
+
+    if ($draftMonitoringName === null) {
+        $draftMonitoringName = $findDraftNameByLocks(['time_start', 'time_end', 'sp_value']) ?? $noteLock?->filler?->name;
+    }
+    if ($draftReadingName === null) {
+        $draftReadingName = $findDraftNameByLocks(['reading_total', 'reading_fungi']);
+    }
+
     $statusForDuplicate = in_array($report->status, ['pending', 'in_progress_monitoring'], true);
 
     $namePrefix = "sections[{$instance->id}]";
@@ -606,12 +673,23 @@
                 ['role' => 'review',     'label' => 'Direview oleh',     'subtitle' => 'Supervisor Mikrobiologi'],
                 ['role' => 'approval',   'label' => 'Disetujui oleh',    'subtitle' => 'QC Manager'],
             ] as $sigSlot)
-                @php $sig = $sigByRole->get($sigSlot['role']); @endphp
+                @php
+                    $sig = $sigByRole->get($sigSlot['role']);
+                    $draftName = null;
+                    if (! $sig && $sigSlot['role'] === 'monitoring') {
+                        $draftName = $draftMonitoringName;
+                    } elseif (! $sig && $sigSlot['role'] === 'reading') {
+                        $draftName = $draftReadingName;
+                    }
+                @endphp
                 <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-center">
                     <div class="text-[11px] font-medium text-gray-500">{{ $sigSlot['label'] }}:</div>
                     @if ($sig)
-                        <div class="mt-1 text-sm font-semibold text-emerald-700">✓ {{ $sig->signer?->name ?? '-' }}</div>
+                        <div class="mt-1 text-sm font-semibold text-emerald-700">&#10003; {{ $sig->signer?->name ?? '-' }}</div>
                         <div class="text-[10px] text-gray-400">{{ optional($sig->signed_at)->translatedFormat('d M Y H:i') }}</div>
+                    @elseif ($draftName)
+                        <div class="mt-1 text-sm font-semibold text-amber-700">Diisi oleh {{ $draftName }}</div>
+                        <div class="text-[10px] text-gray-400">Belum finalize</div>
                     @else
                         <div class="mt-1 h-5 text-xs text-gray-300">..............</div>
                     @endif

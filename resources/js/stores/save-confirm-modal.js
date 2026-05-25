@@ -52,7 +52,7 @@ export const saveConfirmModalStore = {
         this.finalizeDescription = config.finalizeDescription ?? "";
         this.submitLabel         = config.submitLabel         ?? "Simpan";
 
-        this.selectedAction = this.draftAction;
+        this.selectedAction = config.selectedAction ?? this.draftAction;
         this.username       = config.username ?? "";
         this.password       = "";
         this.showPassword   = false;

@@ -78,7 +78,9 @@
 
         // Modal "Simpan & Serahkan" → first option releases the lock to others.
         $releaseAction      = 'release';
-        $releaseLabel       = $phase === 'reading' ? 'Simpan Pembacaan' : 'Simpan Monitoring';
+        $releaseLabel       = $phase === 'reading'
+            ? 'Simpan Pembacaan'
+            : 'Simpan Monitoring';
         $releaseDescription = $phase === 'reading'
             ? 'Draft tersimpan, analis lain bisa melanjutkan pembacaan.'
             : 'Draft tersimpan, analis lain bisa melanjutkan monitoring.';
