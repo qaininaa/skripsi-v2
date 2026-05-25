@@ -36,18 +36,6 @@
 
         <form :action="$store.duplicateSectionModal.action" method="POST" class="mt-4 space-y-4">
             @csrf
-            <div>
-                <label class="mb-1 block text-sm font-medium text-gray-700">Alasan Duplikasi (opsional)</label>
-                <textarea
-                    name="reason"
-                    x-model="$store.duplicateSectionModal.reason"
-                    rows="3"
-                    maxlength="255"
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
-                    placeholder="Mis. re-test setelah cleaning"
-                ></textarea>
-            </div>
-
             <div class="flex justify-end gap-2">
                 <button
                     type="button"

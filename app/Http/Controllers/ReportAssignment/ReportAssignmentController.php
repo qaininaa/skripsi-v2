@@ -59,9 +59,16 @@ class ReportAssignmentController extends Controller
      */
     public function show(Report $report): View
     {
-        $instances = $this->sectionInstanceRepository->getInstancesForReport($report);
+        $report->load($this->detailRelations());
 
-        return view('report-assignment.show', compact('report', 'instances'));
+        $bundle = $this->sectionInstanceRepository->getInstancesForReportWithLocks($report);
+
+        return view('report-assignment.show', [
+            'report'           => $report,
+            'sectionInstances' => $bundle['instances'],
+            'lockMap'          => $bundle['locks'],
+            'phase'            => $report->isReadingPhase() ? 'reading' : 'monitoring',
+        ]);
     }
 
     public function update(ReportUpdateRequest $request, Report $report): RedirectResponse
@@ -89,5 +96,25 @@ class ReportAssignmentController extends Controller
         }
 
         return redirect()->route('report-assignment.index')->with('success', 'Berhasil menghapus tugas pelaporan.');
+    }
+
+    /**
+     * Relations needed by the admin detail page to render full report preview.
+     *
+     * @return array<int, string>
+     */
+    private function detailRelations(): array
+    {
+        return [
+            'reportTemplate.mediumTemplates',
+            'reportTemplate.incubatorTemplates',
+            'lockedByUser',
+            'analysts.user',
+            'instrumentEntries',
+            'mediumEntries.template',
+            'incubators.template',
+            'incubators.entries.incubatedBy',
+            'incubators.entries.removedBy',
+        ];
     }
 }

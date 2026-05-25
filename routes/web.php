@@ -86,6 +86,10 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
             '/report-assignment/{report}/sections/{instance}/duplicate',
             [SectionInstanceController::class, 'duplicate'],
         )->name('report-assignment.sections.duplicate');
+        Route::delete(
+            '/report-assignment/{report}/sections/{instance}/duplicate',
+            [SectionInstanceController::class, 'destroyDuplicate'],
+        )->name('report-assignment.sections.duplicate.destroy');
     });
 
     // Report Fill — Analyst report fill-in process

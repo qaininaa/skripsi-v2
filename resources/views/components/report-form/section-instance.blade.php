@@ -167,7 +167,7 @@
             </div>
         </div>
 
-        @if ($isAdmin && $statusForDuplicate)
+        @if ($isAdmin && $statusForDuplicate && $instance->parent_instance_id === null)
             <button
                 type="button"
                 @click.prevent="$store.duplicateSectionModal.open({
@@ -176,8 +176,25 @@
                 })"
                 class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
             >
-                + Duplikat Seksi
+                + Duplikat Section
             </button>
+        @endif
+
+        @if ($isAdmin && $statusForDuplicate && $instance->parent_instance_id !== null)
+            <form
+                method="POST"
+                action="{{ route('report-assignment.sections.duplicate.destroy', [$report, $instance]) }}"
+                onsubmit="return confirm('Hapus section duplikat ini?');"
+            >
+                @csrf
+                @method('DELETE')
+                <button
+                    type="submit"
+                    class="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+                >
+                    Hapus Duplikat
+                </button>
+            </form>
         @endif
     </div>
 

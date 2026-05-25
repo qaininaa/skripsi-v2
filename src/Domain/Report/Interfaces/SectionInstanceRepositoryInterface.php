@@ -84,6 +84,11 @@ interface SectionInstanceRepositoryInterface
     public function updateEntry(SectionEntry $entry, array $attributes): void;
 
     /**
+     * Delete a SectionInstance row.
+     */
+    public function deleteInstance(SectionInstance $instance): void;
+
+    /**
      * Find a SectionInstance scoped to a report by its primary key.
      *
      * @param  string                $reportId

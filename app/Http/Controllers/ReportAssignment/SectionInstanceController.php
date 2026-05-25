@@ -46,4 +46,28 @@ class SectionInstanceController extends Controller
             ->back()
             ->with('success', 'Section berhasil diduplikasi.');
     }
+
+    /**
+     * Delete a duplicated section instance.
+     */
+    public function destroyDuplicate(
+        Report $report,
+        SectionInstance $instance,
+    ): RedirectResponse {
+        if ($instance->report_id !== $report->id) {
+            abort(404);
+        }
+
+        try {
+            $this->service->deleteDuplicate($instance);
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->back()
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()
+            ->back()
+            ->with('success', 'Section duplikat berhasil dihapus.');
+    }
 }

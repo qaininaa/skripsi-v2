@@ -205,6 +205,14 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
     /**
      * {@inheritDoc}
      */
+    public function deleteInstance(SectionInstance $instance): void
+    {
+        $instance->delete();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function findByReportAndKey(string $reportId, string $instanceId, array $with = []): ?SectionInstance
     {
         return SectionInstance::query()

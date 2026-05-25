@@ -106,6 +106,43 @@ class SectionInstanceService
     }
 
     /**
+     * Delete a duplicated section instance.
+     *
+     * @throws \RuntimeException When section is original or report status disallows deletion.
+     */
+    public function deleteDuplicate(SectionInstance $target): void
+    {
+        $report = $target->report ?? $this->reports->findById($target->report_id);
+        if ($report === null) {
+            throw new \RuntimeException('Laporan tidak ditemukan.');
+        }
+
+        $allowed = [
+            Report::STATUS_PENDING,
+            Report::STATUS_IN_PROGRESS_MONITORING,
+        ];
+        if (! in_array($report->status, $allowed, true)) {
+            throw new \RuntimeException(
+                'Section duplikat hanya dapat dihapus sebelum tahap pembacaan dimulai.'
+            );
+        }
+
+        if ($target->parent_instance_id === null) {
+            throw new \RuntimeException('Section asli tidak dapat dihapus dari aksi ini.');
+        }
+
+        if ($target->children()->exists()) {
+            throw new \RuntimeException(
+                'Section duplikat ini memiliki turunan. Hapus turunan duplikatnya terlebih dahulu.'
+            );
+        }
+
+        DB::transaction(function () use ($target) {
+            $this->sectionInstances->deleteInstance($target);
+        });
+    }
+
+    /**
      * Create instance_number=1 plus its rows + entries for one Section.
      */
     private function createInitialInstance(Report $report, Section $section): SectionInstance
