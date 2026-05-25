@@ -82,7 +82,7 @@
                             <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
                                 {{ $report->created_at->format('Y-m-d H:i:s') }}
                             </td>
-                            <td class="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-800">
+                            <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
                                 {{ $report->product_name }}
                             </td>
                             <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
