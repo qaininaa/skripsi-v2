@@ -11,12 +11,20 @@
 @props(['report', 'readonly' => true])
 
 @php
+    $isReadingPhase = method_exists($report, 'isReadingPhase')
+        ? $report->isReadingPhase()
+        : ((string) $report->status === 'in_progress_reading');
+
     $monitoringAnalysts = $report->analysts
         ->where('type', 'monitoring')
         ->map(fn ($a) => $a->user)
         ->filter()
         ->unique('id')
         ->values();
+
+    $monitoringJoinedNames = $monitoringAnalysts
+        ->map(fn ($analyst) => $analyst->name)
+        ->implode(', ');
 
     $readingAnalysts = $report->analysts
         ->where('type', 'reading')
@@ -44,7 +52,14 @@
         {{-- Dimonitoring Oleh --}}
         <div>
             <label class="mb-1 block text-xs font-medium text-gray-500">Dimonitoring Oleh</label>
-            @if ($monitoringAnalysts->isNotEmpty())
+            @if ($isReadingPhase)
+                <input
+                    type="text"
+                    value="{{ $monitoringJoinedNames !== '' ? $monitoringJoinedNames : 'Belum ada analis' }}"
+                    readonly
+                    class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                >
+            @elseif ($monitoringAnalysts->isNotEmpty())
                 <div class="space-y-1.5">
                     @foreach ($monitoringAnalysts as $analyst)
                         @php $isMe = $analyst->id === auth()->id(); @endphp
