@@ -778,7 +778,7 @@
                         $draftName = $draftReadingName;
                     }
                 @endphp
-                <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-center">
+                <div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-3 text-center h-full flex flex-col {{ $sigSlot['role'] !== 'monitoring' ? 'justify-center' : '' }}">
                     <div class="text-[11px] font-medium text-gray-500">{{ $sigSlot['label'] }}:</div>
                     @if (! empty($roleContributors))
                         @foreach ($roleContributors as $contributor)
