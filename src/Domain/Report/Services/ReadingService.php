@@ -9,6 +9,7 @@ use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionInstance;
 use Domain\Report\Models\SectionSignature;
 use Domain\Report\Services\FieldLockService;
+use Domain\Report\Services\ReportApprovalService;
 use Domain\Report\Support\LocationConclusion;
 use Domain\Report\Support\MicrobialValue;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,7 @@ class ReadingService
     public function __construct(
         protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
         protected FieldLockService $fieldLocks,
+        protected ReportApprovalService $approvalService,
     ) {
     }
 
@@ -115,21 +117,32 @@ class ReadingService
     }
 
     /**
-     * Sign each section_instance as "reading" and transition the report status.
+     * Sign each section_instance as "reading" only when the section has
+     * reading data, then transition the report status. Empty sections stay
+     * unsigned.
      */
     private function finalizeReading(Report $report, string $analystId): void
     {
-        $report->loadMissing('sectionInstances');
+        // Force-refresh relations because saveReadingForInstance() touched
+        // entries earlier in this transaction; loadMissing would keep the
+        // stale (pre-save) collection and skip the signature.
+        $report->load('sectionInstances.instanceLocations.entries');
         $now = now();
 
         foreach ($report->sectionInstances as $instance) {
+            if (! $this->sectionHasReadingData($instance)) {
+                continue;
+            }
+
+            $signerId = $this->resolveReadingSigner($instance) ?? $analystId;
+
             SectionSignature::firstOrCreate(
                 [
                     'section_instance_id' => $instance->id,
                     'role'                => SectionSignature::ROLE_READING,
                 ],
                 [
-                    'signed_by' => $analystId,
+                    'signed_by' => $signerId,
                     'signed_at' => $now,
                 ],
             );
@@ -138,6 +151,42 @@ class ReadingService
         $report->status    = Report::STATUS_PENDING_REVIEW;
         $report->locked_by = null;
         $report->save();
+
+        // Hand off to supervisor by creating their approval row.
+        $this->approvalService->ensureSupervisorAssignment($report);
+    }
+
+    /**
+     * True when at least one entry under the section has reading_total or
+     * reading_fungi populated.
+     */
+    private function sectionHasReadingData(SectionInstance $instance): bool
+    {
+        foreach ($instance->instanceLocations as $loc) {
+            foreach ($loc->entries as $entry) {
+                if ($entry->reading_total !== null && $entry->reading_total !== ''
+                    || $entry->reading_fungi !== null && $entry->reading_fungi !== ''
+                ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Pick the analyst who first contributed reading data to this section.
+     */
+    private function resolveReadingSigner(SectionInstance $instance): ?string
+    {
+        foreach ($instance->instanceLocations as $loc) {
+            foreach ($loc->entries as $entry) {
+                if ($entry->filled_by_reading !== null) {
+                    return (string) $entry->filled_by_reading;
+                }
+            }
+        }
+        return null;
     }
 
     /**

@@ -124,4 +124,26 @@ class UserRepository implements UserRepositoryInterface
         $data->user->password_changed_at = $data->changedAt;
         $data->user->save();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findFirstByRole(string $role): ?User
+    {
+        return User::query()
+            ->where('role', $role)
+            ->orderBy('created_at')
+            ->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function listByRoles(array $roles): \Illuminate\Support\Collection
+    {
+        return User::query()
+            ->whereIn('role', $roles)
+            ->orderBy('name')
+            ->get();
+    }
 }

@@ -19,7 +19,6 @@ class ReportTemplateUpdateRequest extends FormRequest
             'annex_number'                    => ['required', 'integer', 'min:1'],
             'sop_code'                        => ['required', 'string', 'max:100'],
             'sop_version'                     => ['required', 'string', 'max:50'],
-            'has_personnel'                   => ['nullable', 'boolean'],
             'medium_templates'                => ['required', 'array', 'min:1'],
             'medium_templates.*.name'         => ['required', 'string', 'max:255'],
             'incubator_templates'             => ['required', 'array', 'min:1'],

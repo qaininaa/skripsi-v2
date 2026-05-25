@@ -9,11 +9,15 @@ use Domain\PasswordPolicy\Interfaces\PasswordPolicyRepositoryInterface;
 use Domain\PasswordPolicy\Repositories\PasswordPolicyRepository;
 use Domain\PasswordPolicy\Services\PasswordPolicyService;
 use Domain\Report\Interfaces\FieldLockRepositoryInterface;
+use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
+use Domain\Report\Interfaces\SectionSignatureRepositoryInterface;
 use Domain\Report\Repositories\FieldLockRepository;
+use Domain\Report\Repositories\ReportApprovalRepository;
 use Domain\Report\Repositories\ReportRepository;
 use Domain\Report\Repositories\SectionInstanceRepository;
+use Domain\Report\Repositories\SectionSignatureRepository;
 use Domain\ReportTemplate\Interfaces\ReportTemplateRepositoryInterface;
 use Domain\ReportTemplate\Interfaces\SectionRepositoryInterface;
 use Domain\ReportTemplate\Repositories\ReportTemplateRepository;
@@ -47,6 +51,8 @@ class AppServiceProvider extends ServiceProvider
             SectionRepositoryInterface::class            => SectionRepository::class,
             ReportRepositoryInterface::class             => ReportRepository::class,
             SectionInstanceRepositoryInterface::class    => SectionInstanceRepository::class,
+            SectionSignatureRepositoryInterface::class   => SectionSignatureRepository::class,
+            ReportApprovalRepositoryInterface::class     => ReportApprovalRepository::class,
             FieldLockRepositoryInterface::class          => FieldLockRepository::class,
         ];
 

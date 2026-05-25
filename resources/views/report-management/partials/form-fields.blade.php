@@ -173,29 +173,3 @@
         </template>
     </div>
 </div>
-
-{{-- Pemantauan Personel --}}
-<div
-    x-data="{ enabled: {{ old('has_personnel', ($reportTemplate->has_personnel ?? false) ? '1' : '0') }} ? true : false }"
-    class="flex items-start justify-between gap-4 rounded-lg border border-gray-100 bg-gray-50 px-4 py-3"
->
-    <div>
-        <p class="text-sm font-semibold text-gray-800">Pemantauan Personel</p>
-        <p class="text-xs text-gray-500">Aktifkan jika laporan ini mencakup section pemantauan personel (Cawan Kontak &amp; Finger Dab).</p>
-    </div>
-    <button
-        type="button"
-        @click="enabled = !enabled"
-        :class="enabled ? 'bg-green-600' : 'bg-gray-300'"
-        class="relative mt-0.5 inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-        role="switch"
-        :aria-checked="enabled.toString()"
-        aria-label="Pemantauan Personel"
-    >
-        <span
-            :class="enabled ? 'translate-x-5' : 'translate-x-0'"
-            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
-        ></span>
-    </button>
-    <input type="hidden" name="has_personnel" :value="enabled ? '1' : '0'">
-</div>

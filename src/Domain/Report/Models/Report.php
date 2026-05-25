@@ -156,6 +156,16 @@ class Report extends Model
     }
 
     /**
+     * Supervisor / manager approval rows attached to this report.
+     *
+     * @return HasMany<ReportApproval>
+     */
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(ReportApproval::class, 'report_id')->orderBy('step');
+    }
+
+    /**
      * Get the analyst pivot of the given role, if any.
      */
     public function analystOfType(string $type): ?Analyst

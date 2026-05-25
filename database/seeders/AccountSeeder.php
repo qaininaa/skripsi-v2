@@ -60,5 +60,21 @@ class AccountSeeder extends Seeder
             'password' => Hash::make('admin123'),
             'password_changed_at' => $now,
         ]);
+
+        User::create([
+            'name' => 'supervsor 1',
+            'username' => 'supervisor 1',
+            'role' => 'supervisor',
+            'password' => Hash::make('admin123'),
+            'password_changed_at' => $now,
+        ]);
+
+        User::create([
+            'name' => 'manajer',
+            'username' => 'manajer',
+            'role' => 'manager',
+            'password' => Hash::make('admin123'),
+            'password_changed_at' => $now,
+        ]);
     }
 }

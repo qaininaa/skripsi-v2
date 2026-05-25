@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Report;
+namespace App\Http\Controllers\ReportAssignment;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\ReportIndexRequest;
@@ -14,7 +14,10 @@ use Domain\ReportTemplate\Services\ReportTemplateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
-class ReportController extends Controller
+/**
+ * Handles the report assignment process (admin creates/edits/deletes report tasks).
+ */
+class ReportAssignmentController extends Controller
 {
     public function __construct(
         protected ReportService $reportService,

@@ -21,6 +21,13 @@ final class MicrobialValue
 
     /**
      * Whether the input is a valid microbial-count string. Empty → valid.
+     *
+     * Allowed:
+     *   - empty / null
+     *   - "<1"
+     *   - "TNTC" (case-insensitive)
+     *   - positive integer (e.g. "1", "12", "150") — zero is NOT allowed,
+     *     analysts must use "<1" to express absence.
      */
     public static function isValid(?string $value): bool
     {
@@ -38,7 +45,8 @@ final class MicrobialValue
             return true;
         }
 
-        return ctype_digit($v);
+        // Positive integer only: must be digits and the first digit can't be '0'.
+        return ctype_digit($v) && $v[0] !== '0';
     }
 
     /**
@@ -58,7 +66,7 @@ final class MicrobialValue
             $v === ''        => null,
             $v === '<1'      => 0,
             $v === 'tntc'    => self::TNTC,
-            ctype_digit($v)  => (int) $v,
+            ctype_digit($v) && $v[0] !== '0' => (int) $v,
             default          => null,
         };
     }

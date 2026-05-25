@@ -71,7 +71,8 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Batch Produk</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Jenis Laporan</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Dibuat Oleh</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Tahap</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Sedang Dikerjakan Oleh</th>
                         <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">Aksi</th>
                     </tr>
                 </thead>
@@ -94,7 +95,10 @@
                                 {{ $report->createdByUser?->name ?? '-' }}
                             </td>
                             <td class="whitespace-nowrap px-4 py-4">
-                                <x-badges.report-status :status="$report->status" />
+                                <x-badges.workflow-stage :status="$report->status" />
+                            </td>
+                            <td class="whitespace-nowrap px-4 py-4">
+                                <x-workflow.current-handler :report="$report" />
                             </td>
                             <td class="whitespace-nowrap px-4 py-4">
                                 <div class="flex items-center justify-center gap-2">

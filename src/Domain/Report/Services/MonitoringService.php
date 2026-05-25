@@ -147,21 +147,31 @@ class MonitoringService
 
     /**
      * Finalize the monitoring phase. Records SectionSignature(role=monitoring)
-     * for every instance and transitions report status.
+     * for every section that actually has monitoring data (time / SP / note),
+     * and transitions report status. Empty sections stay unsigned.
      */
     private function finalizeMonitoring(Report $report, string $analystId): void
     {
-        $report->loadMissing('sectionInstances');
+        // Force-refresh relations because saveSectionMonitoringRows() touched
+        // entries earlier in this transaction; loadMissing would keep the
+        // stale (pre-save) collection and skip the signature.
+        $report->load('sectionInstances.instanceLocations.entries');
         $now = now();
 
         foreach ($report->sectionInstances as $instance) {
+            if (! $this->sectionHasMonitoringData($instance)) {
+                continue;
+            }
+
+            $signerId = $this->resolveMonitoringSigner($instance) ?? $analystId;
+
             SectionSignature::firstOrCreate(
                 [
                     'section_instance_id' => $instance->id,
                     'role'                => SectionSignature::ROLE_MONITORING,
                 ],
                 [
-                    'signed_by' => $analystId,
+                    'signed_by' => $signerId,
                     'signed_at' => $now,
                 ],
             );
@@ -170,6 +180,43 @@ class MonitoringService
         $report->status    = Report::STATUS_IN_PROGRESS_READING;
         $report->locked_by = null;
         $report->save();
+    }
+
+    /**
+     * True when at least one entry under the section has any monitoring
+     * value (time_start, time_end, sp_value) or the section carries a note.
+     */
+    private function sectionHasMonitoringData(SectionInstance $instance): bool
+    {
+        if (! empty($instance->note)) {
+            return true;
+        }
+
+        foreach ($instance->instanceLocations as $loc) {
+            foreach ($loc->entries as $entry) {
+                if (! empty($entry->time_start) || ! empty($entry->time_end) || ! empty($entry->sp_value)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Pick the analyst who first contributed monitoring data to this section.
+     * Falls back to null when the only thing filled is the section note.
+     */
+    private function resolveMonitoringSigner(SectionInstance $instance): ?string
+    {
+        foreach ($instance->instanceLocations as $loc) {
+            foreach ($loc->entries as $entry) {
+                if ($entry->filled_by_monitoring !== null) {
+                    return (string) $entry->filled_by_monitoring;
+                }
+            }
+        }
+        return null;
     }
 
     private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto, string $analystId): void

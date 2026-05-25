@@ -70,8 +70,8 @@
         $phase ??= $report->isReadingPhase() ? 'reading' : 'monitoring';
 
         $formAction = $phase === 'reading'
-            ? route('analyst.reports.save-reading', $report)
-            : route('analyst.reports.save-monitoring', $report);
+            ? route('report-fill.save-reading', $report)
+            : route('report-fill.save-monitoring', $report);
 
         // Inline "Simpan Draft" button keeps the lock and stays on this page.
         $draftAction        = 'draft';
@@ -98,7 +98,7 @@
     {{-- Header --}}
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-4">
-            <a href="{{ route('analyst.reports.index') }}"
+            <a href="{{ route('report-fill.index') }}"
                class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
                 <span>&larr;</span><span>Kembali</span>
             </a>
@@ -262,8 +262,9 @@
 
         <script>
             // Live border-red feedback for microbial value inputs.
+            // Allowed: empty, "<1", "tntc" (case-insensitive), positive int (no leading zero).
             (function () {
-                const PATTERN = /^(\d+|<1|tntc)$/i;
+                const PATTERN = /^([1-9][0-9]*|<1|tntc)$/i;
                 const inputs = document.querySelectorAll('input[data-microbial]');
                 const validate = (el) => {
                     const v = (el.value || '').trim();
@@ -271,11 +272,191 @@
                     el.classList.toggle('border-red-500', !ok);
                     el.classList.toggle('ring-2',          !ok);
                     el.classList.toggle('ring-red-100',    !ok);
+                    return ok;
                 };
                 inputs.forEach((el) => {
                     validate(el);
                     el.addEventListener('input', () => validate(el));
                     el.addEventListener('blur',  () => validate(el));
+                });
+            })();
+
+            // Live MS/TMS conclusion compute on every reading input change.
+            //
+            // Parsing:
+            //   ""      → null (skip)
+            //   "<1"    → 0
+            //   "tntc"  → +Infinity
+            //   pos int → that number (no leading zero, "0" rejected)
+            //
+            // Per row aggregation:
+            //   Per (row, col) we have a B and an F. T = B+F (Infinity if either is TNTC).
+            //   A row is TMS when ANY column's B ≥ alert_action_total OR F ≥ alert_action_fungi.
+            //   No readings → null. Otherwise MS.
+            //
+            // Per section:
+            //   Any row TMS → section TMS. All MS → MS. All null → "Belum ada data".
+            (function () {
+                const PATTERN = /^([1-9][0-9]*|<1|tntc)$/i;
+                const POS_INF = Number.POSITIVE_INFINITY;
+
+                const parseVal = (raw) => {
+                    if (raw === null || raw === undefined) return null;
+                    const v = String(raw).trim().toLowerCase();
+                    if (v === '') return null;
+                    if (!PATTERN.test(v)) return null;
+                    if (v === '<1') return 0;
+                    if (v === 'tntc') return POS_INF;
+                    return parseInt(v, 10);
+                };
+
+                /**
+                 * Read all reading inputs/spans in the section, indexed by row+col+kind.
+                 * Different entries may share (row, col, kind) when sub_columns A/B exist;
+                 * we keep the first non-null per (row, col, kind).
+                 */
+                const collectByRow = (sectionEl) => {
+                    const map = {}; // rowId → { byCol: { col → {total, fungi} }, totals: [], fungis: [] }
+                    const inputs = sectionEl.querySelectorAll('[data-reading][data-row-id]');
+                    inputs.forEach((el) => {
+                        const rowId = el.dataset.rowId;
+                        const kind  = el.dataset.reading;
+                        const col   = el.dataset.colIndex ?? '0';
+                        if (! rowId || ! kind) return;
+
+                        const raw = ('value' in el) ? el.value : el.textContent;
+                        const num = parseVal(raw);
+                        if (num === null) return;
+
+                        if (! map[rowId]) {
+                            map[rowId] = { byCol: {}, totals: [], fungis: [] };
+                        }
+                        if (! map[rowId].byCol[col]) {
+                            map[rowId].byCol[col] = { total: null, fungi: null };
+                        }
+                        // Keep the first non-null value for the (row, col, kind) cell.
+                        if (map[rowId].byCol[col][kind] === null) {
+                            map[rowId].byCol[col][kind] = num;
+                            (kind === 'total' ? map[rowId].totals : map[rowId].fungis).push(num);
+                        }
+                    });
+                    return map;
+                };
+
+                const renderRowVerdict = (cell, verdict) => {
+                    if (verdict === 'TMS') {
+                        cell.innerHTML = '<span class="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">TMS</span>';
+                    } else if (verdict === 'MS') {
+                        cell.innerHTML = '<span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">MS</span>';
+                    } else {
+                        cell.innerHTML = '<span class="italic text-gray-300">N/A</span>';
+                    }
+                };
+
+                const renderSectionVerdict = (cell, verdict) => {
+                    // Strip everything after the leading "Kesimpulan:" label.
+                    Array.from(cell.children).forEach((child, idx) => {
+                        if (idx === 0) return;
+                        child.remove();
+                    });
+                    const badge = document.createElement('span');
+                    if (verdict === 'TMS') {
+                        badge.className = 'rounded-full bg-red-100 px-3 py-0.5 text-xs font-semibold text-red-700';
+                        badge.textContent = 'TMS';
+                    } else if (verdict === 'MS') {
+                        badge.className = 'rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-semibold text-emerald-700';
+                        badge.textContent = 'MS';
+                    } else {
+                        badge.className = 'text-xs italic text-gray-400';
+                        badge.textContent = 'Belum ada data';
+                    }
+                    cell.appendChild(badge);
+                };
+
+                const renderTotalCells = (sectionEl, rowMap) => {
+                    Object.entries(rowMap).forEach(([rowId, data]) => {
+                        Object.entries(data.byCol).forEach(([col, vals]) => {
+                            const cell = sectionEl.querySelector(
+                                `[data-total-cell][data-row-id="${CSS.escape(rowId)}"][data-col-index="${CSS.escape(col)}"]`
+                            );
+                            if (! cell) return;
+
+                            cell.textContent = formatTotal(vals.total, vals.fungi);
+                        });
+                    });
+                };
+
+                /**
+                 * Display rule for T (Total = B + F):
+                 *   - both null              → "N/A"
+                 *   - any TNTC (+Infinity)   → "TNTC"
+                 *   - both "<1" (0)          → "<1"
+                 *   - one "<1" (0), other n  → n
+                 *   - both numeric           → sum
+                 */
+                const formatTotal = (b, f) => {
+                    if (b === null && f === null) return 'N/A';
+                    if (b === POS_INF || f === POS_INF) return 'TNTC';
+                    const bn = b ?? 0;
+                    const fn = f ?? 0;
+                    if (bn === 0 && fn === 0) {
+                        // Either explicit "<1" + "<1", or one filled with "<1" and the
+                        // other still empty. In either case we treat the row as below
+                        // the limit of detection.
+                        return '<1';
+                    }
+                    return String(bn + fn);
+                };
+
+                const recomputeSection = (sectionEl) => {
+                    const rowMap = collectByRow(sectionEl);
+                    const rows = sectionEl.querySelectorAll('[data-conclusion-row]');
+                    let anyTms = false;
+                    let anyAssessed = false;
+
+                    rows.forEach((rowEl) => {
+                        const rowId = rowEl.dataset.rowId;
+                        const actionTotal = rowEl.dataset.actionTotal === '' ? null : Number(rowEl.dataset.actionTotal);
+                        const actionFungi = rowEl.dataset.actionFungi === '' ? null : Number(rowEl.dataset.actionFungi);
+
+                        const data = rowMap[rowId];
+                        const hasReading = data && (data.totals.length > 0 || data.fungis.length > 0);
+
+                        let verdict = null;
+                        if (hasReading) {
+                            anyAssessed = true;
+                            const breachT = (actionTotal !== null) && data.totals.some((n) => n >= actionTotal);
+                            const breachF = (actionFungi !== null) && data.fungis.some((n) => n >= actionFungi);
+                            verdict = (breachT || breachF) ? 'TMS' : 'MS';
+                            if (verdict === 'TMS') anyTms = true;
+                        }
+
+                        const cell = sectionEl.querySelector(
+                            `[data-row-conclusion-cell][data-row-id="${CSS.escape(rowId)}"]`
+                        );
+                        if (cell) renderRowVerdict(cell, verdict);
+                    });
+
+                    renderTotalCells(sectionEl, rowMap);
+
+                    const sectionVerdict = anyAssessed ? (anyTms ? 'TMS' : 'MS') : null;
+                    const sectionCell = sectionEl.querySelector('[data-section-conclusion-cell]');
+                    if (sectionCell) renderSectionVerdict(sectionCell, sectionVerdict);
+                };
+
+                const recomputeAll = () => {
+                    document.querySelectorAll('[data-conclusion-section]').forEach(recomputeSection);
+                };
+
+                // Initial paint to align UI with whatever is preloaded.
+                recomputeAll();
+
+                // React to every reading input change.
+                document.querySelectorAll('input[data-reading]').forEach((el) => {
+                    el.addEventListener('input', () => {
+                        const sectionEl = el.closest('[data-conclusion-section]');
+                        if (sectionEl) recomputeSection(sectionEl);
+                    });
                 });
             })();
         </script>

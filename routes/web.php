@@ -1,13 +1,14 @@
 <?php
 
-use App\Http\Controllers\Analyst\AnalystReportController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Dashboard\DashboardController;
-use App\Http\Controllers\PasswordPolicy\PasswordPolicyController;
 use App\Http\Controllers\Location\LocationController;
-use App\Http\Controllers\Report\ReportController;
-use App\Http\Controllers\Report\SectionInstanceController;
+use App\Http\Controllers\PasswordPolicy\PasswordPolicyController;
+use App\Http\Controllers\ReportApproval\ReportApprovalController;
+use App\Http\Controllers\ReportAssignment\ReportAssignmentController;
+use App\Http\Controllers\ReportAssignment\SectionInstanceController;
+use App\Http\Controllers\ReportFill\ReportFillController;
 use App\Http\Controllers\ReportTemplate\ReportTemplateController;
 use App\Http\Controllers\ReportTemplate\SectionController;
 use App\Http\Controllers\Room\RoomController;
@@ -72,13 +73,13 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::delete('/report-templates/{reportTemplate}/sections/{section}/locations/{location}', [SectionController::class, 'removeLocation'])->name('report-templates.sections.locations.remove');
 
         // Report assignment (Tugas Pelaporan)
-        Route::get('/report-assignment', [ReportController::class, 'index'])->name('report-assignment.index');
-        Route::get('/report-assignment/create', [ReportController::class, 'create'])->name('report-assignment.create');
-        Route::post('/report-assignment/store', [ReportController::class, 'store'])->name('report-assignment.store');
-        Route::get('/report-assignment/{report}', [ReportController::class, 'show'])->name('report-assignment.show');
-        Route::get('/report-assignment/{report}/edit', [ReportController::class, 'edit'])->name('report-assignment.edit');
-        Route::put('/report-assignment/{report}', [ReportController::class, 'update'])->name('report-assignment.update');
-        Route::delete('/report-assignment/{report}', [ReportController::class, 'destroy'])->name('report-assignment.destroy');
+        Route::get('/report-assignment', [ReportAssignmentController::class, 'index'])->name('report-assignment.index');
+        Route::get('/report-assignment/create', [ReportAssignmentController::class, 'create'])->name('report-assignment.create');
+        Route::post('/report-assignment/store', [ReportAssignmentController::class, 'store'])->name('report-assignment.store');
+        Route::get('/report-assignment/{report}', [ReportAssignmentController::class, 'show'])->name('report-assignment.show');
+        Route::get('/report-assignment/{report}/edit', [ReportAssignmentController::class, 'edit'])->name('report-assignment.edit');
+        Route::put('/report-assignment/{report}', [ReportAssignmentController::class, 'update'])->name('report-assignment.update');
+        Route::delete('/report-assignment/{report}', [ReportAssignmentController::class, 'destroy'])->name('report-assignment.destroy');
 
         // Per-report section instance actions (duplicate)
         Route::post(
@@ -87,12 +88,31 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         )->name('report-assignment.sections.duplicate');
     });
 
-    Route::middleware('role:analyst')->prefix('analyst')->name('analyst.')->group(function () {
-        Route::get('/reports', [AnalystReportController::class, 'index'])->name('reports.index');
-        Route::post('/reports/{report}/start', [AnalystReportController::class, 'start'])->name('reports.start');
-        Route::get('/reports/{report}', [AnalystReportController::class, 'show'])->name('reports.show');
-        Route::get('/reports/{report}/fill', [AnalystReportController::class, 'fill'])->name('reports.fill');
-        Route::put('/reports/{report}/monitoring', [AnalystReportController::class, 'saveMonitoring'])->name('reports.save-monitoring');
-        Route::put('/reports/{report}/reading', [AnalystReportController::class, 'saveReading'])->name('reports.save-reading');
+    // Report Fill — Analyst report fill-in process
+    Route::middleware('role:analyst')->prefix('report-fill')->name('report-fill.')->group(function () {
+        Route::get('/', [ReportFillController::class, 'index'])->name('index');
+        Route::post('/{report}/start', [ReportFillController::class, 'start'])->name('start');
+        Route::get('/{report}', [ReportFillController::class, 'show'])->name('show');
+        Route::get('/{report}/fill', [ReportFillController::class, 'fill'])->name('fill');
+        Route::put('/{report}/monitoring', [ReportFillController::class, 'saveMonitoring'])->name('save-monitoring');
+        Route::put('/{report}/reading', [ReportFillController::class, 'saveReading'])->name('save-reading');
+    });
+
+    // Report Approval — Supervisor approval step
+    Route::middleware('role:supervisor')->prefix('supervisor')->name('supervisor.')->group(function () {
+        Route::get('/inbox', [ReportApprovalController::class, 'inbox'])->defaults('step', 'supervisor')->name('inbox');
+        Route::get('/in-progress', [ReportApprovalController::class, 'inProgress'])->defaults('step', 'supervisor')->name('in-progress');
+        Route::get('/reports/{report}', [ReportApprovalController::class, 'show'])->defaults('step', 'supervisor')->name('reports.show');
+        Route::post('/reports/{report}/approve', [ReportApprovalController::class, 'approve'])->defaults('step', 'supervisor')->name('reports.approve');
+        Route::post('/reports/{report}/return', [ReportApprovalController::class, 'return'])->defaults('step', 'supervisor')->name('reports.return');
+    });
+
+    // Report Approval — Manager approval step
+    Route::middleware('role:manager')->prefix('manager')->name('manager.')->group(function () {
+        Route::get('/inbox', [ReportApprovalController::class, 'inbox'])->defaults('step', 'manager')->name('inbox');
+        Route::get('/in-progress', [ReportApprovalController::class, 'inProgress'])->defaults('step', 'manager')->name('in-progress');
+        Route::get('/reports/{report}', [ReportApprovalController::class, 'show'])->defaults('step', 'manager')->name('reports.show');
+        Route::post('/reports/{report}/approve', [ReportApprovalController::class, 'approve'])->defaults('step', 'manager')->name('reports.approve');
+        Route::post('/reports/{report}/return', [ReportApprovalController::class, 'return'])->defaults('step', 'manager')->name('reports.return');
     });
 });

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Analyst;
+namespace App\Http\Requests\ReportFill;
 
 use App\Rules\CurrentUserPassword;
 use App\Rules\CurrentUserUsername;

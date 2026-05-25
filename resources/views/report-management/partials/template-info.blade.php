@@ -20,10 +20,6 @@
             <p class="text-xs text-gray-500">Annex</p>
             <p class="mt-0.5 text-sm font-medium text-gray-800">{{ $reportTemplate->annex_number }}</p>
         </div>
-        <div>
-            <p class="text-xs text-gray-500">Pemantauan Personel</p>
-            <p class="mt-0.5 text-sm font-medium text-gray-800">{{ $reportTemplate->has_personnel ? 'Ya' : 'Tidak' }}</p>
-        </div>
         <div class="col-span-2">
             <p class="text-xs text-gray-500">Nama</p>
             <p class="mt-0.5 text-sm font-medium text-gray-800">{{ $reportTemplate->name }}</p>

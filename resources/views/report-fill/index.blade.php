@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Tugas Pelaporan')
-@section('page-title', 'Tugas Pelaporan')
+@section('title', 'Laporan Pemantauan')
+@section('page-title', 'Laporan Pemantauan')
 
 @section('content')
     @php
@@ -28,9 +28,16 @@
     <x-messages.success-message />
     <x-messages.error-message />
 
+    <div class="mb-4">
+        <h2 class="text-lg font-semibold text-gray-800">Laporan Pemantauan</h2>
+        <p class="mt-1 text-sm text-gray-500">
+            Daftar semua penugasan laporan yang diberikan kepada Anda.
+        </p>
+    </div>
+
     <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
         {{-- Tabs --}}
-        <div class="overflow-x-auto border-b border-gray-100">
+        <div class="overflow-x-auto overflow-y-hidden border-b border-gray-100 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <nav class="flex gap-1 px-4">
                 @foreach ($tabs as $key => $label)
                     @php
@@ -38,7 +45,7 @@
                         $count    = $counts[$key] ?? 0;
                     @endphp
                     <a
-                        href="{{ route('analyst.reports.index', ['tab' => $key]) }}"
+                        href="{{ route('report-fill.index', ['tab' => $key]) }}"
                         class="relative inline-flex items-center gap-2 whitespace-nowrap px-4 py-4 text-sm font-medium transition-colors
                             {{ $isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700' }}"
                     >
@@ -105,13 +112,13 @@
                                     $canResume     = $isLocker && ($inMonitoring || $inReading);
                                 @endphp
                                 <div class="flex items-center justify-center gap-2">
-                                    <x-buttons.view :href="route('analyst.reports.show', $report)" />
+                                    <x-buttons.view :href="route('report-fill.show', $report)" />
 
                                     @if ($canResume)
-                                        <x-buttons.resume :href="route('analyst.reports.fill', $report)" />
+                                        <x-buttons.resume :href="route('report-fill.fill', $report)" />
                                     @elseif ($canStart)
                                         <x-buttons.start
-                                            :action="route('analyst.reports.start', $report)"
+                                            :action="route('report-fill.start', $report)"
                                             :product-name="$report->product_name"
                                             :batch-number="$report->batch_number"
                                         />

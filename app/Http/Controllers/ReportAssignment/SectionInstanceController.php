@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Report;
+namespace App\Http\Controllers\ReportAssignment;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\DuplicateSectionRequest;

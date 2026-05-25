@@ -142,7 +142,11 @@
     $headColCount = count($columns);
 @endphp
 
-<section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
+<section
+    class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100"
+    data-conclusion-section
+    data-instance-id="{{ $instance->id }}"
+>
     {{-- Section header --}}
     <div class="mb-3 flex items-start justify-between gap-3">
         <div class="flex items-start gap-3">
@@ -370,8 +374,18 @@
                                 ->filter()
                                 ->first();
                             $rowName = "{$namePrefix}[rows][{$row->id}]";
+
+                            $alertActionTotal = $location?->alert_action_total;
+                            $alertActionFungi = $location?->alert_action_fungi;
                         @endphp
-                        <tr class="border-b border-gray-100 hover:bg-gray-50/40">
+                        <tr
+                            class="border-b border-gray-100 hover:bg-gray-50/40"
+                            data-conclusion-row
+                            data-instance-id="{{ $instance->id }}"
+                            data-row-id="{{ $row->id }}"
+                            data-action-total="{{ $alertActionTotal ?? '' }}"
+                            data-action-fungi="{{ $alertActionFungi ?? '' }}"
+                        >
                             <td class="border-r border-gray-100 px-2 py-2">{{ $loop->iteration }}</td>
                             <td class="border-r border-gray-100 px-2 py-2 text-left text-gray-700 min-w-[10rem]">{{ $room?->name ?? 'N/A' }}</td>
                             <td class="border-r border-gray-100 px-2 py-2">
@@ -409,6 +423,9 @@
                                                     name="{{ $readName }}[reading_total]"
                                                     value="{{ $oldB }}"
                                                     data-microbial
+                                                    data-reading="total"
+                                                    data-row-id="{{ $row->id }}"
+                                                    data-col-index="{{ $col['column_index'] }}"
                                                     class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
                                                     placeholder="N/A"
                                                 >
@@ -418,12 +435,15 @@
                                                     value="{{ $oldB }}"
                                                     disabled
                                                     title="Diisi oleh {{ $bLockedBy }}"
+                                                    data-reading="total"
+                                                    data-row-id="{{ $row->id }}"
+                                                    data-col-index="{{ $col['column_index'] }}"
                                                     class="w-full min-w-[2.25rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-gray-400"
                                                 >
                                             @elseif ($oldB !== null && $oldB !== '')
-                                                {{ $oldB }}
+                                                <span data-reading="total" data-row-id="{{ $row->id }}" data-col-index="{{ $col['column_index'] }}">{{ $oldB }}</span>
                                             @else
-                                                <span class="italic text-gray-300">N/A</span>
+                                                <span data-reading="total" data-row-id="{{ $row->id }}" data-col-index="{{ $col['column_index'] }}" class="italic text-gray-300">N/A</span>
                                             @endif
                                         </div>
                                         {{-- F --}}
@@ -434,6 +454,9 @@
                                                     name="{{ $readName }}[reading_fungi]"
                                                     value="{{ $oldF }}"
                                                     data-microbial
+                                                    data-reading="fungi"
+                                                    data-row-id="{{ $row->id }}"
+                                                    data-col-index="{{ $col['column_index'] }}"
                                                     class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
                                                     placeholder="N/A"
                                                 >
@@ -443,16 +466,24 @@
                                                     value="{{ $oldF }}"
                                                     disabled
                                                     title="Diisi oleh {{ $fLockedBy }}"
+                                                    data-reading="fungi"
+                                                    data-row-id="{{ $row->id }}"
+                                                    data-col-index="{{ $col['column_index'] }}"
                                                     class="w-full min-w-[2.25rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-gray-400"
                                                 >
                                             @elseif ($oldF !== null && $oldF !== '')
-                                                {{ $oldF }}
+                                                <span data-reading="fungi" data-row-id="{{ $row->id }}" data-col-index="{{ $col['column_index'] }}">{{ $oldF }}</span>
                                             @else
-                                                <span class="italic text-gray-300">N/A</span>
+                                                <span data-reading="fungi" data-row-id="{{ $row->id }}" data-col-index="{{ $col['column_index'] }}" class="italic text-gray-300">N/A</span>
                                             @endif
                                         </div>
                                         {{-- T (derived) --}}
-                                        <div class="text-gray-500">
+                                        <div
+                                            class="text-gray-500"
+                                            data-total-cell
+                                            data-row-id="{{ $row->id }}"
+                                            data-col-index="{{ $col['column_index'] }}"
+                                        >
                                             {{ $tt !== null ? $tt : 'N/A' }}
                                         </div>
                                     </div>
@@ -477,7 +508,11 @@
                             </td>
 
                             {{-- Kesimpulan --}}
-                            <td class="border-l border-gray-100 px-2 py-2">
+                            <td
+                                class="border-l border-gray-100 px-2 py-2"
+                                data-row-conclusion-cell
+                                data-row-id="{{ $row->id }}"
+                            >
                                 @if ($verdict === 'TMS')
                                     <span class="rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">TMS</span>
                                 @elseif ($verdict === 'MS')
@@ -533,7 +568,7 @@
     </div>
 
     {{-- Kesimpulan akhir --}}
-    <div class="mt-3 flex items-center gap-2 text-sm">
+    <div class="mt-3 flex items-center gap-2 text-sm" data-section-conclusion-cell>
         <span class="text-gray-500">Kesimpulan:</span>
         @if ($instance->final_conclusion === 'TMS')
             <span class="rounded-full bg-red-100 px-3 py-0.5 text-xs font-semibold text-red-700">TMS</span>

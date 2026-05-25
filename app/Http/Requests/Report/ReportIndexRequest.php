@@ -16,7 +16,7 @@ class ReportIndexRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:255'],
-            'status' => ['nullable', 'in:pending,in_progress,completed,archived'],
+            'status' => ['nullable', 'in:pending,in_progress,in_progress_monitoring,in_progress_reading,pending_review,pending_approval,completed,archived'],
         ];
     }
 

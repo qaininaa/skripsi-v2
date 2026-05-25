@@ -26,7 +26,13 @@ class ReportRepository implements ReportRepositoryInterface
     public function getReports(GetReportsFilterDto $data)
     {
         return Report::query()
-            ->with(['reportTemplate', 'createdByUser'])
+            ->with([
+                'reportTemplate',
+                'createdByUser',
+                'lockedByUser',
+                'analysts.user',
+                'approvals.user',
+            ])
             ->when($data->search !== null, function ($query) use ($data) {
                 $query->where(function ($sub) use ($data) {
                     $sub->where('product_name', 'like', '%' . $data->search . '%')

@@ -16,7 +16,6 @@ use Illuminate\Support\Carbon;
  * @property int     $annex_number
  * @property string  $sop_code
  * @property string  $sop_version
- * @property bool    $has_personnel
  * @property Carbon  $created_at
  * @property Carbon  $updated_at
  */
@@ -29,12 +28,10 @@ class ReportTemplate extends Model
         'annex_number',
         'sop_code',
         'sop_version',
-        'has_personnel',
     ];
 
     protected $casts = [
-        'has_personnel' => 'boolean',
-        'annex_number'  => 'integer',
+        'annex_number' => 'integer',
     ];
 
     /**
