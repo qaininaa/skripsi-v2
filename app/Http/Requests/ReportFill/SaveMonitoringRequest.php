@@ -52,9 +52,9 @@ class SaveMonitoringRequest extends FormRequest
             'sections'                                          => ['nullable', 'array'],
             'sections.*.note'                                   => ['nullable', 'string', 'max:5000'],
 
-            // sections[{id}][columns][{idx}][sp_value]
+            // sections[{id}][columns][{idx}][column_label_value]
             'sections.*.columns'                                => ['nullable', 'array'],
-            'sections.*.columns.*.sp_value'                     => ['nullable', 'string', 'max:20', new MicrobialCount()],
+            'sections.*.columns.*.column_label_value'           => ['nullable', 'string', 'max:20', new MicrobialCount()],
 
             // sections[{id}][columns][{idx}][slots][{label}][time_*]
             'sections.*.columns.*.slots'                        => ['nullable', 'array'],

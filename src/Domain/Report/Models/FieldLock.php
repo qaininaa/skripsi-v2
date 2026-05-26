@@ -17,7 +17,7 @@ use Illuminate\Support\Carbon;
  * a fellow analyst takes over.
  *
  * The table is intentionally polymorphic so the same mechanism applies to:
- *   - section_entries.time_start / time_end / sp_value / reading_total / reading_fungi
+ *   - section_entries.time_start / time_end / column_label_value / cfu_bacteri / cfu_fungsi
  *   - section_instances.note
  *   - instrument_entries.no_id / calibration_date / due_date
  *   - medium_entries.batch_number / gpt_number / expiration_date

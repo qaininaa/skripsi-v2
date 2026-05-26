@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  * Handles the analyst monitoring workflow:
  *  - "Mulai pengerjaan" (lock the report and bootstrap entry rows)
  *  - Saving instrument / medium / incubator entries on the form
- *  - Saving section monitoring data (time_start, time_end, sp_value)
+ *  - Saving section monitoring data (time_start, time_end, column_label_value)
  *  - Finalizing the monitoring phase — moves the report into "in_progress_reading"
  *
  * Locking model:
@@ -199,7 +199,7 @@ class MonitoringService
 
     /**
      * True when at least one entry under the section has any monitoring
-     * value (time_start, time_end, sp_value) or the section carries a note.
+     * value (time_start, time_end, column_label_value) or the section carries a note.
      */
     private function sectionHasMonitoringData(SectionInstance $instance): bool
     {
@@ -209,7 +209,7 @@ class MonitoringService
 
         foreach ($instance->instanceLocations as $loc) {
             foreach ($loc->entries as $entry) {
-                if (! empty($entry->time_start) || ! empty($entry->time_end) || ! empty($entry->sp_value)) {
+                if (! empty($entry->time_start) || ! empty($entry->time_end) || ! empty($entry->column_label_value)) {
                     return true;
                 }
             }
@@ -372,12 +372,12 @@ class MonitoringService
     }
 
     /**
-     * Persist time_start, time_end, sp_value, plus the catatan text
+     * Persist time_start, time_end, column_label_value, plus the catatan text
      * for every section_instance the form posted.
      *
      * Form shape:
      *   sections[{id}][note]
-     *   sections[{id}][columns][{idx}][sp_value]
+     *   sections[{id}][columns][{idx}][column_label_value]
      *   sections[{id}][columns][{idx}][slots][{label_or_underscore}][time_start|time_end]
      *
      * Same SP / time values are broadcast to every entry of the matching
@@ -417,7 +417,9 @@ class MonitoringService
             $columns = $row['columns'] ?? [];
             foreach ($columns as $colIdx => $colData) {
                 $colIdx  = (int) $colIdx;
-                $spValue = MicrobialValue::normalise($colData['sp_value'] ?? null);
+                $columnLabelValue = MicrobialValue::normalise(
+                    $colData['column_label_value'] ?? ($colData['sp_value'] ?? null)
+                );
                 $slots   = $colData['slots'] ?? [];
 
                 foreach ($instance->instanceLocations as $loc) {
@@ -436,7 +438,7 @@ class MonitoringService
                         $values = [
                             'time_start' => $timeStart,
                             'time_end'   => $timeEnd,
-                            'sp_value'   => $spValue,
+                            'column_label_value'   => $columnLabelValue,
                         ];
 
                         $entryLocks = $entryLocksMap[$entry->id] ?? collect();
@@ -447,8 +449,6 @@ class MonitoringService
                                 $payload[$field] = $value;
                             }
                         }
-
-                        $payload['filled_by_monitoring'] = $entry->filled_by_monitoring ?? $analystId;
 
                         $entry->fill($payload)->save();
 

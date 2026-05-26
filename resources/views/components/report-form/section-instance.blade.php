@@ -13,9 +13,9 @@
     section's time_slot_type.
 
     Form name conventions used here:
-      SP        sections[{ID}][columns][{idx}][sp_value]
+      SP/Shift  sections[{ID}][columns][{idx}][column_label_value]
       Time slot sections[{ID}][columns][{idx}][slots][{label|_}][time_start|time_end]
-      Reading   sections[{ID}][rows][{loc_id}][readings][{idx}][reading_total|reading_fungi]
+      Reading   sections[{ID}][rows][{loc_id}][readings][{idx}][cfu_bacteri|cfu_fungsi]
       Note      sections[{ID}][note]
 
     Props:
@@ -113,16 +113,7 @@
     // if signature row has not been created yet, still show who filled
     // monitoring/reading fields for this section.
     $allEntries = $rows->flatMap(fn ($r) => $r->entries);
-    $draftMonitoringId = $allEntries
-        ->pluck('filled_by_monitoring')
-        ->filter()
-        ->map(fn ($id) => (string) $id)
-        ->first();
-    $draftReadingId = $allEntries
-        ->pluck('filled_by_reading')
-        ->filter()
-        ->map(fn ($id) => (string) $id)
-        ->first();
+    $draftMonitoringId = null;
 
     $noteLock = $lockMap['section_instances'][$instance->id]['note'] ?? null;
 
@@ -144,12 +135,12 @@
         ->all();
 
     $draftMonitoringName = $draftMonitoringId ? ($analystNameById[$draftMonitoringId] ?? null) : null;
-    $draftReadingName = $draftReadingId ? ($analystNameById[$draftReadingId] ?? null) : null;
+    $draftReadingName = null;
 
     // Monitoring contributors per section (can be more than one analyst).
     // Source of truth:
     //   1) section_signatures.monitoring (official sign-off record)
-    //   2) section_entries.filled_by_monitoring + field_locks timestamps
+    //   2) field_locks timestamps on section entries
     //   3) section_instances.note lock owner
     $monitoringContributors = [];
     $registerMonitoringContributor = function (?string $userId, ?string $name = null, $at = null) use (&$monitoringContributors, $analystNameById) {
@@ -195,15 +186,8 @@
 
     foreach ($rows as $r) {
         foreach ($r->entries as $entry) {
-            if ($entry->filled_by_monitoring !== null) {
-                $entryUserId = (string) $entry->filled_by_monitoring;
-                if (! isset($monitoringContributors[$entryUserId])) {
-                    $registerMonitoringContributor($entryUserId, $analystNameById[$entryUserId] ?? null);
-                }
-            }
-
             $entryLocks = $lockMap['section_entries'][$entry->id] ?? [];
-            foreach (['time_start', 'time_end', 'sp_value'] as $field) {
+            foreach (['time_start', 'time_end', 'column_label_value'] as $field) {
                 $lock = $entryLocks[$field] ?? null;
                 if ($lock?->filled_by) {
                     $lockUserId = (string) $lock->filled_by;
@@ -238,12 +222,20 @@
         ->values()
         ->all();
 
+    $readingContributors = $instance->signatures
+        ->where('role', 'reading')
+        ->sortBy(fn ($sig) => $sig->signed_at?->getTimestamp() ?? PHP_INT_MAX)
+        ->map(fn ($sig) => [
+            'user_id' => (string) $sig->signed_by,
+            'name'    => $sig->signer?->name ?? ($analystNameById[(string) $sig->signed_by] ?? '-'),
+            'at'      => $sig->signed_at,
+        ])
+        ->values()
+        ->all();
+
     // Fallback when analyst relation is not loaded yet.
     if ($draftMonitoringName === null && $draftMonitoringId !== null && $draftMonitoringId === $currentUserId) {
         $draftMonitoringName = auth()->user()?->name;
-    }
-    if ($draftReadingName === null && $draftReadingId !== null && $draftReadingId === $currentUserId) {
-        $draftReadingName = auth()->user()?->name;
     }
 
     $findDraftNameByLocks = function (array $fields) use ($rows, $lockMap) {
@@ -262,10 +254,10 @@
     };
 
     if ($draftMonitoringName === null) {
-        $draftMonitoringName = $findDraftNameByLocks(['time_start', 'time_end', 'sp_value']) ?? $noteLock?->filler?->name;
+        $draftMonitoringName = $findDraftNameByLocks(['time_start', 'time_end', 'column_label_value']) ?? $noteLock?->filler?->name;
     }
     if ($draftReadingName === null) {
-        $draftReadingName = $findDraftNameByLocks(['reading_total', 'reading_fungi']);
+        $draftReadingName = $findDraftNameByLocks(['cfu_bacteri', 'cfu_fungsi']);
     }
 
     $statusForDuplicate = in_array($report->status, ['pending', 'in_progress_monitoring'], true);
@@ -403,8 +395,8 @@
                             @if (! $col['is_setup'])
                                 @php
                                     $spEntry      = $headerEntry($col['column_index'], $col['sub_columns'][0] ?? null);
-                                    $spLockedBy   = $spEntry ? $lockOwner('section_entries', $spEntry->id, 'sp_value') : null;
-                                    $spLocked     = $spEntry ? $isLockedByOther('section_entries', $spEntry->id, 'sp_value') : false;
+                                    $spLockedBy   = $spEntry ? $lockOwner('section_entries', $spEntry->id, 'column_label_value') : null;
+                                    $spLocked     = $spEntry ? $isLockedByOther('section_entries', $spEntry->id, 'column_label_value') : false;
                                     $isSettlePlate = $section->measurement_type === 'settle_plate';
                                     $spLabel       = $isSettlePlate ? 'SP:' : 'Shift:';
                                 @endphp
@@ -413,20 +405,20 @@
                                     @if ($canEditMonitoring && ! $spLocked)
                                         <input
                                             type="text"
-                                            name="{{ $colNamePrefix }}[sp_value]"
-                                            value="{{ old("sections.{$instance->id}.columns.{$col['column_index']}.sp_value", $spEntry?->sp_value) }}"
+                                            name="{{ $colNamePrefix }}[column_label_value]"
+                                            value="{{ old("sections.{$instance->id}.columns.{$col['column_index']}.column_label_value", $spEntry?->column_label_value) }}"
                                             class="w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             placeholder="{{ $isSettlePlate ? 'SP' : 'Shift' }}"
                                         >
                                     @elseif ($canEditMonitoring && $spLocked)
                                         <input
                                             type="text"
-                                            value="{{ $spEntry?->sp_value }}"
+                                            value="{{ $spEntry?->column_label_value }}"
                                             disabled
                                             class="w-14 cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
                                         >
                                     @else
-                                        <span class="font-medium text-gray-700">{{ $spEntry?->sp_value ?: 'N/A' }}</span>
+                                        <span class="font-medium text-gray-700">{{ $spEntry?->column_label_value ?: 'N/A' }}</span>
                                     @endif
                                 </div>
                                 @if ($canEditMonitoring && $spLocked)
@@ -546,7 +538,7 @@
                             $location = $row->location;
                             $room     = $location?->room;
                             $verdict  = collect($row->entries)
-                                ->pluck('location_conclusion')
+                                ->pluck('conclusion')
                                 ->filter()
                                 ->first();
                             $rowName = "{$namePrefix}[rows][{$row->id}]";
@@ -578,16 +570,16 @@
                                 @php
                                     $entry      = $resolveEntry($row, $col);
                                     $readName   = "{$rowName}[readings][{$col['column_index']}]";
-                                    $oldB       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.reading_total", $entry?->reading_total);
-                                    $oldF       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.reading_fungi", $entry?->reading_fungi);
+                                    $oldB       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.cfu_bacteri", $entry?->cfu_bacteri);
+                                    $oldF       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.cfu_fungsi", $entry?->cfu_fungsi);
                                     $hasTime    = $entry?->hasMonitoringTime() ?? false;
                                     $b          = is_numeric($oldB) ? (int) $oldB : null;
                                     $f          = is_numeric($oldF) ? (int) $oldF : null;
-                                    $tt         = ($b !== null || $f !== null) ? ((int)($b ?? 0) + (int)($f ?? 0)) : null;
-                                    $bLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'reading_total') : null;
-                                    $fLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'reading_fungi') : null;
-                                    $bLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'reading_total') : false;
-                                    $fLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'reading_fungi') : false;
+                                    $tt         = is_numeric($entry?->cfu_total) ? (int) $entry->cfu_total : (($b !== null || $f !== null) ? ((int)($b ?? 0) + (int)($f ?? 0)) : null);
+                                    $bLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'cfu_bacteri') : null;
+                                    $fLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'cfu_fungsi') : null;
+                                    $bLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'cfu_bacteri') : false;
+                                    $fLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'cfu_fungsi') : false;
                                 @endphp
                                 <td class="border-x border-gray-100 px-1 py-1">
                                     <div class="grid grid-cols-3 gap-x-1 text-[11px]">
@@ -596,7 +588,7 @@
                                             @if ($canEditReading && $hasTime && ! $bLocked)
                                                 <input
                                                     type="text"
-                                                    name="{{ $readName }}[reading_total]"
+                                                    name="{{ $readName }}[cfu_bacteri]"
                                                     value="{{ $oldB }}"
                                                     data-microbial
                                                     data-reading="total"
@@ -627,7 +619,7 @@
                                             @if ($canEditReading && $hasTime && ! $fLocked)
                                                 <input
                                                     type="text"
-                                                    name="{{ $readName }}[reading_fungi]"
+                                                    name="{{ $readName }}[cfu_fungsi]"
                                                     value="{{ $oldF }}"
                                                     data-microbial
                                                     data-reading="fungi"
@@ -774,7 +766,10 @@
                     }
                     if ($sigSlot['role'] === 'monitoring') {
                         $roleContributors = $monitoringContributors;
-                    } elseif (! $sig && $sigSlot['role'] === 'reading') {
+                    } elseif ($sigSlot['role'] === 'reading') {
+                        $roleContributors = $readingContributors;
+                    }
+                    if (empty($roleContributors) && ! $sig && $sigSlot['role'] === 'reading') {
                         $draftName = $draftReadingName;
                     }
                 @endphp

@@ -109,6 +109,10 @@ class ReadingService
             if ($action === self::ACTION_FINALIZE) {
                 $this->finalizeReading($report, $analystId);
             } elseif ($action === self::ACTION_RELEASE) {
+                // Match monitoring handoff behavior:
+                // "Simpan Pembacaan" should stamp per-section reading sign-off
+                // without moving the phase yet.
+                $this->stampReadingSignatures($report, $analystId);
                 $report->locked_by = null;
                 $report->save();
             }
@@ -123,6 +127,40 @@ class ReadingService
      */
     private function finalizeReading(Report $report, string $analystId): void
     {
+        $this->stampReadingSignatures($report, $analystId);
+
+        $report->status    = Report::STATUS_PENDING_REVIEW;
+        $report->locked_by = null;
+        $report->save();
+
+        // Hand off to supervisor by creating their approval row.
+        $this->approvalService->ensureSupervisorAssignment($report);
+    }
+
+    /**
+     * True when at least one entry under the section has cfu_bacteri or
+     * cfu_fungsi populated.
+     */
+    private function sectionHasReadingData(SectionInstance $instance): bool
+    {
+        foreach ($instance->instanceLocations as $loc) {
+            foreach ($loc->entries as $entry) {
+                if ($entry->cfu_bacteri !== null && $entry->cfu_bacteri !== ''
+                    || $entry->cfu_fungsi !== null && $entry->cfu_fungsi !== ''
+                ) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Stamp SectionSignature(role=reading) on sections that already carry
+     * reading values. Each analyst signs at most once per section.
+     */
+    private function stampReadingSignatures(Report $report, string $analystId): void
+    {
         // Force-refresh relations because saveReadingForInstance() touched
         // entries earlier in this transaction; loadMissing would keep the
         // stale (pre-save) collection and skip the signature.
@@ -134,59 +172,17 @@ class ReadingService
                 continue;
             }
 
-            $signerId = $this->resolveReadingSigner($instance) ?? $analystId;
-
             SectionSignature::firstOrCreate(
                 [
                     'section_instance_id' => $instance->id,
                     'role'                => SectionSignature::ROLE_READING,
+                    'signed_by'           => $analystId,
                 ],
                 [
-                    'signed_by' => $signerId,
                     'signed_at' => $now,
                 ],
             );
         }
-
-        $report->status    = Report::STATUS_PENDING_REVIEW;
-        $report->locked_by = null;
-        $report->save();
-
-        // Hand off to supervisor by creating their approval row.
-        $this->approvalService->ensureSupervisorAssignment($report);
-    }
-
-    /**
-     * True when at least one entry under the section has reading_total or
-     * reading_fungi populated.
-     */
-    private function sectionHasReadingData(SectionInstance $instance): bool
-    {
-        foreach ($instance->instanceLocations as $loc) {
-            foreach ($loc->entries as $entry) {
-                if ($entry->reading_total !== null && $entry->reading_total !== ''
-                    || $entry->reading_fungi !== null && $entry->reading_fungi !== ''
-                ) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Pick the analyst who first contributed reading data to this section.
-     */
-    private function resolveReadingSigner(SectionInstance $instance): ?string
-    {
-        foreach ($instance->instanceLocations as $loc) {
-            foreach ($loc->entries as $entry) {
-                if ($entry->filled_by_reading !== null) {
-                    return (string) $entry->filled_by_reading;
-                }
-            }
-        }
-        return null;
     }
 
     /**
@@ -236,8 +232,8 @@ class ReadingService
                 }
 
                 $newValues = [
-                    'reading_total' => MicrobialValue::normalise($values['reading_total'] ?? null),
-                    'reading_fungi' => MicrobialValue::normalise($values['reading_fungi'] ?? null),
+                    'cfu_bacteri' => MicrobialValue::normalise($values['cfu_bacteri'] ?? ($values['reading_total'] ?? null)),
+                    'cfu_fungsi'  => MicrobialValue::normalise($values['cfu_fungsi']  ?? ($values['reading_fungi'] ?? null)),
                 ];
 
                 $entryLocks = $entryLocksMap[$target->id] ?? collect();
@@ -249,7 +245,18 @@ class ReadingService
                     }
                 }
 
-                $fillable['filled_by_reading'] = $target->filled_by_reading ?? $analystId;
+                $effectiveBacteri = array_key_exists('cfu_bacteri', $fillable)
+                    ? $fillable['cfu_bacteri']
+                    : $target->cfu_bacteri;
+                $effectiveFungsi = array_key_exists('cfu_fungsi', $fillable)
+                    ? $fillable['cfu_fungsi']
+                    : $target->cfu_fungsi;
+
+                $bacteriCount = MicrobialValue::toCount($effectiveBacteri);
+                $fungsiCount  = MicrobialValue::toCount($effectiveFungsi);
+                $fillable['cfu_total'] = ($bacteriCount !== null || $fungsiCount !== null)
+                    ? (string) ((int) ($bacteriCount ?? 0) + (int) ($fungsiCount ?? 0))
+                    : null;
 
                 $target->fill($fillable)->save();
 
@@ -274,8 +281,8 @@ class ReadingService
             // Persist the cached verdict on the leaf entries (any one will do
             // for queries) and aggregate at instance level.
             foreach ($row->entries as $entry) {
-                if ($entry->location_conclusion !== $verdict) {
-                    $entry->location_conclusion = $verdict;
+                if ($entry->conclusion !== $verdict) {
+                    $entry->conclusion = $verdict;
                     $entry->save();
                 }
             }

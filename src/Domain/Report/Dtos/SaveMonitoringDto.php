@@ -8,7 +8,7 @@ namespace Domain\Report\Dtos;
  *
  * Sections payload structure:
  *   sections[{instance_id}][note]
- *   sections[{instance_id}][columns][{idx}][sp_value]
+ *   sections[{instance_id}][columns][{idx}][column_label_value]
  *   sections[{instance_id}][columns][{idx}][slots][{label_or_underscore}][time_start]
  *   sections[{instance_id}][columns][{idx}][slots][{label_or_underscore}][time_end]
  */

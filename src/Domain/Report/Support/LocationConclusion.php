@@ -10,8 +10,8 @@ use Domain\Report\Models\SectionInstance;
  * Computes per-location MS/TMS verdicts and the section-wide rollup.
  *
  * Rules:
- *   - A reading is "Action breach" when reading_total ≥ alert_action_total
- *     OR reading_fungi ≥ alert_action_fungi.
+ *   - A reading is "Action breach" when cfu_bacteri ≥ alert_action_total
+ *     OR cfu_fungsi ≥ alert_action_fungi.
  *   - TNTC (PHP_INT_MAX from MicrobialValue) always breaches.
  *   - A row is TMS if ANY of its entries is an action breach.
  *   - A row with no readings yet remains null (not assessed).
@@ -30,8 +30,8 @@ final class LocationConclusion
         $anyBreach   = false;
 
         foreach ($entries as $entry) {
-            $total = MicrobialValue::toCount($entry->reading_total);
-            $fungi = MicrobialValue::toCount($entry->reading_fungi);
+            $total = MicrobialValue::toCount($entry->cfu_bacteri);
+            $fungi = MicrobialValue::toCount($entry->cfu_fungsi);
 
             if ($total === null && $fungi === null) {
                 continue;
@@ -66,7 +66,7 @@ final class LocationConclusion
 
         $verdicts = [];
         foreach ($instance->instanceLocations as $row) {
-            $verdict = $row->location_conclusion ?? null;
+            $verdict = $row->conclusion ?? null;
             // Recompute on the fly if not cached.
             if ($verdict === null) {
                 $verdict = self::forRow($row->location, $row->entries);

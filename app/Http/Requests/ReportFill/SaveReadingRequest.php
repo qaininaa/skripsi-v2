@@ -31,8 +31,8 @@ class SaveReadingRequest extends FormRequest
             'sections'                                              => ['nullable', 'array'],
             'sections.*.rows'                                       => ['nullable', 'array'],
             'sections.*.rows.*.readings'                            => ['nullable', 'array'],
-            'sections.*.rows.*.readings.*.reading_total'            => ['nullable', 'string', 'max:10', new MicrobialCount()],
-            'sections.*.rows.*.readings.*.reading_fungi'            => ['nullable', 'string', 'max:10', new MicrobialCount()],
+            'sections.*.rows.*.readings.*.cfu_bacteri'              => ['nullable', 'string', 'max:10', new MicrobialCount()],
+            'sections.*.rows.*.readings.*.cfu_fungsi'               => ['nullable', 'string', 'max:10', new MicrobialCount()],
         ];
     }
 
