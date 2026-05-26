@@ -14,16 +14,16 @@
       $returnRoute      — route name (e.g. supervisor.reports.return)
       $backRoute        — route name (e.g. supervisor.laporan-masuk)
       $roleLabel        — 'Supervisor' | 'Manajer'
+      $previewOnly      — bool (true = read-only preview from in-progress list)
 --}}
 @php
     use Domain\Report\Models\ReportApproval;
 
-    $analystMonitoring = $report->analystOfType('monitoring')?->user;
-    $analystReading    = $report->analystOfType('reading')?->user;
-    $supervisorRow     = $report->approvals->firstWhere('step', ReportApproval::STEP_SUPERVISOR);
-    $managerRow        = $report->approvals->firstWhere('step', ReportApproval::STEP_MANAGER);
+    $previewOnly       = $previewOnly ?? false;
 
-    $isPending = $approval->status === ReportApproval::STATUS_PENDING;
+    $isPending = ! $previewOnly
+        && $approval !== null
+        && $approval->status === ReportApproval::STATUS_PENDING;
 @endphp
 
 {{-- Header --}}
@@ -72,137 +72,85 @@
 <x-messages.error-message />
 <x-messages.validation-errors :except="['username', 'password']" />
 
-{{-- Approval pipeline summary --}}
-<div class="mb-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
-    <h2 class="mb-3 text-sm font-semibold text-gray-800">Riwayat Persetujuan</h2>
-    <div class="grid gap-3 md:grid-cols-3">
-        <div class="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-            <div class="text-xs text-gray-500">Analis Pembacaan</div>
-            <div class="mt-1 text-sm font-semibold text-gray-800">
-                {{ $analystReading?->name ?? $analystMonitoring?->name ?? '—' }}
-            </div>
-        </div>
-        <div class="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-            <div class="text-xs text-gray-500">Supervisor</div>
-            <div class="mt-1 text-sm font-semibold text-gray-800">
-                {{ $supervisorRow?->user?->name ?? '—' }}
-            </div>
-            @if ($supervisorRow)
-                <div class="mt-0.5 text-[11px] text-gray-500">
-                    @if ($supervisorRow->status === 'approved')
-                        Disetujui {{ optional($supervisorRow->signed_at)->translatedFormat('d M Y H:i') }}
-                    @elseif ($supervisorRow->status === 'returned')
-                        Dikembalikan ke {{ $supervisorRow->returnedToUser?->name ?? '—' }}
-                    @else
-                        Menunggu
-                    @endif
-                </div>
-            @endif
-        </div>
-        <div class="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
-            <div class="text-xs text-gray-500">Manajer</div>
-            <div class="mt-1 text-sm font-semibold text-gray-800">
-                {{ $managerRow?->user?->name ?? '—' }}
-            </div>
-            @if ($managerRow)
-                <div class="mt-0.5 text-[11px] text-gray-500">
-                    @if ($managerRow->status === 'approved')
-                        Disetujui {{ optional($managerRow->signed_at)->translatedFormat('d M Y H:i') }}
-                    @elseif ($managerRow->status === 'returned')
-                        Dikembalikan ke {{ $managerRow->returnedToUser?->name ?? '—' }}
-                    @else
-                        Menunggu
-                    @endif
-                </div>
-            @endif
-        </div>
-    </div>
-
-    @if ($supervisorRow?->status === 'returned' || $managerRow?->status === 'returned')
-        @php
-            $latestReturned = $managerRow?->status === 'returned' ? $managerRow : $supervisorRow;
-        @endphp
-        <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-            <p class="font-semibold">Catatan pengembalian terakhir</p>
-            <p class="mt-1 whitespace-pre-line">{{ $latestReturned->notes ?? '—' }}</p>
-        </div>
-    @endif
-</div>
-
 {{-- Read-only report content (reuses analyst section components) --}}
 @include('report-approval.partials.report-readonly', [
     'report'           => $report,
     'sectionInstances' => $sectionInstances,
     'lockMap'          => $lockMap,
+    'previewOnly'      => $previewOnly,
 ])
 
-{{-- Modals --}}
-@include('report-approval.partials.approve-modal', [
-    'action'    => route($approveRoute, $report),
-    'roleLabel' => $roleLabel,
-])
-@include('report-approval.partials.return-modal', [
-    'action'        => route($returnRoute, $report),
-    'returnTargets' => $returnTargets,
-    'roleLabel'     => $roleLabel,
-])
+@if ($isPending)
+    {{-- Modals --}}
+    @include('report-approval.partials.approve-modal', [
+        'action'    => route($approveRoute, $report),
+        'roleLabel' => $roleLabel,
+    ])
+    @include('report-approval.partials.return-modal', [
+        'action'        => route($returnRoute, $report),
+        'returnTargets' => $returnTargets,
+        'roleLabel'     => $roleLabel,
+    ])
+@endif
 
 @push('scripts')
-    <script>
-        document.addEventListener('alpine:init', () => {
-            const errorState = @json([
-                'auth_error_approve' => session('approve_auth_error'),
-                'auth_error_return'  => session('return_auth_error'),
-            ]);
-
-            Alpine.store('approvalApproveModal', {
-                isOpen: false,
-                username: '',
-                password: '',
-                showPassword: false,
-                authError: '',
-                open() { this.isOpen = true; this.authError = ''; },
-                close() { this.isOpen = false; this.username = ''; this.password = ''; this.authError = ''; },
-            });
-
-            Alpine.store('approvalReturnModal', {
-                isOpen: false,
-                username: '',
-                password: '',
-                showPassword: false,
-                returnedToUserId: '',
-                notes: '',
-                authError: '',
-                open() { this.isOpen = true; this.authError = ''; },
-                close() {
-                    this.isOpen = false;
-                    this.username = '';
-                    this.password = '';
-                    this.returnedToUserId = '';
-                    this.notes = '';
-                    this.authError = '';
-                },
-            });
-        });
-    </script>
-    @if ($errors->has('auth_error'))
+    @if ($isPending)
         <script>
-            document.addEventListener('alpine:initialized', () => {
-                if (! window.Alpine) return;
-                // Best-effort rehydrate: reopen approve modal if old('action') === 'approve'.
-                const action = @json(old('action'));
-                if (action === 'approve') {
-                    Alpine.store('approvalApproveModal').open();
-                    Alpine.store('approvalApproveModal').authError = @json($errors->first('auth_error'));
-                    Alpine.store('approvalApproveModal').username = @json(old('username', ''));
-                } else if (action === 'return') {
-                    Alpine.store('approvalReturnModal').open();
-                    Alpine.store('approvalReturnModal').authError = @json($errors->first('auth_error'));
-                    Alpine.store('approvalReturnModal').username = @json(old('username', ''));
-                    Alpine.store('approvalReturnModal').returnedToUserId = @json(old('returned_to_user_id', ''));
-                    Alpine.store('approvalReturnModal').notes = @json(old('notes', ''));
-                }
+            document.addEventListener('alpine:init', () => {
+                const errorState = @json([
+                    'auth_error_approve' => session('approve_auth_error'),
+                    'auth_error_return'  => session('return_auth_error'),
+                ]);
+
+                Alpine.store('approvalApproveModal', {
+                    isOpen: false,
+                    username: '',
+                    password: '',
+                    showPassword: false,
+                    authError: '',
+                    open() { this.isOpen = true; this.authError = ''; },
+                    close() { this.isOpen = false; this.username = ''; this.password = ''; this.authError = ''; },
+                });
+
+                Alpine.store('approvalReturnModal', {
+                    isOpen: false,
+                    username: '',
+                    password: '',
+                    showPassword: false,
+                    returnedToUserId: '',
+                    notes: '',
+                    authError: '',
+                    open() { this.isOpen = true; this.authError = ''; },
+                    close() {
+                        this.isOpen = false;
+                        this.username = '';
+                        this.password = '';
+                        this.returnedToUserId = '';
+                        this.notes = '';
+                        this.authError = '';
+                    },
+                });
             });
         </script>
+        @if ($errors->has('auth_error'))
+            <script>
+                document.addEventListener('alpine:initialized', () => {
+                    if (! window.Alpine) return;
+                    // Best-effort rehydrate: reopen approve modal if old('action') === 'approve'.
+                    const action = @json(old('action'));
+                    if (action === 'approve') {
+                        Alpine.store('approvalApproveModal').open();
+                        Alpine.store('approvalApproveModal').authError = @json($errors->first('auth_error'));
+                        Alpine.store('approvalApproveModal').username = @json(old('username', ''));
+                    } else if (action === 'return') {
+                        Alpine.store('approvalReturnModal').open();
+                        Alpine.store('approvalReturnModal').authError = @json($errors->first('auth_error'));
+                        Alpine.store('approvalReturnModal').username = @json(old('username', ''));
+                        Alpine.store('approvalReturnModal').returnedToUserId = @json(old('returned_to_user_id', ''));
+                        Alpine.store('approvalReturnModal').notes = @json(old('notes', ''));
+                    }
+                });
+            </script>
+        @endif
     @endif
 @endpush

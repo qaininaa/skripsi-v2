@@ -8,7 +8,7 @@
     `analysts` pivot for that role (multiple analysts may collaborate),
     each on its own line with a "(saya)" marker for the current user.
 --}}
-@props(['report', 'readonly' => true])
+@props(['report', 'readonly' => true, 'previewOnly' => false])
 
 @php
     $isReadingPhase = method_exists($report, 'isReadingPhase')
@@ -32,6 +32,10 @@
         ->filter()
         ->unique('id')
         ->values();
+
+    $readingJoinedNames = $readingAnalysts
+        ->map(fn ($analyst) => $analyst->name)
+        ->implode(', ');
 @endphp
 
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
@@ -52,7 +56,14 @@
         {{-- Dimonitoring Oleh --}}
         <div>
             <label class="mb-1 block text-xs font-medium text-gray-500">Dimonitoring Oleh</label>
-            @if ($isReadingPhase)
+            @if ($previewOnly)
+                <input
+                    type="text"
+                    value="{{ $monitoringJoinedNames !== '' ? $monitoringJoinedNames : 'Belum ada analis' }}"
+                    readonly
+                    class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                >
+            @elseif ($isReadingPhase)
                 <input
                     type="text"
                     value="{{ $monitoringJoinedNames !== '' ? $monitoringJoinedNames : 'Belum ada analis' }}"
@@ -85,7 +96,14 @@
         {{-- Dibaca Oleh --}}
         <div>
             <label class="mb-1 block text-xs font-medium text-gray-500">Dibaca Oleh</label>
-            @if ($readingAnalysts->isNotEmpty())
+            @if ($previewOnly)
+                <input
+                    type="text"
+                    value="{{ $readingJoinedNames !== '' ? $readingJoinedNames : 'Belum ada analis pembacaan' }}"
+                    readonly
+                    class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+                >
+            @elseif ($readingAnalysts->isNotEmpty())
                 <div class="space-y-1.5">
                     @foreach ($readingAnalysts as $analyst)
                         @php $isMe = $analyst->id === auth()->id(); @endphp

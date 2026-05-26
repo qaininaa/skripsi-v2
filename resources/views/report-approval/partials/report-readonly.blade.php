@@ -7,6 +7,7 @@
       $report
       $sectionInstances
       $lockMap
+      $previewOnly
 --}}
 @php
     use Domain\Report\Models\Incubator;
@@ -34,7 +35,7 @@
 @endphp
 
 <div class="space-y-6">
-    <x-report-form.section-room-monitoring :report="$report" :readonly="true" />
+    <x-report-form.section-room-monitoring :report="$report" :readonly="true" :preview-only="($previewOnly ?? false)" />
 
     <x-report-form.section-instrument-identity
         :instrument-entries="$instrumentEntries"

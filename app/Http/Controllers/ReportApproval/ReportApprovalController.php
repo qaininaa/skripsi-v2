@@ -59,11 +59,29 @@ class ReportApprovalController extends Controller
         ]);
     }
 
-    public function inProgress(string $step): View
+    public function inProgress(Request $request, string $step): View
     {
         $config = $this->resolveConfig($step);
+        $stage = (string) $request->query('stage', 'all');
+        $allowedStages = [
+            'all',
+            'pending',
+            'monitoring',
+            'reading',
+            'review_supervisor',
+            'approval_manager',
+            'returned',
+        ];
+        if (! in_array($stage, $allowedStages, true)) {
+            $stage = 'all';
+        }
 
         $reports = $this->approvals->getInProgressReportsForAssignee(
+            $config['stepConstant'],
+            (string) Auth::id(),
+            $stage,
+        );
+        $counts = $this->approvals->countInProgressByStage(
             $config['stepConstant'],
             (string) Auth::id(),
         );
@@ -71,11 +89,14 @@ class ReportApprovalController extends Controller
         return view('report-approval.in-progress', [
             'reports'   => $reports,
             'showRoute' => $config['showRoute'],
+            'previewRoute' => $config['previewRoute'],
             'roleLabel' => $config['roleLabel'],
+            'activeStage' => $stage,
+            'counts'      => $counts,
         ]);
     }
 
-    public function show(string $step, Report $report): View
+    public function show(Report $report, string $step): View
     {
         $config = $this->resolveConfig($step);
 
@@ -101,6 +122,7 @@ class ReportApprovalController extends Controller
         return view('report-approval.show', [
             'report'           => $report,
             'approval'         => $approval,
+            'previewOnly'      => false,
             'sectionInstances' => $bundle['instances'],
             'lockMap'          => $bundle['locks'],
             'returnTargets'    => $returnTargets,
@@ -111,7 +133,40 @@ class ReportApprovalController extends Controller
         ]);
     }
 
-    public function approve(ApproveReportRequest $request, string $step, Report $report): RedirectResponse
+    /**
+     * Read-only preview page for supervisor/manager ongoing list.
+     * This does not require an approval row assigned to the current actor.
+     */
+    public function preview(Report $report, string $step): View
+    {
+        $config = $this->resolveConfig($step);
+
+        $report->load([
+            'reportTemplate',
+            'createdByUser',
+            'lockedByUser',
+            'analysts.user',
+            'approvals.user',
+            'approvals.returnedToUser',
+        ]);
+
+        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+
+        return view('report-approval.show', [
+            'report'           => $report,
+            'approval'         => null,
+            'previewOnly'      => true,
+            'sectionInstances' => $bundle['instances'],
+            'lockMap'          => $bundle['locks'],
+            'returnTargets'    => collect(),
+            'approveRoute'     => $config['approveRoute'],
+            'returnRoute'      => $config['returnRoute'],
+            'backRoute'        => $config['inProgressRoute'],
+            'roleLabel'        => $config['roleLabel'],
+        ]);
+    }
+
+    public function approve(ApproveReportRequest $request, Report $report, string $step): RedirectResponse
     {
         $config = $this->resolveConfig($step);
 
@@ -134,7 +189,7 @@ class ReportApprovalController extends Controller
             ->with('success', $successMessage);
     }
 
-    public function return(ReturnReportRequest $request, string $step, Report $report): RedirectResponse
+    public function return(ReturnReportRequest $request, Report $report, string $step): RedirectResponse
     {
         $config = $this->resolveConfig($step);
 
@@ -156,7 +211,7 @@ class ReportApprovalController extends Controller
     /**
      * Resolve step-specific configuration for routes, labels, and constants.
      *
-     * @return array{stepConstant: int, roleLabel: string, inboxRoute: string, showRoute: string, approveRoute: string, returnRoute: string}
+     * @return array{stepConstant: int, roleLabel: string, inboxRoute: string, inProgressRoute: string, showRoute: string, previewRoute: string, approveRoute: string, returnRoute: string}
      */
     private function resolveConfig(string $step): array
     {
@@ -165,7 +220,9 @@ class ReportApprovalController extends Controller
                 'stepConstant' => ReportApproval::STEP_MANAGER,
                 'roleLabel'    => 'Manajer',
                 'inboxRoute'   => 'manager.inbox',
+                'inProgressRoute' => 'manager.in-progress',
                 'showRoute'    => 'manager.reports.show',
+                'previewRoute' => 'manager.reports.preview',
                 'approveRoute' => 'manager.reports.approve',
                 'returnRoute'  => 'manager.reports.return',
             ],
@@ -173,7 +230,9 @@ class ReportApprovalController extends Controller
                 'stepConstant' => ReportApproval::STEP_SUPERVISOR,
                 'roleLabel'    => 'Supervisor',
                 'inboxRoute'   => 'supervisor.inbox',
+                'inProgressRoute' => 'supervisor.in-progress',
                 'showRoute'    => 'supervisor.reports.show',
+                'previewRoute' => 'supervisor.reports.preview',
                 'approveRoute' => 'supervisor.reports.approve',
                 'returnRoute'  => 'supervisor.reports.return',
             ],

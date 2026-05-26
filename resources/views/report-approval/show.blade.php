@@ -7,6 +7,7 @@
     @include('report-approval.partials.show', [
         'report'           => $report,
         'approval'         => $approval,
+        'previewOnly'      => $previewOnly ?? false,
         'sectionInstances' => $sectionInstances,
         'lockMap'          => $lockMap,
         'returnTargets'    => $returnTargets,

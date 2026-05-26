@@ -106,6 +106,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     Route::middleware('role:supervisor')->prefix('supervisor')->name('supervisor.')->group(function () {
         Route::get('/inbox', [ReportApprovalController::class, 'inbox'])->defaults('step', 'supervisor')->name('inbox');
         Route::get('/in-progress', [ReportApprovalController::class, 'inProgress'])->defaults('step', 'supervisor')->name('in-progress');
+        Route::get('/reports/{report}/preview', [ReportApprovalController::class, 'preview'])->defaults('step', 'supervisor')->name('reports.preview');
         Route::get('/reports/{report}', [ReportApprovalController::class, 'show'])->defaults('step', 'supervisor')->name('reports.show');
         Route::post('/reports/{report}/approve', [ReportApprovalController::class, 'approve'])->defaults('step', 'supervisor')->name('reports.approve');
         Route::post('/reports/{report}/return', [ReportApprovalController::class, 'return'])->defaults('step', 'supervisor')->name('reports.return');
@@ -115,6 +116,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     Route::middleware('role:manager')->prefix('manager')->name('manager.')->group(function () {
         Route::get('/inbox', [ReportApprovalController::class, 'inbox'])->defaults('step', 'manager')->name('inbox');
         Route::get('/in-progress', [ReportApprovalController::class, 'inProgress'])->defaults('step', 'manager')->name('in-progress');
+        Route::get('/reports/{report}/preview', [ReportApprovalController::class, 'preview'])->defaults('step', 'manager')->name('reports.preview');
         Route::get('/reports/{report}', [ReportApprovalController::class, 'show'])->defaults('step', 'manager')->name('reports.show');
         Route::post('/reports/{report}/approve', [ReportApprovalController::class, 'approve'])->defaults('step', 'manager')->name('reports.approve');
         Route::post('/reports/{report}/return', [ReportApprovalController::class, 'return'])->defaults('step', 'manager')->name('reports.return');

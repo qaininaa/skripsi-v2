@@ -42,11 +42,17 @@ interface ReportApprovalRepositoryInterface
     public function countByAssigneeTab(int $step, string $userId): array;
 
     /**
-     * Reports the assignee currently has work-in-progress on (status=pending or
-     * returned waiting for them). Used by the "Sedang Dikerjakan" page on the
-     * supervisor / manager sidebar.
+     * Reports that are still ongoing in the workflow (not completed/archived).
+     * Used by the "Sedang Dikerjakan" page on the supervisor / manager sidebar.
      *
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function getInProgressReportsForAssignee(int $step, string $userId);
+    public function getInProgressReportsForAssignee(int $step, string $userId, string $stage = 'all');
+
+    /**
+     * Counts for each in-progress stage filter.
+     *
+     * @return array<string, int>
+     */
+    public function countInProgressByStage(int $step, string $userId): array;
 }
