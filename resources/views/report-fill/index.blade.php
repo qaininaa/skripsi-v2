@@ -112,7 +112,7 @@
                                     $canResume     = $isLocker && ($inMonitoring || $inReading);
                                 @endphp
                                 <div class="flex items-center justify-center gap-2">
-                                    <x-buttons.view :href="route('report-fill.show', $report)" />
+                                    <x-buttons.view :href="route('report-fill.preview', $report)" />
 
                                     @if ($canResume)
                                         <x-buttons.resume :href="route('report-fill.fill', $report)" />

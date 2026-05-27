@@ -48,7 +48,7 @@
 
 <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
     <div class="border-b border-gray-100 px-6 py-4">
-        <h2 class="text-2xl font-semibold text-gray-900">Laporan Sedang Dikerjakan</h2>
+        <h2 class="text-xl font-semibold text-gray-900">Laporan Sedang Dikerjakan</h2>
         <p class="mt-1 text-sm text-gray-500">Pantau laporan yang sedang dikerjakan analis pada tahap monitoring maupun pembacaan.</p>
 
         <div class="mt-5 flex flex-wrap items-end gap-5 border-b border-gray-200">
@@ -134,7 +134,7 @@
                             {{ $report->batch_number }}
                         </td>
                         <td class="whitespace-nowrap px-6 py-5 text-left">
-                            <span class="inline-flex rounded-full px-3 py-1 text-sm font-semibold {{ $meta['class'] }}">
+                            <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $meta['class'] }}">
                                 {{ $meta['label'] }}
                             </span>
                         </td>
@@ -146,13 +146,7 @@
                         </td>
                         <td class="whitespace-nowrap px-6 py-5">
                             <div class="flex items-center justify-center gap-2">
-                                <a
-                                    href="{{ route($previewRoute, $report) }}"
-                                    class="inline-flex items-center gap-1 rounded-xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100"
-                                >
-                                    <span>Lihat</span>
-                                    <span>&rsaquo;</span>
-                                </a>
+                                <x-buttons.preview :href="route($previewRoute, $report)" />
                             </div>
                         </td>
                     </tr>

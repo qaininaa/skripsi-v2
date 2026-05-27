@@ -95,6 +95,7 @@
             : 'Data monitoring sudah lengkap, lanjut ke tahap baca.';
 
         $isAdmin = optional(auth()->user())->role === 'admin';
+        $previewOnly = $previewOnly ?? false;
     @endphp
 
     {{-- Header --}}
@@ -183,7 +184,7 @@
         @csrf
         @method('PUT')
 
-        <x-report-form.section-room-monitoring :report="$report" :readonly="$readonly" />
+        <x-report-form.section-room-monitoring :report="$report" :readonly="$readonly" :preview-only="$previewOnly" />
 
         <x-report-form.section-instrument-identity
             :instrument-entries="$instrumentEntries"

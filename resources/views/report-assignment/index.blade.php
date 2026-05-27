@@ -102,7 +102,7 @@
                             </td>
                             <td class="whitespace-nowrap px-4 py-4">
                                 <div class="flex items-center justify-center gap-2">
-                                    <x-buttons.detail :href="route('report-assignment.show', $report)" />
+                                    <x-buttons.detail :href="route('report-assignment.preview', $report)" />
                                     @if ($report->status === 'pending')
                                         <x-buttons.edit :href="route('report-assignment.edit', $report)" />
                                         <x-buttons.delete

@@ -75,6 +75,14 @@ class ReportFillController extends Controller
      */
     public function show(Report $report): View
     {
+        return $this->preview($report);
+    }
+
+    /**
+     * Read-only preview page for analysts.
+     */
+    public function preview(Report $report): View
+    {
         $report->load($this->fillRelations());
 
         $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
@@ -82,6 +90,7 @@ class ReportFillController extends Controller
         return view('report-fill.fill', [
             'report'           => $report,
             'readonly'         => true,
+            'previewOnly'      => true,
             'phase'            => $this->currentPhase($report),
             'sectionInstances' => $bundle['instances'],
             'lockMap'          => $bundle['locks'],
@@ -103,6 +112,7 @@ class ReportFillController extends Controller
         return view('report-fill.fill', [
             'report'           => $report,
             'readonly'         => ! $isOwner,
+            'previewOnly'      => false,
             'phase'            => $this->currentPhase($report),
             'sectionInstances' => $bundle['instances'],
             'lockMap'          => $bundle['locks'],

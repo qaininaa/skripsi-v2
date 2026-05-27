@@ -76,6 +76,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/report-assignment', [ReportAssignmentController::class, 'index'])->name('report-assignment.index');
         Route::get('/report-assignment/create', [ReportAssignmentController::class, 'create'])->name('report-assignment.create');
         Route::post('/report-assignment/store', [ReportAssignmentController::class, 'store'])->name('report-assignment.store');
+        Route::get('/report-assignment/{report}/preview', [ReportAssignmentController::class, 'preview'])->name('report-assignment.preview');
         Route::get('/report-assignment/{report}', [ReportAssignmentController::class, 'show'])->name('report-assignment.show');
         Route::get('/report-assignment/{report}/edit', [ReportAssignmentController::class, 'edit'])->name('report-assignment.edit');
         Route::put('/report-assignment/{report}', [ReportAssignmentController::class, 'update'])->name('report-assignment.update');
@@ -96,6 +97,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     Route::middleware('role:analyst')->prefix('report-fill')->name('report-fill.')->group(function () {
         Route::get('/', [ReportFillController::class, 'index'])->name('index');
         Route::post('/{report}/start', [ReportFillController::class, 'start'])->name('start');
+        Route::get('/{report}/preview', [ReportFillController::class, 'preview'])->name('preview');
         Route::get('/{report}', [ReportFillController::class, 'show'])->name('show');
         Route::get('/{report}/fill', [ReportFillController::class, 'fill'])->name('fill');
         Route::put('/{report}/monitoring', [ReportFillController::class, 'saveMonitoring'])->name('save-monitoring');

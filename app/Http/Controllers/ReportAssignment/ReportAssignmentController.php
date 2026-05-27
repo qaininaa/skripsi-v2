@@ -59,6 +59,14 @@ class ReportAssignmentController extends Controller
      */
     public function show(Report $report): View
     {
+        return $this->preview($report);
+    }
+
+    /**
+     * Read-only preview detail for admin QC.
+     */
+    public function preview(Report $report): View
+    {
         $report->load($this->detailRelations());
 
         $bundle = $this->sectionInstanceRepository->getInstancesForReportWithLocks($report);
