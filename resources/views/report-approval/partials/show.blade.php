@@ -77,14 +77,14 @@
                 @click.prevent="$store.approvalReturnModal.open()"
                 class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100"
             >
-                <span>↩</span><span>Kembalikan ke Analis</span>
+                Kembalikan ke Analis
             </button>
             <button
                 type="button"
                 @click.prevent="$store.approvalApproveModal.open()"
-                class="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-600"
+                class="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100"
             >
-                <span>✓</span><span>Setujui Laporan</span>
+                Setujui Laporan
             </button>
         </div>
     @endif
