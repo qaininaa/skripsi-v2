@@ -40,7 +40,7 @@
         <div>
             @if ($report->reportTemplate)
                 <div class="flex items-center gap-2 text-base font-semibold text-gray-800">
-                    <span class="font-bold text-gray-700">{{ $report->reportTemplate->annex_number }}</span>
+                    <span class="font-bold text-gray-700">Annex {{ $report->reportTemplate->annex_number }}</span>
                     <span class="text-gray-400">—</span>
                     <span>{{ $report->reportTemplate->name }}</span>
                     <x-badges.report-status :status="$report->status" />
@@ -67,7 +67,7 @@
                             submitLabel: 'Simpan Perubahan',
                         })
                     "
-                    class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                    class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100 cursor-pointer"
                 >
                     <span>Simpan Perubahan</span>
                 </button>
@@ -75,14 +75,14 @@
             <button
                 type="button"
                 @click.prevent="$store.approvalReturnModal.open()"
-                class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100"
+                class="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100 cursor-pointer"
             >
                 Kembalikan ke Analis
             </button>
             <button
                 type="button"
                 @click.prevent="$store.approvalApproveModal.open()"
-                class="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100"
+                class="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-100 cursor-pointer"
             >
                 Setujui Laporan
             </button>
