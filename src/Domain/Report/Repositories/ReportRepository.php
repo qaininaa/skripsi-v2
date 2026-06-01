@@ -3,11 +3,13 @@
 namespace Domain\Report\Repositories;
 
 use Domain\Report\Dtos\CreateReportDto;
+use Domain\Report\Dtos\GetArchiveReportsFilterDto;
 use Domain\Report\Dtos\GetAnalystReportsFilterDto;
 use Domain\Report\Dtos\GetReportsFilterDto;
 use Domain\Report\Dtos\UpdateReportDto;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Models\Report;
+use Domain\Report\Models\ReportApproval;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -45,6 +47,65 @@ class ReportRepository implements ReportRepositoryInterface
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getArchivedReports(GetArchiveReportsFilterDto $data, array $annexNumbers)
+    {
+        return $this->archivedBaseQuery()
+            ->with(['reportTemplate'])
+            ->whereHas('reportTemplate', function ($query) use ($annexNumbers) {
+                $query->whereIn('annex_number', $annexNumbers);
+            })
+            ->when($data->search !== null, function ($query) use ($data) {
+                $query->where(function ($sub) use ($data) {
+                    $sub->where('product_name', 'like', '%' . $data->search . '%')
+                        ->orWhere('batch_number', 'like', '%' . $data->search . '%')
+                        ->orWhereHas('reportTemplate', function ($templateQuery) use ($data) {
+                            $templateQuery->where('name', 'like', '%' . $data->search . '%');
+                        });
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function countArchivedReports(array $annexNumbers): int
+    {
+        return $this->archivedBaseQuery()
+            ->whereHas('reportTemplate', function ($query) use ($annexNumbers) {
+                $query->whereIn('annex_number', $annexNumbers);
+            })
+            ->count();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findArchivedReportById(string $id): ?Report
+    {
+        return $this->archivedBaseQuery()
+            ->with([
+                'reportTemplate',
+                'createdByUser',
+                'lockedByUser',
+                'analysts.user',
+                'approvals.user',
+                'approvals.returnedToUser',
+                'instrumentEntries',
+                'mediumEntries.template',
+                'incubators.template',
+                'incubators.entries.incubatedBy',
+                'incubators.entries.removedBy',
+            ])
+            ->where('id', $id)
+            ->first();
     }
 
     /**
@@ -173,5 +234,24 @@ class ReportRepository implements ReportRepositoryInterface
     public function updateMeta(Report $report, array $attributes): void
     {
         $report->fill($attributes)->save();
+    }
+
+    /**
+     * Build the base archive query:
+     * - only finalized statuses
+     * - only reports approved by manager
+     */
+    private function archivedBaseQuery(): Builder
+    {
+        return Report::query()
+            ->whereIn('status', [
+                Report::STATUS_COMPLETED,
+                Report::STATUS_ARCHIVED,
+            ])
+            ->whereHas('approvals', function ($query) {
+                $query
+                    ->where('step', ReportApproval::STEP_MANAGER)
+                    ->where('status', ReportApproval::STATUS_APPROVED);
+            });
     }
 }

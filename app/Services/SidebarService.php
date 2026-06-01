@@ -144,14 +144,12 @@ class SidebarService
             ];
         }
 
-        if ($role !== 'super') {
-            $sections[] = [
-                'label' => 'Arsip',
-                'items' => [
-                    $this->item('Arsip Laporan', 'arsip-laporan.index', 'arsip-laporan.*', 'icons/sidebar/archive.svg'),
-                ],
-            ];
-        }
+        $sections[] = [
+            'label' => 'Arsip',
+            'items' => [
+                $this->item('Arsip Laporan', 'arsip-laporan.index', 'arsip-laporan.*', 'icons/sidebar/archive.svg'),
+            ],
+        ];
 
         return $this->filterUnavailableRoutes($sections);
     }

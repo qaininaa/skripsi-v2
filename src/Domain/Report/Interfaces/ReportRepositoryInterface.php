@@ -3,6 +3,7 @@
 namespace Domain\Report\Interfaces;
 
 use Domain\Report\Dtos\CreateReportDto;
+use Domain\Report\Dtos\GetArchiveReportsFilterDto;
 use Domain\Report\Dtos\GetAnalystReportsFilterDto;
 use Domain\Report\Dtos\GetReportsFilterDto;
 use Domain\Report\Dtos\UpdateReportDto;
@@ -20,6 +21,29 @@ interface ReportRepositoryInterface
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function getReports(GetReportsFilterDto $data);
+
+    /**
+     * Retrieve archived reports in a given folder (annex bucket).
+     *
+     * Only reports that have been approved by manager are included.
+     *
+     * @param  GetArchiveReportsFilterDto  $data
+     * @param  array<int, int>             $annexNumbers
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function getArchivedReports(GetArchiveReportsFilterDto $data, array $annexNumbers);
+
+    /**
+     * Count manager-approved archived reports in a given annex bucket.
+     *
+     * @param  array<int, int>  $annexNumbers
+     */
+    public function countArchivedReports(array $annexNumbers): int;
+
+    /**
+     * Find one manager-approved archived report with all read-only relations.
+     */
+    public function findArchivedReportById(string $id): ?Report;
 
     /**
      * Retrieve a paginated list of reports for the analyst inbox view.

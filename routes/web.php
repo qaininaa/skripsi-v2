@@ -6,6 +6,7 @@ use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Location\LocationController;
 use App\Http\Controllers\PasswordPolicy\PasswordPolicyController;
 use App\Http\Controllers\ReportApproval\ReportApprovalController;
+use App\Http\Controllers\ReportArchive\ReportArchiveController;
 use App\Http\Controllers\ReportAssignment\ReportAssignmentController;
 use App\Http\Controllers\ReportAssignment\SectionInstanceController;
 use App\Http\Controllers\ReportFill\ReportFillController;
@@ -32,6 +33,14 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', 'password.changed'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::middleware('role:super,admin,analyst,supervisor,manager')
+        ->prefix('arsip-laporan')
+        ->name('arsip-laporan.')
+        ->group(function () {
+            Route::get('/', [ReportArchiveController::class, 'index'])->name('index');
+            Route::get('/{reportId}', [ReportArchiveController::class, 'show'])->name('show');
+        });
 
     Route::middleware('role:super')->group(function () {
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
