@@ -27,6 +27,7 @@ class DashboardController extends Controller
 
         return view($view, [
             'userName' => $this->dashboardService->resolveUserName($user),
+            'reviewNote' => $this->dashboardService->resolveReviewNote($user),
         ]);
     }
 }

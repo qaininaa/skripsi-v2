@@ -8,4 +8,6 @@
         description="Selamat datang di dashboard Manajer."
         :name="$userName"
     />
+
+    <x-cards.review-notification :note="$reviewNote ?? null" />
 @endsection
