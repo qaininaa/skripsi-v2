@@ -65,7 +65,6 @@
                 $dueOwner    = $incubatorReal ? $lockOwner('incubators', $incubatorId, 'due_date_calibration') : null;
             @endphp
 
-            <div class="rounded-xl border border-gray-100 bg-gray-50/50 p-5">
                 <h3 class="mb-4 text-sm font-semibold uppercase tracking-wide text-blue-500">
                     Incubator {{ strtoupper($incubatorName) }}
                 </h3>
@@ -196,6 +195,8 @@
                         $existingIncubatedName = $entry->incubatedBy?->name;
                         $existingRemovedName   = $entry->removedBy?->name;
                         $currentUserName       = optional(auth()->user())->name ?? '';
+                        $canQuickFillIn        = ! $readonly && (! $dateInLocked || ! $timeInLocked);
+                        $canQuickFillOut       = ! $readonly && (! $dateOutLocked || ! $timeOutLocked);
                     @endphp
 
                     <div
@@ -208,6 +209,35 @@
                             existingIncubatedName: @js($existingIncubatedName),
                             existingRemovedName:   @js($existingRemovedName),
                             currentUserName:       @js($currentUserName),
+                            canSetDateIn:          @js(! $readonly && ! $dateInLocked),
+                            canSetTimeIn:          @js(! $readonly && ! $timeInLocked),
+                            canSetDateOut:         @js(! $readonly && ! $dateOutLocked),
+                            canSetTimeOut:         @js(! $readonly && ! $timeOutLocked),
+                            nowDate() {
+                                const now = new Date();
+                                const year = now.getFullYear();
+                                const month = String(now.getMonth() + 1).padStart(2, '0');
+                                const day = String(now.getDate()).padStart(2, '0');
+                                return `${year}-${month}-${day}`;
+                            },
+                            nowTime() {
+                                const now = new Date();
+                                const hours = String(now.getHours()).padStart(2, '0');
+                                const minutes = String(now.getMinutes()).padStart(2, '0');
+                                return `${hours}:${minutes}`;
+                            },
+                            setIncubatedNow() {
+                                const date = this.nowDate();
+                                const time = this.nowTime();
+                                if (this.canSetDateIn) this.dateIn = date;
+                                if (this.canSetTimeIn) this.timeIn = time;
+                            },
+                            setRemovedNow() {
+                                const date = this.nowDate();
+                                const time = this.nowTime();
+                                if (this.canSetDateOut) this.dateOut = date;
+                                if (this.canSetTimeOut) this.timeOut = time;
+                            },
                             get hasIn()  { return (this.dateIn  || '').trim() !== '' || (this.timeIn  || '').trim() !== ''; },
                             get hasOut() { return (this.dateOut || '').trim() !== '' || (this.timeOut || '').trim() !== ''; },
                             get incubatedByName() {
@@ -229,13 +259,35 @@
 
                         <div class="grid gap-4 lg:grid-cols-2">
                             <div>
-                                <label class="mb-1 block text-xs font-medium text-gray-500">Diinkubasi oleh</label>
+                                <div class="mb-1 flex items-center justify-between gap-2">
+                                    <label class="block text-xs font-medium text-gray-500">Diinkubasi oleh</label>
+                                    @if ($canQuickFillIn)
+                                        <button
+                                            type="button"
+                                            @click="setIncubatedNow()"
+                                            class="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                                        >
+                                            Diinkubasi Sekarang
+                                        </button>
+                                    @endif
+                                </div>
                                 <div class="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500">
                                     <span x-text="incubatedByName || 'N/A'"></span>
                                 </div>
                             </div>
                             <div>
-                                <label class="mb-1 block text-xs font-medium text-gray-500">Dikeluarkan oleh</label>
+                                <div class="mb-1 flex items-center justify-between gap-2">
+                                    <label class="block text-xs font-medium text-gray-500">Dikeluarkan oleh</label>
+                                    @if ($canQuickFillOut)
+                                        <button
+                                            type="button"
+                                            @click="setRemovedNow()"
+                                            class="rounded-lg border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                                        >
+                                            Dikeluarkan Sekarang
+                                        </button>
+                                    @endif
+                                </div>
                                 <div class="rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-500">
                                     <span x-text="removedByName || 'N/A'"></span>
                                 </div>
@@ -359,7 +411,6 @@
                         </div>
                     </div>
                 @endforeach
-            </div>
         @endforeach
     </div>
 </section>

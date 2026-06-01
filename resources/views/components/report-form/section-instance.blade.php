@@ -444,6 +444,8 @@
                                         $endLockedBy   = $entry ? $lockOwner('section_entries', $entry->id, 'time_end')   : null;
                                         $startLocked   = $entry ? $isLockedByOther('section_entries', $entry->id, 'time_start') : false;
                                         $endLocked     = $entry ? $isLockedByOther('section_entries', $entry->id, 'time_end')   : false;
+                                        $startInputId  = "section-{$instance->id}-col-{$col['column_index']}-slot-{$slotKey}-start";
+                                        $endInputId    = "section-{$instance->id}-col-{$col['column_index']}-slot-{$slotKey}-end";
                                     @endphp
                                     <div class="flex items-center justify-center gap-1 whitespace-nowrap text-[10px]">
                                         @if ($sub !== null)
@@ -451,11 +453,19 @@
                                         @endif
                                         @if ($canEditMonitoring && ! $startLocked)
                                             <input
+                                                id="{{ $startInputId }}"
                                                 type="time"
                                                 name="{{ $slotName }}[time_start]"
                                                 value="{{ $valStart }}"
                                                 class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             >
+                                            <button
+                                                type="button"
+                                                onclick="window.qcSetTimeInputNow('{{ $startInputId }}')"
+                                                class="rounded border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 hover:bg-sky-100"
+                                            >
+                                                Now
+                                            </button>
                                         @elseif ($canEditMonitoring && $startLocked)
                                             <input
                                                 type="time"
@@ -469,11 +479,19 @@
                                         <span class="text-gray-400">—</span>
                                         @if ($canEditMonitoring && ! $endLocked)
                                             <input
+                                                id="{{ $endInputId }}"
                                                 type="time"
                                                 name="{{ $slotName }}[time_end]"
                                                 value="{{ $valEnd }}"
                                                 class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
                                             >
+                                            <button
+                                                type="button"
+                                                onclick="window.qcSetTimeInputNow('{{ $endInputId }}')"
+                                                class="rounded border border-sky-300 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 hover:bg-sky-100"
+                                            >
+                                                Now
+                                            </button>
                                         @elseif ($canEditMonitoring && $endLocked)
                                             <input
                                                 type="time"

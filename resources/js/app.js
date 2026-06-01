@@ -12,5 +12,25 @@ Alpine.store("saveConfirmModal", saveConfirmModalStore);
 Alpine.store("duplicateSectionModal", duplicateSectionModalStore);
 Alpine.data("reportTemplateForm", reportTemplateForm);
 
+const formatNowTime = () => {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+};
+
+window.qcSetTimeInputNow = (inputId) => {
+    const input = document.getElementById(inputId);
+
+    if (!input || input.disabled) {
+        return;
+    }
+
+    input.value = formatNowTime();
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+};
+
 window.Alpine = Alpine;
 Alpine.start();
