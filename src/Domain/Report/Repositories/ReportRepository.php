@@ -114,10 +114,10 @@ class ReportRepository implements ReportRepositoryInterface
      * Tab semantics:
      *   - all: every report visible to analysts (everything except archived)
      *   - belum_dikerjakan: status = pending
-     *   - sedang_dimonitoring: status = in_progress (someone owns it)
-     *   - sedang_dibaca: placeholder bucket for the read phase
+     *   - sedang_dimonitoring: status = in_progress_monitoring
+     *   - sedang_dibaca: status = in_progress_reading
      *   - dikirim: status = completed
-     *   - dikembalikan: placeholder for revisions
+     *   - dikembalikan: returned approvals targeted to current analyst
      *
      * @param  GetAnalystReportsFilterDto  $data
      * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
@@ -125,8 +125,8 @@ class ReportRepository implements ReportRepositoryInterface
     public function getReportsForAnalyst(GetAnalystReportsFilterDto $data)
     {
         return Report::query()
-            ->with(['reportTemplate', 'analysts.user', 'lockedByUser'])
-            ->where(fn (Builder $q) => $this->applyAnalystTab($q, $data->tab))
+            ->with(['reportTemplate', 'analysts.user', 'lockedByUser', 'approvals.user'])
+            ->where(fn (Builder $q) => $this->applyAnalystTab($q, $data->tab, $data->analyst_id))
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->withQueryString();
@@ -135,14 +135,14 @@ class ReportRepository implements ReportRepositoryInterface
     /**
      * @return array<string, int>
      */
-    public function countByAnalystTab(): array
+    public function countByAnalystTab(?string $analystId = null): array
     {
         $tabs = ['all', 'belum_dikerjakan', 'sedang_dimonitoring', 'sedang_dibaca', 'dikirim', 'dikembalikan'];
 
         $result = [];
         foreach ($tabs as $tab) {
             $result[$tab] = Report::query()
-                ->where(fn (Builder $q) => $this->applyAnalystTab($q, $tab))
+                ->where(fn (Builder $q) => $this->applyAnalystTab($q, $tab, $analystId))
                 ->count();
         }
 
@@ -152,7 +152,7 @@ class ReportRepository implements ReportRepositoryInterface
     /**
      * Apply a tab filter to a query builder, in place.
      */
-    private function applyAnalystTab(Builder $query, string $tab): Builder
+    private function applyAnalystTab(Builder $query, string $tab, ?string $analystId = null): Builder
     {
         return match ($tab) {
             'belum_dikerjakan'    => $query->where('status', Report::STATUS_PENDING),
@@ -163,7 +163,15 @@ class ReportRepository implements ReportRepositoryInterface
                 Report::STATUS_PENDING_APPROVAL,
                 Report::STATUS_COMPLETED,
             ]),
-            'dikembalikan'        => $query->whereRaw('1 = 0'), // placeholder for revision flow
+            'dikembalikan'        => $query
+                ->whereIn('status', [
+                    Report::STATUS_IN_PROGRESS_MONITORING,
+                    Report::STATUS_IN_PROGRESS_READING,
+                ])
+                ->whereHas('approvals', function (Builder $q) use ($analystId) {
+                    $q->where('status', ReportApproval::STATUS_RETURNED)
+                        ->when($analystId !== null, fn (Builder $sq) => $sq->where('returned_to_user_id', $analystId));
+                }),
             default               => $query->whereIn('status', [
                 Report::STATUS_PENDING,
                 Report::STATUS_IN_PROGRESS_MONITORING,

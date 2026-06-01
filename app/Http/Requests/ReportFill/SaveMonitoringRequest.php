@@ -24,6 +24,8 @@ class SaveMonitoringRequest extends FormRequest
                 MonitoringService::ACTION_DRAFT,
                 MonitoringService::ACTION_RELEASE,
                 MonitoringService::ACTION_FINALIZE,
+                MonitoringService::ACTION_TO_READING,
+                MonitoringService::ACTION_FINALIZE_TO_REVIEW,
             ])],
             'username'    => ['required', 'string', 'max:255', new CurrentUserUsername()],
             'password'    => ['required', 'string', new CurrentUserPassword()],

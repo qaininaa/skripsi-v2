@@ -57,9 +57,11 @@ interface ReportRepositoryInterface
     /**
      * Count reports in each analyst tab. Returns map: tab => count.
      *
+     * @param  string|null  $analystId  Needed for the "dikembalikan" tab scope.
+     *
      * @return array<string, int>
      */
-    public function countByAnalystTab(): array;
+    public function countByAnalystTab(?string $analystId = null): array;
 
     /**
      * Persist a new report to the database.

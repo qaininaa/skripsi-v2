@@ -8,8 +8,11 @@
         use Domain\Report\Models\Incubator;
         use Domain\Report\Models\IncubatorEntry;
         use Domain\Report\Models\InstrumentEntry;
+        use Domain\Report\Models\Analyst;
         use Domain\Report\Models\MediumEntry;
         use Domain\Report\Models\Report;
+        use Domain\Report\Models\ReportApproval;
+        use Domain\Report\Services\MonitoringService;
 
         $template = $report->reportTemplate;
         $hasSwab  = $template?->hasSwab() ?? false;
@@ -96,6 +99,41 @@
 
         $isAdmin = optional(auth()->user())->role === 'admin';
         $previewOnly = $previewOnly ?? false;
+
+        $currentUserId = (string) (auth()->id() ?? '');
+        $returnedApproval = $report->approvals
+            ->where('status', ReportApproval::STATUS_RETURNED)
+            ->filter(fn ($approval) => (string) $approval->returned_to_user_id === $currentUserId)
+            ->sortByDesc(fn ($approval) => $approval->updated_at?->getTimestamp() ?? 0)
+            ->first();
+        $isRevisionForMe = $returnedApproval !== null;
+
+        $hasMonitoringRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === Analyst::TYPE_MONITORING
+                && (string) $analyst->user_id === $currentUserId
+        );
+        $hasReadingRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === Analyst::TYPE_READING
+                && (string) $analyst->user_id === $currentUserId
+        );
+        $isDualRoleRevision = $isRevisionForMe
+            && $hasMonitoringRole
+            && $hasReadingRole;
+
+        $isMonitoringRevisionMode = ! $readonly
+            && $phase === 'monitoring'
+            && $isDualRoleRevision;
+        $isReadingRevisionSendOnlyMode = ! $readonly
+            && $isRevisionForMe
+            && $phase === 'reading';
+
+        $toReadingAction = MonitoringService::ACTION_TO_READING;
+        $sendToSupervisorAction = MonitoringService::ACTION_FINALIZE_TO_REVIEW;
+
+        if ($isReadingRevisionSendOnlyMode) {
+            $finalizeLabel = 'Kirim ke Supervisor Langsung';
+            $finalizeDescription = 'Kirim hasil revisi pembacaan langsung ke supervisor.';
+        }
     @endphp
 
     {{-- Header --}}
@@ -122,19 +160,73 @@
 
         @unless ($readonly)
             <div class="flex items-center gap-2">
-                <x-buttons.save-draft
-                    :form-id="'report-form'"
-                    :draft-action="$draftAction"
-                />
-                <x-buttons.save-submit
-                    :form-id="'report-form'"
-                    :draft-action="$releaseAction"
-                    :finalize-action="$finalizeAction"
-                    :draft-label="$releaseLabel"
-                    :finalize-label="$finalizeLabel"
-                    :draft-description="$releaseDescription"
-                    :finalize-description="$finalizeDescription"
-                />
+                @if ($isReadingRevisionSendOnlyMode)
+                    <button
+                        type="button"
+                        @click.prevent="
+                            $store.saveConfirmModal.open({
+                                formId: 'report-form',
+                                kind: 'draft',
+                                title: 'Konfirmasi Kirim ke Supervisor',
+                                draftAction: @js($finalizeAction),
+                                selectedAction: @js($finalizeAction),
+                                submitLabel: 'Kirim ke Supervisor',
+                            });
+                        "
+                        class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+                    >
+                        Kirim ke Supervisor
+                    </button>
+                @else
+                    <x-buttons.save-draft
+                        :form-id="'report-form'"
+                        :draft-action="$draftAction"
+                    />
+                    @if ($isMonitoringRevisionMode)
+                        <button
+                            type="button"
+                            @click.prevent="
+                                $store.saveConfirmModal.open({
+                                    formId: 'report-form',
+                                    kind: 'draft',
+                                    title: 'Konfirmasi Ke Pembacaan',
+                                    draftAction: @js($toReadingAction),
+                                    selectedAction: @js($toReadingAction),
+                                    submitLabel: 'Ke Pembacaan',
+                                });
+                            "
+                            class="inline-flex items-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 cursor-pointer"
+                        >
+                            Ke Pembacaan
+                        </button>
+                        <button
+                            type="button"
+                            @click.prevent="
+                                $store.saveConfirmModal.open({
+                                    formId: 'report-form',
+                                    kind: 'draft',
+                                    title: 'Konfirmasi Kirim ke Supervisor',
+                                    draftAction: @js($sendToSupervisorAction),
+                                    selectedAction: @js($sendToSupervisorAction),
+                                    submitLabel: 'Kirim ke Supervisor',
+                                });
+                            "
+                            class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+                        >
+                            Kirim ke Supervisor
+                        </button>
+                    @else
+                        <x-buttons.save-submit
+                            :form-id="'report-form'"
+                            :draft-action="$releaseAction"
+                            :finalize-action="$finalizeAction"
+                            :draft-label="$releaseLabel"
+                            :finalize-label="$finalizeLabel"
+                            :draft-description="$releaseDescription"
+                            :finalize-description="$finalizeDescription"
+                        />
+                    @endif
+                @endif
                 {{--
                 <button
                     type="button"
@@ -174,6 +266,16 @@
     <x-messages.success-message />
     <x-messages.error-message />
     <x-messages.validation-errors :except="['username', 'password']" />
+
+    @if ($isRevisionForMe && $returnedApproval !== null)
+        <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <div class="text-lg font-semibold text-amber-900">Laporan dikembalikan untuk direvisi</div>
+            @if (! empty($returnedApproval->notes))
+                <p class="mt-1 text-amber-700">“{{ $returnedApproval->notes }}”</p>
+            @endif
+            <p class="mt-1 text-sm text-amber-700">— {{ $returnedApproval->user?->name ?? $returnedApproval->role_label }}</p>
+        </div>
+    @endif
 
     <form
         id="report-form"
@@ -223,14 +325,27 @@
             $passwordError = $errors->first('password');
             $hasAuthError  = $usernameError !== '' || $passwordError !== '';
             $oldUsername   = old('username', '');
-            $oldAction     = old('action', $draftAction);
-            $modalKind     = old('action') === $finalizeAction || old('action') === $releaseAction
-                ? 'finalize'
-                : 'draft';
-            $modalTitle    = $modalKind === 'finalize'
-                ? 'Simpan & Serahkan Laporan'
-                : 'Konfirmasi Simpan Draft';
-            $effectiveDraftAction = $modalKind === 'finalize' ? $releaseAction : $draftAction;
+            $oldAction     = old('action', $isReadingRevisionSendOnlyMode ? $finalizeAction : $draftAction);
+            $isRevisionQuickAction = in_array($oldAction, [$toReadingAction, $sendToSupervisorAction], true);
+            if ($isReadingRevisionSendOnlyMode) {
+                $modalKind = 'draft';
+                $modalTitle = 'Konfirmasi Kirim ke Supervisor';
+                $effectiveDraftAction = $finalizeAction;
+                $effectiveSubmitLabel = 'Kirim ke Supervisor';
+            } else {
+                $modalKind     = $isRevisionQuickAction
+                    ? 'draft'
+                    : (old('action') === $finalizeAction || old('action') === $releaseAction ? 'finalize' : 'draft');
+                $modalTitle    = $isRevisionQuickAction
+                    ? ($oldAction === $toReadingAction ? 'Konfirmasi Ke Pembacaan' : 'Konfirmasi Kirim ke Supervisor')
+                    : ($modalKind === 'finalize' ? 'Simpan & Serahkan Laporan' : 'Konfirmasi Simpan Draft');
+                $effectiveDraftAction = $isRevisionQuickAction
+                    ? $oldAction
+                    : ($modalKind === 'finalize' ? $releaseAction : $draftAction);
+                $effectiveSubmitLabel = $oldAction === $toReadingAction
+                    ? 'Ke Pembacaan'
+                    : ($oldAction === $sendToSupervisorAction ? 'Kirim ke Supervisor' : 'Simpan');
+            }
         @endphp
 
         @if ($hasAuthError)
@@ -249,6 +364,7 @@
                 data-username-error="{{ $usernameError }}"
                 data-password-error="{{ $passwordError }}"
                 data-selected-action="{{ $oldAction }}"
+                data-submit-label="{{ $effectiveSubmitLabel }}"
                 hidden
             ></div>
             <script>
@@ -271,6 +387,7 @@
                         username:            d.username,
                         usernameError:       d.usernameError,
                         passwordError:       d.passwordError,
+                        submitLabel:         d.submitLabel,
                     });
                     // Re-select the previously chosen action.
                     store.selectedAction = d.selectedAction;

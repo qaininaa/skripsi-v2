@@ -102,7 +102,10 @@ class ReadingService
                     continue;
                 }
 
-                $this->saveReadingForInstance($instance, $payload['rows'] ?? [], $analystId);
+                $sectionChanged = $this->saveReadingForInstance($instance, $payload['rows'] ?? [], $analystId);
+                if ($sectionChanged) {
+                    $this->invalidateSignaturesForEditedSection($instance);
+                }
                 $this->recomputeConclusions($instance);
             }
 
@@ -186,13 +189,31 @@ class ReadingService
     }
 
     /**
+     * When analyst edits a section during revision, downstream sign-offs for
+     * that section are no longer valid and must be re-created on finalize.
+     */
+    private function invalidateSignaturesForEditedSection(SectionInstance $instance): void
+    {
+        SectionSignature::query()
+            ->where('section_instance_id', $instance->id)
+            ->whereIn('role', [
+                SectionSignature::ROLE_READING,
+                SectionSignature::ROLE_REVIEW,
+                SectionSignature::ROLE_APPROVAL,
+            ])
+            ->delete();
+    }
+
+    /**
      * Persist reading values for a section instance.
      *
      * @param  array<string, array{readings: array<int, array<string, mixed>>}>  $rows
      *         keyed by section_instance_location id
      */
-    private function saveReadingForInstance(SectionInstance $instance, array $rows, string $analystId): void
+    private function saveReadingForInstance(SectionInstance $instance, array $rows, string $analystId): bool
     {
+        $sectionChanged = false;
+
         // Bulk-fetch field locks for every entry under this instance to
         // avoid an N+1 storm inside the row/reading loops below.
         $entryIds = [];
@@ -245,6 +266,10 @@ class ReadingService
                     }
                 }
 
+                if (! array_key_exists('cfu_bacteri', $fillable) && ! array_key_exists('cfu_fungsi', $fillable)) {
+                    continue;
+                }
+
                 $effectiveBacteri = array_key_exists('cfu_bacteri', $fillable)
                     ? $fillable['cfu_bacteri']
                     : $target->cfu_bacteri;
@@ -258,15 +283,24 @@ class ReadingService
                     ? (string) ((int) ($bacteriCount ?? 0) + (int) ($fungsiCount ?? 0))
                     : null;
 
-                $target->fill($fillable)->save();
+                $target->fill($fillable);
+                $dirtyFields = array_keys($target->getDirty());
+                if (empty($dirtyFields)) {
+                    continue;
+                }
+
+                $target->save();
+                $sectionChanged = true;
 
                 foreach ($newValues as $field => $value) {
-                    if (array_key_exists($field, $fillable)) {
+                    if (in_array($field, $dirtyFields, true)) {
                         $this->fieldLocks->lockField('section_entries', $target->id, $field, $analystId, $value);
                     }
                 }
             }
         }
+
+        return $sectionChanged;
     }
 
     /**

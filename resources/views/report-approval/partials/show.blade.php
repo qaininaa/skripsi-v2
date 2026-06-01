@@ -61,15 +61,15 @@
                         $store.saveConfirmModal.open({
                             formId: 'supervisor-monitoring-form',
                             kind: 'draft',
-                            title: 'Konfirmasi Simpan Monitoring',
+                            title: 'Konfirmasi Simpan Perubahan',
                             draftAction: @js($saveMonitoringConfirmAction),
                             selectedAction: @js($saveMonitoringConfirmAction),
-                            submitLabel: 'Simpan Monitoring',
+                            submitLabel: 'Simpan Perubahan',
                         })
                     "
                     class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
                 >
-                    <span>Simpan Monitoring</span>
+                    <span>Simpan Perubahan</span>
                 </button>
             @endif
             <button
@@ -146,46 +146,57 @@
 @push('scripts')
     @if ($isPending)
         <script>
-            document.addEventListener('alpine:init', () => {
-                const errorState = @json([
-                    'auth_error_approve' => session('approve_auth_error'),
-                    'auth_error_return'  => session('return_auth_error'),
-                ]);
+            (() => {
+                const bootStores = () => {
+                    if (! window.Alpine) return;
 
-                Alpine.store('approvalApproveModal', {
-                    isOpen: false,
-                    username: '',
-                    password: '',
-                    showPassword: false,
-                    authError: '',
-                    open() { this.isOpen = true; this.authError = ''; },
-                    close() { this.isOpen = false; this.username = ''; this.password = ''; this.authError = ''; },
-                });
+                    if (! Alpine.store('approvalApproveModal')) {
+                        Alpine.store('approvalApproveModal', {
+                            isOpen: false,
+                            username: '',
+                            password: '',
+                            showPassword: false,
+                            authError: '',
+                            open() { this.isOpen = true; this.authError = ''; },
+                            close() { this.isOpen = false; this.username = ''; this.password = ''; this.authError = ''; },
+                        });
+                    }
 
-                Alpine.store('approvalReturnModal', {
-                    isOpen: false,
-                    username: '',
-                    password: '',
-                    showPassword: false,
-                    returnedToUserId: '',
-                    notes: '',
-                    authError: '',
-                    open() { this.isOpen = true; this.authError = ''; },
-                    close() {
-                        this.isOpen = false;
-                        this.username = '';
-                        this.password = '';
-                        this.returnedToUserId = '';
-                        this.notes = '';
-                        this.authError = '';
-                    },
-                });
-            });
+                    if (! Alpine.store('approvalReturnModal')) {
+                        Alpine.store('approvalReturnModal', {
+                            isOpen: false,
+                            username: '',
+                            password: '',
+                            showPassword: false,
+                            returnedToUserId: '',
+                            notes: '',
+                            authError: '',
+                            open() { this.isOpen = true; this.authError = ''; },
+                            close() {
+                                this.isOpen = false;
+                                this.username = '';
+                                this.password = '';
+                                this.returnedToUserId = '';
+                                this.notes = '';
+                                this.authError = '';
+                            },
+                        });
+                    }
+                };
+
+                if (window.Alpine) {
+                    bootStores();
+                } else {
+                    document.addEventListener('alpine:init', bootStores, { once: true });
+                }
+            })();
         </script>
         @if ($errors->has('auth_error'))
             <script>
-                document.addEventListener('alpine:initialized', () => {
+                const rehydrateAuthModal = () => {
                     if (! window.Alpine) return;
+                    if (! Alpine.store('approvalApproveModal') || ! Alpine.store('approvalReturnModal')) return;
+
                     // Best-effort rehydrate: reopen approve modal if old('action') === 'approve'.
                     const action = @json(old('action'));
                     if (action === 'approve') {
@@ -199,7 +210,13 @@
                         Alpine.store('approvalReturnModal').returnedToUserId = @json(old('returned_to_user_id', ''));
                         Alpine.store('approvalReturnModal').notes = @json(old('notes', ''));
                     }
-                });
+                };
+
+                if (window.Alpine) {
+                    rehydrateAuthModal();
+                } else {
+                    document.addEventListener('alpine:initialized', rehydrateAuthModal, { once: true });
+                }
             </script>
         @endif
 
@@ -212,7 +229,7 @@
         @endphp
         @if ($hasSaveMonitoringAuthError)
             <script>
-                document.addEventListener('alpine:initialized', () => {
+                const rehydrateSaveMonitoringModal = () => {
                     if (! window.Alpine) return;
                     const store = Alpine.store('saveConfirmModal');
                     if (! store) return;
@@ -228,7 +245,13 @@
                         usernameError: @json($saveMonitoringUsernameError),
                         passwordError: @json($saveMonitoringPasswordError),
                     });
-                });
+                };
+
+                if (window.Alpine) {
+                    rehydrateSaveMonitoringModal();
+                } else {
+                    document.addEventListener('alpine:initialized', rehydrateSaveMonitoringModal, { once: true });
+                }
             </script>
         @endif
     @endif

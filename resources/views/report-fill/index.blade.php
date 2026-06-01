@@ -80,7 +80,17 @@
                             $monitoringAnalyst = $report->analystOfType('monitoring')?->user;
                             $readingAnalyst    = $report->analystOfType('reading')?->user;
                             $isMine            = $monitoringAnalyst !== null && $monitoringAnalyst->id === auth()->id();
-                            $badge             = $statusBadge[$report->status] ?? ['label' => $report->status, 'class' => 'bg-gray-100 text-gray-600'];
+                            $returnedApprovalForMe = $report->approvals
+                                ->where('status', \Domain\Report\Models\ReportApproval::STATUS_RETURNED)
+                                ->filter(fn ($approval) => (string) $approval->returned_to_user_id === (string) auth()->id())
+                                ->sortByDesc(fn ($approval) => $approval->updated_at?->getTimestamp() ?? 0)
+                                ->first();
+                            $isReturnedForMe = $returnedApprovalForMe !== null
+                                && in_array($report->status, ['in_progress_monitoring', 'in_progress_reading'], true);
+
+                            $badge = $isReturnedForMe
+                                ? ['label' => 'Dikembalikan', 'class' => 'bg-orange-100 text-orange-700']
+                                : ($statusBadge[$report->status] ?? ['label' => $report->status, 'class' => 'bg-gray-100 text-gray-600']);
                         @endphp
 
                         <tr class="hover:bg-gray-50/60">
@@ -114,16 +124,30 @@
                                 <div class="flex items-center justify-center gap-2">
                                     <x-buttons.view :href="route('report-fill.preview', $report)" />
 
-                                    @if ($canResume)
+                                    @if ($isReturnedForMe && $canResume)
+                                        <x-buttons.resume :href="route('report-fill.fill', $report)" label="Revisi" />
+                                    @elseif ($canResume)
                                         <x-buttons.resume :href="route('report-fill.fill', $report)" />
                                     @elseif ($canStart)
-                                        <x-buttons.start
-                                            :action="route('report-fill.start', $report)"
-                                            :product-name="$report->product_name"
-                                            :batch-number="$report->batch_number"
-                                        />
+                                        @if ($isReturnedForMe)
+                                            <x-buttons.start
+                                                :action="route('report-fill.start', $report)"
+                                                :product-name="$report->product_name"
+                                                :batch-number="$report->batch_number"
+                                                label="Revisi"
+                                            />
+                                        @else
+                                            <x-buttons.start
+                                                :action="route('report-fill.start', $report)"
+                                                :product-name="$report->product_name"
+                                                :batch-number="$report->batch_number"
+                                            />
+                                        @endif
                                     @endif
                                 </div>
+                                @if ($isReturnedForMe && ! empty($returnedApprovalForMe?->notes))
+                                    <p class="mt-1 text-center text-xs italic text-orange-600">“{{ $returnedApprovalForMe->notes }}”</p>
+                                @endif
                             </td>
                         </tr>
                     @empty

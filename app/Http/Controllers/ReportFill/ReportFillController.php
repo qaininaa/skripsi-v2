@@ -37,7 +37,7 @@ class ReportFillController extends Controller
     {
         $dto     = $request->toDTO();
         $reports = $this->reportService->getReportsForAnalyst($dto);
-        $counts  = $this->reportService->countByAnalystTab();
+        $counts  = $this->reportService->countByAnalystTab($this->currentAnalystId());
 
         return view('report-fill.index', [
             'reports'   => $reports,
@@ -143,6 +143,12 @@ class ReportFillController extends Controller
         }
 
         return match ($request->action()) {
+            \Domain\Report\Services\MonitoringService::ACTION_TO_READING => redirect()
+                ->route('report-fill.fill', $report)
+                ->with('success', 'Monitoring revisi tersimpan. Anda masuk ke tahap pembacaan.'),
+            \Domain\Report\Services\MonitoringService::ACTION_FINALIZE_TO_REVIEW => redirect()
+                ->route('report-fill.index')
+                ->with('success', 'Revisi monitoring tersimpan dan laporan langsung dikirim ke supervisor.'),
             \Domain\Report\Services\MonitoringService::ACTION_FINALIZE => redirect()
                 ->route('report-fill.index')
                 ->with('success', 'Monitoring selesai. Laporan berlanjut ke tahap pembacaan.'),
@@ -207,6 +213,8 @@ class ReportFillController extends Controller
             'reportTemplate.incubatorTemplates',
             'lockedByUser',
             'analysts.user',
+            'approvals.user',
+            'approvals.returnedToUser',
             'instrumentEntries',
             'mediumEntries.template',
             'incubators.template',

@@ -69,13 +69,12 @@ class ReportApprovalService
             return null;
         }
 
-        return $this->approvals->createOrSkip([
-            'report_id'  => $report->id,
-            'step'       => ReportApproval::STEP_SUPERVISOR,
-            'role_label' => ReportApproval::ROLE_SUPERVISOR,
-            'user_id'    => (string) $supervisor->id,
-            'status'     => ReportApproval::STATUS_PENDING,
-        ]);
+        return $this->upsertPendingAssignment(
+            $report->id,
+            ReportApproval::STEP_SUPERVISOR,
+            ReportApproval::ROLE_SUPERVISOR,
+            (string) $supervisor->id,
+        );
     }
 
     /**
@@ -110,13 +109,12 @@ class ReportApprovalService
             // Hand off to manager.
             $manager = $this->users->findFirstByRole('manager');
             if ($manager !== null) {
-                $this->approvals->createOrSkip([
-                    'report_id'  => $report->id,
-                    'step'       => ReportApproval::STEP_MANAGER,
-                    'role_label' => ReportApproval::ROLE_MANAGER,
-                    'user_id'    => (string) $manager->id,
-                    'status'     => ReportApproval::STATUS_PENDING,
-                ]);
+                $this->upsertPendingAssignment(
+                    $report->id,
+                    ReportApproval::STEP_MANAGER,
+                    ReportApproval::ROLE_MANAGER,
+                    (string) $manager->id,
+                );
                 $report->status = Report::STATUS_PENDING_APPROVAL;
             } else {
                 // No manager exists — short-circuit to completed.
@@ -322,28 +320,86 @@ class ReportApprovalService
      *
      * - Status → in_progress_reading (analyst gets back the editable phase)
      * - Locked by the analyst the report was returned to
-     * - Reading + supervisor + manager signatures cleared so each role re-signs
-     *   on the next pass through.
+     * - Supervisor + manager signatures are cleared so downstream roles re-sign.
+     *   Analyst signatures are preserved and only invalidated per-section when
+     *   that section is actually edited.
      */
     private function resetForRevision(Report $report, string $analystId): void
     {
-        $report->loadMissing('sectionInstances');
+        $report->loadMissing(['sectionInstances', 'analysts']);
+
+        $nextStatus = $this->resolveRevisionStatusForAnalyst($report, $analystId);
 
         $instanceIds = $report->sectionInstances->pluck('id')->all();
         if (! empty($instanceIds)) {
+            $rolesToDelete = [
+                SectionSignature::ROLE_REVIEW,
+                SectionSignature::ROLE_APPROVAL,
+            ];
+
             SectionSignature::query()
                 ->whereIn('section_instance_id', $instanceIds)
-                ->whereIn('role', [
-                    SectionSignature::ROLE_READING,
-                    SectionSignature::ROLE_REVIEW,
-                    SectionSignature::ROLE_APPROVAL,
-                ])
+                ->whereIn('role', $rolesToDelete)
                 ->delete();
         }
 
         $this->reports->updateMeta($report, [
-            'status'    => Report::STATUS_IN_PROGRESS_READING,
+            'status'    => $nextStatus,
             'locked_by' => $analystId,
+        ]);
+    }
+
+    /**
+     * If the returned analyst is both monitoring and reading owner on this
+     * report, send revision back to monitoring so they can fix both phases.
+     */
+    private function resolveRevisionStatusForAnalyst(Report $report, string $analystId): string
+    {
+        $hasMonitoringRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === Analyst::TYPE_MONITORING
+                && (string) $analyst->user_id === $analystId
+        );
+        $hasReadingRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === Analyst::TYPE_READING
+                && (string) $analyst->user_id === $analystId
+        );
+
+        $isDualRoleOwner = $hasMonitoringRole && $hasReadingRole;
+
+        return $isDualRoleOwner
+            ? Report::STATUS_IN_PROGRESS_MONITORING
+            : Report::STATUS_IN_PROGRESS_READING;
+    }
+
+    /**
+     * Ensure the assignment row exists and is reset to pending state.
+     */
+    private function upsertPendingAssignment(
+        string $reportId,
+        int $step,
+        string $roleLabel,
+        string $userId,
+    ): ReportApproval {
+        $existing = $this->approvals->findByReportAndStep($reportId, $step);
+        if ($existing !== null) {
+            $this->approvals->update($existing, [
+                'role_label'          => $roleLabel,
+                'user_id'             => $userId,
+                'status'              => ReportApproval::STATUS_PENDING,
+                'signed_at'           => null,
+                'notes'               => null,
+                'returned_to_user_id' => null,
+            ]);
+
+            return $existing->fresh() ?? $existing;
+        }
+
+        return $this->approvals->createOrSkip([
+            'report_id'  => $reportId,
+            'step'       => $step,
+            'role_label' => $roleLabel,
+            'user_id'    => $userId,
+            'status'     => ReportApproval::STATUS_PENDING,
         ]);
     }
 }

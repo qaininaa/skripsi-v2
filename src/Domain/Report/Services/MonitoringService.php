@@ -10,9 +10,11 @@ use Domain\Report\Models\IncubatorEntry;
 use Domain\Report\Models\InstrumentEntry;
 use Domain\Report\Models\MediumEntry;
 use Domain\Report\Models\Report;
+use Domain\Report\Models\ReportApproval;
 use Domain\Report\Models\SectionInstance;
 use Domain\Report\Models\SectionSignature;
 use Domain\Report\Services\FieldLockService;
+use Domain\Report\Services\ReportApprovalService;
 use Domain\Report\Support\MicrobialValue;
 use Illuminate\Support\Facades\DB;
 
@@ -43,6 +45,8 @@ class MonitoringService
     public const ACTION_DRAFT    = 'draft';                  // save & keep lock; analyst stays on the form.
     public const ACTION_RELEASE  = 'release';                // save + sign sections with data + release lock.
     public const ACTION_FINALIZE = 'finalize_monitoring';    // sign off + transition to reading phase.
+    public const ACTION_TO_READING = 'to_reading';           // revision-only: keep lock and switch to reading stage.
+    public const ACTION_FINALIZE_TO_REVIEW = 'finalize_to_review'; // revision-only: send directly to supervisor.
 
     /**
      * Tool names that always appear in section "Identitas Instrumen".
@@ -53,6 +57,7 @@ class MonitoringService
     public function __construct(
         protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
         protected FieldLockService $fieldLocks,
+        protected ReportApprovalService $approvalService,
     ) {
     }
 
@@ -125,7 +130,13 @@ class MonitoringService
             throw new \RuntimeException('Anda bukan penanggung jawab monitoring laporan ini.');
         }
 
-        if (! in_array($action, [self::ACTION_DRAFT, self::ACTION_RELEASE, self::ACTION_FINALIZE], true)) {
+        if (! in_array($action, [
+            self::ACTION_DRAFT,
+            self::ACTION_RELEASE,
+            self::ACTION_FINALIZE,
+            self::ACTION_TO_READING,
+            self::ACTION_FINALIZE_TO_REVIEW,
+        ], true)) {
             throw new \RuntimeException('Aksi penyimpanan tidak dikenali.');
         }
 
@@ -137,6 +148,10 @@ class MonitoringService
 
             if ($action === self::ACTION_FINALIZE) {
                 $this->finalizeMonitoring($report, $analystId);
+            } elseif ($action === self::ACTION_TO_READING) {
+                $this->moveToReadingForRevision($report, $analystId);
+            } elseif ($action === self::ACTION_FINALIZE_TO_REVIEW) {
+                $this->finalizeRevisionToReview($report, $analystId);
             } elseif ($action === self::ACTION_RELEASE) {
                 // "Simpan Monitoring" from the handoff modal should still
                 // stamp per-section monitoring sign-off (without phase move).
@@ -147,6 +162,93 @@ class MonitoringService
             }
             // ACTION_DRAFT: keep locked_by on the current analyst.
         });
+    }
+
+    /**
+     * Revision-only transition from monitoring to reading while keeping lock
+     * on the same analyst.
+     */
+    private function moveToReadingForRevision(Report $report, string $analystId): void
+    {
+        if (! $this->isReturnedRevisionForAnalyst($report, $analystId)) {
+            throw new \RuntimeException('Aksi ini hanya tersedia untuk laporan yang dikembalikan kepada Anda.');
+        }
+
+        $this->stampMonitoringSignatures($report, $analystId);
+
+        $report->status    = Report::STATUS_IN_PROGRESS_READING;
+        $report->locked_by = $analystId;
+        $report->save();
+
+        Analyst::firstOrCreate([
+            'report_id' => $report->id,
+            'user_id'   => $analystId,
+            'type'      => Analyst::TYPE_READING,
+        ]);
+    }
+
+    /**
+     * Revision-only shortcut: after monitoring fixes, re-sign existing reading
+     * data and send report back to supervisor in one step.
+     *
+     * @throws \RuntimeException
+     */
+    private function finalizeRevisionToReview(Report $report, string $analystId): void
+    {
+        if (! $this->isReturnedRevisionForAnalyst($report, $analystId)) {
+            throw new \RuntimeException('Aksi ini hanya tersedia untuk laporan yang dikembalikan kepada Anda.');
+        }
+
+        if (! $this->isDualRoleAnalyst($report, $analystId)) {
+            throw new \RuntimeException('Kirim langsung ke supervisor hanya untuk analis yang mengerjakan monitoring dan pembacaan.');
+        }
+
+        $this->stampMonitoringSignatures($report, $analystId);
+
+        if (! $this->reportHasReadingData($report)) {
+            throw new \RuntimeException('Belum ada data pembacaan. Gunakan tombol "Ke Pembacaan" terlebih dahulu.');
+        }
+
+        $this->stampReadingSignaturesFromExistingData($report, $analystId);
+
+        $report->status    = Report::STATUS_PENDING_REVIEW;
+        $report->locked_by = null;
+        $report->save();
+
+        $this->approvalService->ensureSupervisorAssignment($report);
+    }
+
+    /**
+     * Whether this report is currently in returned-revision state for analyst.
+     */
+    private function isReturnedRevisionForAnalyst(Report $report, string $analystId): bool
+    {
+        $report->loadMissing('approvals');
+
+        return $report->approvals
+            ->contains(function ($approval) use ($analystId) {
+                return $approval->status === ReportApproval::STATUS_RETURNED
+                    && (string) $approval->returned_to_user_id === $analystId;
+            });
+    }
+
+    /**
+     * Whether analyst is both monitoring and reading owner on this report.
+     */
+    private function isDualRoleAnalyst(Report $report, string $analystId): bool
+    {
+        $report->loadMissing('analysts');
+
+        $hasMonitoringRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === Analyst::TYPE_MONITORING
+                && (string) $analyst->user_id === $analystId
+        );
+        $hasReadingRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === Analyst::TYPE_READING
+                && (string) $analyst->user_id === $analystId
+        );
+
+        return $hasMonitoringRole && $hasReadingRole;
     }
 
     /**
@@ -240,6 +342,83 @@ class MonitoringService
         }
 
         return false;
+    }
+
+    /**
+     * True when at least one entry under the section has reading values.
+     */
+    private function sectionHasReadingData(SectionInstance $instance): bool
+    {
+        foreach ($instance->instanceLocations as $loc) {
+            foreach ($loc->entries as $entry) {
+                if (($entry->cfu_bacteri !== null && $entry->cfu_bacteri !== '')
+                    || ($entry->cfu_fungsi !== null && $entry->cfu_fungsi !== '')
+                ) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Report-level helper for reading-data presence.
+     */
+    private function reportHasReadingData(Report $report): bool
+    {
+        $report->load('sectionInstances.instanceLocations.entries');
+
+        foreach ($report->sectionInstances as $instance) {
+            if ($this->sectionHasReadingData($instance)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Recreate reading signatures from existing reading values after revision.
+     */
+    private function stampReadingSignaturesFromExistingData(Report $report, string $analystId): void
+    {
+        $report->load('sectionInstances.instanceLocations.entries');
+        $now = now();
+
+        foreach ($report->sectionInstances as $instance) {
+            if (! $this->sectionHasReadingData($instance)) {
+                continue;
+            }
+
+            SectionSignature::firstOrCreate(
+                [
+                    'section_instance_id' => $instance->id,
+                    'role'                => SectionSignature::ROLE_READING,
+                    'signed_by'           => $analystId,
+                ],
+                [
+                    'signed_at' => $now,
+                ],
+            );
+        }
+    }
+
+    /**
+     * Monitoring edits invalidate the full downstream chain for that section.
+     * This is called only for analyst edits (not supervisor correction mode).
+     */
+    private function invalidateSignaturesForEditedMonitoringSection(SectionInstance $instance): void
+    {
+        SectionSignature::query()
+            ->where('section_instance_id', $instance->id)
+            ->whereIn('role', [
+                SectionSignature::ROLE_MONITORING,
+                SectionSignature::ROLE_READING,
+                SectionSignature::ROLE_REVIEW,
+                SectionSignature::ROLE_APPROVAL,
+            ])
+            ->delete();
     }
 
     private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto, string $actorId, bool $overrideLockOwnership = false): void
@@ -449,14 +628,19 @@ class MonitoringService
                 continue;
             }
 
+            $sectionChanged = false;
+
             if (array_key_exists('note', $row)) {
                 $instanceTable = $this->fieldLocks->tableOf($instance);
                 $instanceLocks = $this->fieldLocks->getForRow($instanceTable, $instance->id);
 
                 if ($overrideLockOwnership || $this->fieldLocks->canEdit($instanceLocks, 'note', $actorId)) {
                     $instance->note = $row['note'];
-                    $instance->save();
-                    $this->fieldLocks->lockField($instanceTable, $instance->id, 'note', $actorId, $row['note']);
+                    if ($instance->isDirty('note')) {
+                        $instance->save();
+                        $sectionChanged = true;
+                        $this->fieldLocks->lockField($instanceTable, $instance->id, 'note', $actorId, $row['note']);
+                    }
                 }
             }
 
@@ -513,15 +697,30 @@ class MonitoringService
                             }
                         }
 
-                        $entry->fill($payload)->save();
+                        if (empty($payload)) {
+                            continue;
+                        }
 
-                        foreach ($values as $field => $value) {
-                            if (array_key_exists($field, $payload)) {
-                                $this->fieldLocks->lockField('section_entries', $entry->id, $field, $actorId, $value);
+                        $entry->fill($payload);
+                        $dirtyFields = array_keys($entry->getDirty());
+                        if (empty($dirtyFields)) {
+                            continue;
+                        }
+
+                        $entry->save();
+                        $sectionChanged = true;
+
+                        foreach ($dirtyFields as $field) {
+                            if (array_key_exists($field, $values)) {
+                                $this->fieldLocks->lockField('section_entries', $entry->id, $field, $actorId, $values[$field]);
                             }
                         }
                     }
                 }
+            }
+
+            if ($sectionChanged && ! $overrideLockOwnership) {
+                $this->invalidateSignaturesForEditedMonitoringSection($instance);
             }
         }
     }

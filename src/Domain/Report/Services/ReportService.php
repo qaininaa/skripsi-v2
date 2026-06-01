@@ -52,9 +52,9 @@ class ReportService
      *
      * @return array<string, int>
      */
-    public function countByAnalystTab(): array
+    public function countByAnalystTab(?string $analystId = null): array
     {
-        return $this->repository->countByAnalystTab();
+        return $this->repository->countByAnalystTab($analystId);
     }
 
     /**
