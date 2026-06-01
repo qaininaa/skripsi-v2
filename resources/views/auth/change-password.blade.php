@@ -14,7 +14,12 @@
         action="{{ route('password.change.update') }}"
         method="POST"
         class="space-y-4"
-        x-data="{ isSubmitting: false }"
+        x-data="{
+            isSubmitting: false,
+            showOldPassword: false,
+            showNewPassword: false,
+            showNewPasswordConfirmation: false
+        }"
         @submit="isSubmitting = true"
     >
         @csrf
@@ -22,36 +27,45 @@
 
         <div>
             <label for="old_password" class="mb-1 block text-sm font-medium text-gray-700">Password Lama</label>
-            <input
-                id="old_password"
-                name="old_password"
-                type="password"
-                required
-                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-            >
+            <div class="relative">
+                <input
+                    id="old_password"
+                    name="old_password"
+                    :type="showOldPassword ? 'text' : 'password'"
+                    required
+                    class="block w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                <x-buttons.password-toggle state="showOldPassword" />
+            </div>
         </div>
 
         <div>
             <label for="new_password" class="mb-1 block text-sm font-medium text-gray-700">Password Baru</label>
-            <input
-                id="new_password"
-                name="new_password"
-                type="password"
-                required
-                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-            >
+            <div class="relative">
+                <input
+                    id="new_password"
+                    name="new_password"
+                    :type="showNewPassword ? 'text' : 'password'"
+                    required
+                    class="block w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                <x-buttons.password-toggle state="showNewPassword" />
+            </div>
             <p class="mt-1 text-xs text-gray-500">Minimal 8 karakter, mengandung angka dan simbol.</p>
         </div>
 
         <div>
             <label for="new_password_confirmation" class="mb-1 block text-sm font-medium text-gray-700">Konfirmasi Password Baru</label>
-            <input
-                id="new_password_confirmation"
-                name="new_password_confirmation"
-                type="password"
-                required
-                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-            >
+            <div class="relative">
+                <input
+                    id="new_password_confirmation"
+                    name="new_password_confirmation"
+                    :type="showNewPasswordConfirmation ? 'text' : 'password'"
+                    required
+                    class="block w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+                >
+                <x-buttons.password-toggle state="showNewPasswordConfirmation" />
+            </div>
         </div>
 
         <button

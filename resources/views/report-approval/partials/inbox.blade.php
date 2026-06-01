@@ -21,8 +21,13 @@
 <x-messages.error-message />
 
 <div class="rounded-xl bg-white shadow-sm ring-1 ring-gray-100">
+    <div class="border-b border-gray-100 px-6 py-4">
+        <h2 class="text-xl font-semibold text-gray-900">Laporan Masuk</h2>
+        <p class="mt-1 text-sm text-gray-500">Pantau laporan yang menunggu review, disetujui, atau dikembalikan.</p>
+    </div>
+
     {{-- Tabs --}}
-    <div class="overflow-x-auto border-b border-gray-100">
+    <div class="overflow-x-auto overflow-y-hidden border-b border-gray-100" style="overflow-y: hidden;">
         <nav class="flex gap-1 px-4">
             @foreach ($tabs as $key => $label)
                 @php
@@ -48,8 +53,8 @@
     </div>
 
     {{-- Table --}}
-    <div class="overflow-x-auto">
-        <table class="min-w-full">
+    <div class="overflow-x-auto overflow-y-hidden" style="overflow-y: hidden;">
+        <table class="approval-inbox-table min-w-full">
             <thead class="bg-white">
                 <tr class="text-xs font-semibold uppercase tracking-wider text-gray-500">
                     <th class="px-6 py-3 text-left">Tanggal</th>

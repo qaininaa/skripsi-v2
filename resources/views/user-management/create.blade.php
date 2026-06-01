@@ -53,15 +53,18 @@
                 </select>
             </div>
 
-            <div>
+            <div x-data="{ showPassword: false }">
                 <label for="password" class="mb-1 block text-sm font-medium text-gray-700">Password <span class="text-red-500">*</span></label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    required
-                    class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                >
+                <div class="relative">
+                    <input
+                        :type="showPassword ? 'text' : 'password'"
+                        id="password"
+                        name="password"
+                        required
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                    >
+                    <x-buttons.password-toggle state="showPassword" />
+                </div>
             </div>
 
             <div class="flex gap-3 pt-2">

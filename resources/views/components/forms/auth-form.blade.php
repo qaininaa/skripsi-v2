@@ -14,7 +14,7 @@
     action="{{ $action }}"
     method="{{ strtolower($formMethod) }}"
     class="space-y-5"
-    x-data="{ isSubmitting: false }"
+    x-data="{ isSubmitting: false, showPassword: false }"
     @submit="isSubmitting = true"
 >
     @if ($formMethod !== 'GET')
@@ -54,14 +54,17 @@
             <label for="{{ $passwordName }}" class="block text-sm/6 font-medium text-gray-900">Password</label>
         </div>
         <div class="mt-2">
-            <input
-                id="{{ $passwordName }}"
-                name="{{ $passwordName }}"
-                type="password"
-                autocomplete="current-password"
-                required
-                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 {{ $errors->has($passwordName) ? 'outline-red-500' : 'outline-gray-300' }} placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-sky-600"
-            >
+            <div class="relative">
+                <input
+                    id="{{ $passwordName }}"
+                    name="{{ $passwordName }}"
+                    :type="showPassword ? 'text' : 'password'"
+                    autocomplete="current-password"
+                    required
+                    class="block w-full rounded-md bg-white px-3 py-1.5 pr-10 text-base text-gray-900 outline-1 -outline-offset-1 {{ $errors->has($passwordName) ? 'outline-red-500' : 'outline-gray-300' }} placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-sky-600"
+                >
+                <x-buttons.password-toggle state="showPassword" />
+            </div>
             @error($passwordName)
                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
             @enderror
@@ -86,4 +89,3 @@
         {{ $errors->first('login') }}
     </div>
 @endif
-

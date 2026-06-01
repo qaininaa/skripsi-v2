@@ -90,12 +90,7 @@
                             class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100"
                             required
                         >
-                        <button
-                            type="button"
-                            @click="$store.approvalReturnModal.showPassword = ! $store.approvalReturnModal.showPassword"
-                            class="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
-                            tabindex="-1"
-                        >👁</button>
+                        <x-buttons.password-toggle state="$store.approvalReturnModal.showPassword" />
                     </div>
                 </div>
             </div>
