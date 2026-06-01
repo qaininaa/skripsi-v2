@@ -16,12 +16,18 @@
     'hasSwab'  => false,
     'readonly' => true,
     'lockMap'  => [],
+    'allowOverrideLocks' => false,
+    'monitoringTimeRequiresExistingValue' => false,
+    'monitoringInOutRequiresExistingActor' => false,
 ])
 
 @php
     $currentUserId = (string) (auth()->id() ?? '');
 
-    $isLocked = function (string $table, string $rowId, string $field) use ($lockMap, $currentUserId) {
+    $isLocked = function (string $table, string $rowId, string $field) use ($lockMap, $currentUserId, $allowOverrideLocks) {
+        if ($allowOverrideLocks) {
+            return false;
+        }
         $lock = $lockMap[$table][$rowId][$field] ?? null;
         return $lock !== null && (string) $lock->filled_by !== $currentUserId;
     };
@@ -195,8 +201,31 @@
                         $existingIncubatedName = $entry->incubatedBy?->name;
                         $existingRemovedName   = $entry->removedBy?->name;
                         $currentUserName       = optional(auth()->user())->name ?? '';
-                        $canQuickFillIn        = ! $readonly && (! $dateInLocked || ! $timeInLocked);
-                        $canQuickFillOut       = ! $readonly && (! $dateOutLocked || ! $timeOutLocked);
+
+                        $hasExistingIncubatedActor = ! empty($entry->incubated_by);
+                        $hasExistingRemovedActor   = ! empty($entry->removed_by);
+
+                        $canEditDateIn = ! $readonly
+                            && ! $dateInLocked
+                            && (! $monitoringInOutRequiresExistingActor || $hasExistingIncubatedActor);
+                        $canEditDateOut = ! $readonly
+                            && ! $dateOutLocked
+                            && (! $monitoringInOutRequiresExistingActor || $hasExistingRemovedActor);
+
+                        $timeInHasExistingValue = ! empty($entry->time_in);
+                        $timeOutHasExistingValue = ! empty($entry->time_out);
+
+                        $canEditTimeIn = ! $readonly
+                            && ! $timeInLocked
+                            && (! $monitoringInOutRequiresExistingActor || $hasExistingIncubatedActor)
+                            && (! $monitoringTimeRequiresExistingValue || $timeInHasExistingValue);
+                        $canEditTimeOut = ! $readonly
+                            && ! $timeOutLocked
+                            && (! $monitoringInOutRequiresExistingActor || $hasExistingRemovedActor)
+                            && (! $monitoringTimeRequiresExistingValue || $timeOutHasExistingValue);
+
+                        $canQuickFillIn  = $canEditDateIn || $canEditTimeIn;
+                        $canQuickFillOut = $canEditDateOut || $canEditTimeOut;
                     @endphp
 
                     <div
@@ -209,10 +238,10 @@
                             existingIncubatedName: @js($existingIncubatedName),
                             existingRemovedName:   @js($existingRemovedName),
                             currentUserName:       @js($currentUserName),
-                            canSetDateIn:          @js(! $readonly && ! $dateInLocked),
-                            canSetTimeIn:          @js(! $readonly && ! $timeInLocked),
-                            canSetDateOut:         @js(! $readonly && ! $dateOutLocked),
-                            canSetTimeOut:         @js(! $readonly && ! $timeOutLocked),
+                            canSetDateIn:          @js($canEditDateIn),
+                            canSetTimeIn:          @js($canEditTimeIn),
+                            canSetDateOut:         @js($canEditDateOut),
+                            canSetTimeOut:         @js($canEditTimeOut),
                             nowDate() {
                                 const now = new Date();
                                 const year = now.getFullYear();
@@ -296,7 +325,7 @@
                             {{-- Tanggal Masuk --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Tanggal Masuk Inkubator</label>
-                                @if (! $readonly && ! $dateInLocked)
+                                @if ($canEditDateIn)
                                     <input
                                         type="date"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_in]"
@@ -312,6 +341,14 @@
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dateInOwner }}</p>
+                                @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingIncubatedActor)
+                                    <input
+                                        type="date"
+                                        value="{{ optional($entry->date_in)->format('Y-m-d') }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data diinkubasi oleh analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
                                         type="date"
@@ -325,7 +362,7 @@
                             {{-- Tanggal Keluar --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Tanggal Keluar Inkubator</label>
-                                @if (! $readonly && ! $dateOutLocked)
+                                @if ($canEditDateOut)
                                     <input
                                         type="date"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][date_out]"
@@ -341,6 +378,14 @@
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dateOutOwner }}</p>
+                                @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingRemovedActor)
+                                    <input
+                                        type="date"
+                                        value="{{ optional($entry->date_out)->format('Y-m-d') }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data dikeluarkan oleh analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
                                         type="date"
@@ -354,7 +399,7 @@
                             {{-- Jam Masuk --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Jam Masuk</label>
-                                @if (! $readonly && ! $timeInLocked)
+                                @if ($canEditTimeIn)
                                     <input
                                         type="time"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_in]"
@@ -370,6 +415,22 @@
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $timeInOwner }}</p>
+                                @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingIncubatedActor)
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_in }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data diinkubasi oleh analis, tidak bisa diedit SPV.</p>
+                                @elseif (! $readonly && $monitoringTimeRequiresExistingValue && ! $timeInHasExistingValue)
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_in }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Jam belum diisi analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
                                         type="time"
@@ -383,7 +444,7 @@
                             {{-- Jam Keluar --}}
                             <div>
                                 <label class="mb-1 block text-xs font-medium text-gray-500">Jam Keluar</label>
-                                @if (! $readonly && ! $timeOutLocked)
+                                @if ($canEditTimeOut)
                                     <input
                                         type="time"
                                         name="incubators[{{ $incubator->id }}][entries][{{ $mediumType }}][time_out]"
@@ -399,6 +460,22 @@
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $timeOutOwner }}</p>
+                                @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingRemovedActor)
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_out }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data dikeluarkan oleh analis, tidak bisa diedit SPV.</p>
+                                @elseif (! $readonly && $monitoringTimeRequiresExistingValue && ! $timeOutHasExistingValue)
+                                    <input
+                                        type="time"
+                                        value="{{ $entry->time_out }}"
+                                        disabled
+                                        class="{{ $readonlyClass }}"
+                                    >
+                                    <p class="mt-1 text-[11px] italic text-gray-400">Jam belum diisi analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
                                         type="time"

@@ -28,6 +28,8 @@
     'readonly' => true,
     'isAdmin'  => false,
     'lockMap'  => [],
+    'allowOverrideLocks' => false,
+    'monitoringTimeRequiresExistingValue' => false,
 ])
 
 @php
@@ -47,8 +49,11 @@
      *   [table_name][row_id][field_name] => FieldLock
      * and is pre-computed by the repository.
      */
-    $isLockedByOther = function (string $table, ?string $rowId, string $field) use ($lockMap, $currentUserId) {
+    $isLockedByOther = function (string $table, ?string $rowId, string $field) use ($lockMap, $currentUserId, $allowOverrideLocks) {
         if ($rowId === null) {
+            return false;
+        }
+        if ($allowOverrideLocks) {
             return false;
         }
         $lock = $lockMap[$table][$rowId][$field] ?? null;
@@ -444,6 +449,14 @@
                                         $endLockedBy   = $entry ? $lockOwner('section_entries', $entry->id, 'time_end')   : null;
                                         $startLocked   = $entry ? $isLockedByOther('section_entries', $entry->id, 'time_start') : false;
                                         $endLocked     = $entry ? $isLockedByOther('section_entries', $entry->id, 'time_end')   : false;
+                                        $startHasExistingValue = ! empty($entry?->time_start);
+                                        $endHasExistingValue   = ! empty($entry?->time_end);
+                                        $canEditStartTime = $canEditMonitoring
+                                            && ! $startLocked
+                                            && (! $monitoringTimeRequiresExistingValue || $startHasExistingValue);
+                                        $canEditEndTime = $canEditMonitoring
+                                            && ! $endLocked
+                                            && (! $monitoringTimeRequiresExistingValue || $endHasExistingValue);
                                         $startInputId  = "section-{$instance->id}-col-{$col['column_index']}-slot-{$slotKey}-start";
                                         $endInputId    = "section-{$instance->id}-col-{$col['column_index']}-slot-{$slotKey}-end";
                                     @endphp
@@ -451,7 +464,7 @@
                                         @if ($sub !== null)
                                             <span class="font-semibold text-gray-700">{{ $sub }}:</span>
                                         @endif
-                                        @if ($canEditMonitoring && ! $startLocked)
+                                        @if ($canEditStartTime)
                                             <input
                                                 id="{{ $startInputId }}"
                                                 type="time"
@@ -466,7 +479,7 @@
                                             >
                                                 Now
                                             </button>
-                                        @elseif ($canEditMonitoring && $startLocked)
+                                        @elseif ($canEditMonitoring)
                                             <input
                                                 type="time"
                                                 value="{{ $valStart }}"
@@ -477,7 +490,7 @@
                                             <span class="text-gray-600">{{ $valStart ?: '--:--' }}</span>
                                         @endif
                                         <span class="text-gray-400">—</span>
-                                        @if ($canEditMonitoring && ! $endLocked)
+                                        @if ($canEditEndTime)
                                             <input
                                                 id="{{ $endInputId }}"
                                                 type="time"
@@ -492,7 +505,7 @@
                                             >
                                                 Now
                                             </button>
-                                        @elseif ($canEditMonitoring && $endLocked)
+                                        @elseif ($canEditMonitoring)
                                             <input
                                                 type="time"
                                                 value="{{ $valEnd }}"

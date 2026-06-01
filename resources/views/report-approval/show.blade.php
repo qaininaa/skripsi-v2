@@ -13,6 +13,7 @@
         'returnTargets'    => $returnTargets,
         'approveRoute'     => $approveRoute,
         'returnRoute'      => $returnRoute,
+        'saveMonitoringRoute' => $saveMonitoringRoute,
         'backRoute'        => $backRoute,
         'roleLabel'        => $roleLabel,
     ])

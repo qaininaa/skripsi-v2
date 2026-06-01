@@ -119,6 +119,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/in-progress', [ReportApprovalController::class, 'inProgress'])->defaults('step', 'supervisor')->name('in-progress');
         Route::get('/reports/{report}/preview', [ReportApprovalController::class, 'preview'])->defaults('step', 'supervisor')->name('reports.preview');
         Route::get('/reports/{report}', [ReportApprovalController::class, 'show'])->defaults('step', 'supervisor')->name('reports.show');
+        Route::put('/reports/{report}/monitoring', [ReportApprovalController::class, 'saveMonitoring'])->defaults('step', 'supervisor')->name('reports.save-monitoring');
         Route::post('/reports/{report}/approve', [ReportApprovalController::class, 'approve'])->defaults('step', 'supervisor')->name('reports.approve');
         Route::post('/reports/{report}/return', [ReportApprovalController::class, 'return'])->defaults('step', 'supervisor')->name('reports.return');
     });

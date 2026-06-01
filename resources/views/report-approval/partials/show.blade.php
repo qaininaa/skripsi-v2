@@ -20,10 +20,14 @@
     use Domain\Report\Models\ReportApproval;
 
     $previewOnly       = $previewOnly ?? false;
+    $saveMonitoringRoute = $saveMonitoringRoute ?? null;
 
     $isPending = ! $previewOnly
         && $approval !== null
         && $approval->status === ReportApproval::STATUS_PENDING;
+
+    $canEditMonitoring = $isPending && $saveMonitoringRoute !== null;
+    $saveMonitoringConfirmAction = 'save_monitoring_supervisor';
 @endphp
 
 {{-- Header --}}
@@ -50,6 +54,24 @@
 
     @if ($isPending)
         <div class="flex items-center gap-2">
+            @if ($canEditMonitoring)
+                <button
+                    type="button"
+                    @click.prevent="
+                        $store.saveConfirmModal.open({
+                            formId: 'supervisor-monitoring-form',
+                            kind: 'draft',
+                            title: 'Konfirmasi Simpan Monitoring',
+                            draftAction: @js($saveMonitoringConfirmAction),
+                            selectedAction: @js($saveMonitoringConfirmAction),
+                            submitLabel: 'Simpan Monitoring',
+                        })
+                    "
+                    class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                >
+                    <span>Simpan Monitoring</span>
+                </button>
+            @endif
             <button
                 type="button"
                 @click.prevent="$store.approvalReturnModal.open()"
@@ -72,13 +94,41 @@
 <x-messages.error-message />
 <x-messages.validation-errors :except="['username', 'password']" />
 
-{{-- Read-only report content (reuses analyst section components) --}}
-@include('report-approval.partials.report-readonly', [
-    'report'           => $report,
-    'sectionInstances' => $sectionInstances,
-    'lockMap'          => $lockMap,
-    'previewOnly'      => $previewOnly,
-])
+@if ($canEditMonitoring)
+    <form
+        id="supervisor-monitoring-form"
+        action="{{ route($saveMonitoringRoute, $report) }}"
+        method="POST"
+        class="space-y-6"
+    >
+        @csrf
+        @method('PUT')
+        @include('report-approval.partials.report-readonly', [
+            'report'           => $report,
+            'sectionInstances' => $sectionInstances,
+            'lockMap'          => $lockMap,
+            'previewOnly'      => $previewOnly,
+            'readonly'         => false,
+            'phase'            => 'monitoring',
+            'allowOverrideLocks' => true,
+            'monitoringTimeRequiresExistingValue' => true,
+            'monitoringInOutRequiresExistingActor' => true,
+        ])
+    </form>
+@else
+    {{-- Read-only report content (reuses analyst section components) --}}
+    @include('report-approval.partials.report-readonly', [
+        'report'           => $report,
+        'sectionInstances' => $sectionInstances,
+        'lockMap'          => $lockMap,
+        'previewOnly'      => $previewOnly,
+        'readonly'         => true,
+        'phase'            => 'reading',
+        'allowOverrideLocks' => false,
+        'monitoringTimeRequiresExistingValue' => false,
+        'monitoringInOutRequiresExistingActor' => false,
+    ])
+@endif
 
 @if ($isPending)
     {{-- Modals --}}
@@ -149,6 +199,35 @@
                         Alpine.store('approvalReturnModal').returnedToUserId = @json(old('returned_to_user_id', ''));
                         Alpine.store('approvalReturnModal').notes = @json(old('notes', ''));
                     }
+                });
+            </script>
+        @endif
+
+        @php
+            $saveMonitoringUsernameError = $errors->first('username');
+            $saveMonitoringPasswordError = $errors->first('password');
+            $hasSaveMonitoringAuthError = $canEditMonitoring
+                && old('action') === $saveMonitoringConfirmAction
+                && ($saveMonitoringUsernameError !== '' || $saveMonitoringPasswordError !== '');
+        @endphp
+        @if ($hasSaveMonitoringAuthError)
+            <script>
+                document.addEventListener('alpine:initialized', () => {
+                    if (! window.Alpine) return;
+                    const store = Alpine.store('saveConfirmModal');
+                    if (! store) return;
+
+                    store.open({
+                        formId: 'supervisor-monitoring-form',
+                        kind: 'draft',
+                        title: 'Konfirmasi Simpan Monitoring',
+                        draftAction: @json($saveMonitoringConfirmAction),
+                        selectedAction: @json(old('action', $saveMonitoringConfirmAction)),
+                        submitLabel: 'Simpan Monitoring',
+                        username: @json(old('username', '')),
+                        usernameError: @json($saveMonitoringUsernameError),
+                        passwordError: @json($saveMonitoringPasswordError),
+                    });
                 });
             </script>
         @endif

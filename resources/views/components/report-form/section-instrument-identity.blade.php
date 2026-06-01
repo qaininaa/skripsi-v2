@@ -15,12 +15,16 @@
     'instrumentEntries',
     'readonly' => true,
     'lockMap'  => [],
+    'allowOverrideLocks' => false,
 ])
 
 @php
     $currentUserId = (string) (auth()->id() ?? '');
 
-    $isLockedByOther = function (string $rowId, string $field) use ($lockMap, $currentUserId) {
+    $isLockedByOther = function (string $rowId, string $field) use ($lockMap, $currentUserId, $allowOverrideLocks) {
+        if ($allowOverrideLocks) {
+            return false;
+        }
         $lock = $lockMap['instrument_entries'][$rowId][$field] ?? null;
         return $lock !== null && (string) $lock->filled_by !== $currentUserId;
     };

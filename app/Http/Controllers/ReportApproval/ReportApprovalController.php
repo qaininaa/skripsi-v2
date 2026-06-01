@@ -5,11 +5,13 @@ namespace App\Http\Controllers\ReportApproval;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Approval\ApproveReportRequest;
 use App\Http\Requests\Approval\ReturnReportRequest;
+use App\Http\Requests\Approval\SaveSupervisorMonitoringRequest;
 use Domain\Report\Dtos\GetApprovalReportsFilterDto;
 use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\ReportApproval;
+use Domain\Report\Services\MonitoringService;
 use Domain\Report\Services\ReportApprovalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +31,7 @@ class ReportApprovalController extends Controller
         protected ReportApprovalRepositoryInterface $approvals,
         protected ReportApprovalService $approvalService,
         protected SectionInstanceRepositoryInterface $sectionInstances,
+        protected MonitoringService $monitoringService,
     ) {
     }
 
@@ -128,6 +131,7 @@ class ReportApprovalController extends Controller
             'returnTargets'    => $returnTargets,
             'approveRoute'     => $config['approveRoute'],
             'returnRoute'      => $config['returnRoute'],
+            'saveMonitoringRoute' => $config['saveMonitoringRoute'],
             'backRoute'        => $config['inboxRoute'],
             'roleLabel'        => $config['roleLabel'],
         ]);
@@ -161,9 +165,44 @@ class ReportApprovalController extends Controller
             'returnTargets'    => collect(),
             'approveRoute'     => $config['approveRoute'],
             'returnRoute'      => $config['returnRoute'],
+            'saveMonitoringRoute' => $config['saveMonitoringRoute'],
             'backRoute'        => $config['inProgressRoute'],
             'roleLabel'        => $config['roleLabel'],
         ]);
+    }
+
+    public function saveMonitoring(
+        SaveSupervisorMonitoringRequest $request,
+        Report $report,
+        string $step,
+    ): RedirectResponse {
+        if ($step !== 'supervisor') {
+            abort(404);
+        }
+
+        $approval = $this->approvals->findByReportAndStep(
+            $report->id,
+            ReportApproval::STEP_SUPERVISOR,
+        );
+
+        abort_if($approval === null, 404);
+        abort_if((string) $approval->user_id !== (string) Auth::id(), 403);
+
+        if ($approval->status !== ReportApproval::STATUS_PENDING) {
+            return back()->with('error', 'Laporan ini sudah diproses sebelumnya.');
+        }
+
+        try {
+            $this->monitoringService->saveMonitoringBySupervisor(
+                $report,
+                (string) Auth::id(),
+                $request->toDTO(),
+            );
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Perbaikan data monitoring berhasil disimpan.');
     }
 
     public function approve(ApproveReportRequest $request, Report $report, string $step): RedirectResponse
@@ -211,7 +250,17 @@ class ReportApprovalController extends Controller
     /**
      * Resolve step-specific configuration for routes, labels, and constants.
      *
-     * @return array{stepConstant: int, roleLabel: string, inboxRoute: string, inProgressRoute: string, showRoute: string, previewRoute: string, approveRoute: string, returnRoute: string}
+     * @return array{
+     *   stepConstant: int,
+     *   roleLabel: string,
+     *   inboxRoute: string,
+     *   inProgressRoute: string,
+     *   showRoute: string,
+     *   previewRoute: string,
+     *   approveRoute: string,
+     *   returnRoute: string,
+     *   saveMonitoringRoute: string|null
+     * }
      */
     private function resolveConfig(string $step): array
     {
@@ -225,6 +274,7 @@ class ReportApprovalController extends Controller
                 'previewRoute' => 'manager.reports.preview',
                 'approveRoute' => 'manager.reports.approve',
                 'returnRoute'  => 'manager.reports.return',
+                'saveMonitoringRoute' => null,
             ],
             default => [
                 'stepConstant' => ReportApproval::STEP_SUPERVISOR,
@@ -235,6 +285,7 @@ class ReportApprovalController extends Controller
                 'previewRoute' => 'supervisor.reports.preview',
                 'approveRoute' => 'supervisor.reports.approve',
                 'returnRoute'  => 'supervisor.reports.return',
+                'saveMonitoringRoute' => 'supervisor.reports.save-monitoring',
             ],
         };
     }

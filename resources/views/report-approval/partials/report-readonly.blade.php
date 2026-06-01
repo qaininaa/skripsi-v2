@@ -8,12 +8,23 @@
       $sectionInstances
       $lockMap
       $previewOnly
+      $readonly
+      $phase
+      $allowOverrideLocks
+      $monitoringTimeRequiresExistingValue
+      $monitoringInOutRequiresExistingActor
 --}}
 @php
     use Domain\Report\Models\Incubator;
     use Domain\Report\Models\IncubatorEntry;
     use Domain\Report\Models\InstrumentEntry;
     use Domain\Report\Models\MediumEntry;
+
+    $readonly = $readonly ?? true;
+    $phase = $phase ?? 'reading';
+    $allowOverrideLocks = $allowOverrideLocks ?? false;
+    $monitoringTimeRequiresExistingValue = $monitoringTimeRequiresExistingValue ?? false;
+    $monitoringInOutRequiresExistingActor = $monitoringInOutRequiresExistingActor ?? false;
 
     $template = $report->reportTemplate;
     $hasSwab  = $template?->hasSwab() ?? false;
@@ -39,31 +50,38 @@
 
     <x-report-form.section-instrument-identity
         :instrument-entries="$instrumentEntries"
-        :readonly="true"
+        :readonly="$readonly"
         :lock-map="$lockMap ?? []"
+        :allow-override-locks="$allowOverrideLocks"
     />
 
     <x-report-form.section-medium-identity
         :medium-entries="$mediumEntries"
-        :readonly="true"
+        :readonly="$readonly"
         :lock-map="$lockMap ?? []"
+        :allow-override-locks="$allowOverrideLocks"
     />
 
     <x-report-form.section-incubation
         :incubators="$incubators"
         :has-swab="$hasSwab"
-        :readonly="true"
+        :readonly="$readonly"
         :lock-map="$lockMap ?? []"
+        :allow-override-locks="$allowOverrideLocks"
+        :monitoring-time-requires-existing-value="$monitoringTimeRequiresExistingValue"
+        :monitoring-in-out-requires-existing-actor="$monitoringInOutRequiresExistingActor"
     />
 
     @foreach ($sectionInstances as $instance)
         <x-report-form.section-instance
             :instance="$instance"
             :report="$report"
-            :phase="'reading'"
-            :readonly="true"
+            :phase="$phase"
+            :readonly="$readonly"
             :is-admin="false"
             :lock-map="$lockMap ?? []"
+            :allow-override-locks="$allowOverrideLocks"
+            :monitoring-time-requires-existing-value="$monitoringTimeRequiresExistingValue"
         />
     @endforeach
 </div>

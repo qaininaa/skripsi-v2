@@ -150,6 +150,30 @@ class MonitoringService
     }
 
     /**
+     * Supervisor correction on monitoring fields during pending review.
+     *
+     * Lock ownership is bypassed so supervisor can adjust monitoring inputs.
+     * Special rule for jam fields:
+     *  - time_start/time_end, time_in/time_out may be edited only when the
+     *    current persisted value is already non-empty (filled by analyst).
+     *
+     * @throws \RuntimeException
+     */
+    public function saveMonitoringBySupervisor(Report $report, string $supervisorId, SaveMonitoringDto $dto): void
+    {
+        if ($report->status !== Report::STATUS_PENDING_REVIEW) {
+            throw new \RuntimeException('Perbaikan monitoring hanya tersedia saat tahap review supervisor.');
+        }
+
+        DB::transaction(function () use ($report, $dto, $supervisorId) {
+            $this->saveInstrumentRows($report, $dto, $supervisorId, true);
+            $this->saveMediumRows($report, $dto, $supervisorId, true);
+            $this->saveIncubatorRows($report, $dto, $supervisorId, true, true, true);
+            $this->saveSectionMonitoringRows($report, $dto, $supervisorId, true, true);
+        });
+    }
+
+    /**
      * Finalize the monitoring phase. Records SectionSignature(role=monitoring)
      * for every section that actually has monitoring data (time / SP / note),
      * and transitions report status. Empty sections stay unsigned.
@@ -218,7 +242,7 @@ class MonitoringService
         return false;
     }
 
-    private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto, string $analystId): void
+    private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto, string $actorId, bool $overrideLockOwnership = false): void
     {
         foreach ($dto->instruments as $toolName => $row) {
             $instrument = $report->instrumentEntries()->where('tool_name', $toolName)->first();
@@ -237,7 +261,7 @@ class MonitoringService
 
             $payload = [];
             foreach ($values as $field => $value) {
-                if ($this->fieldLocks->canEdit($locks, $field, $analystId)) {
+                if ($overrideLockOwnership || $this->fieldLocks->canEdit($locks, $field, $actorId)) {
                     $payload[$field] = $value;
                 }
             }
@@ -248,13 +272,13 @@ class MonitoringService
 
             foreach ($values as $field => $value) {
                 if (array_key_exists($field, $payload)) {
-                    $this->fieldLocks->lockField($table, $instrument->id, $field, $analystId, $value);
+                    $this->fieldLocks->lockField($table, $instrument->id, $field, $actorId, $value);
                 }
             }
         }
     }
 
-    private function saveMediumRows(Report $report, SaveMonitoringDto $dto, string $analystId): void
+    private function saveMediumRows(Report $report, SaveMonitoringDto $dto, string $actorId, bool $overrideLockOwnership = false): void
     {
         foreach ($dto->mediums as $entryId => $row) {
             $entry = $report->mediumEntries()->whereKey($entryId)->first();
@@ -276,7 +300,7 @@ class MonitoringService
 
             $payload = [];
             foreach ($values as $field => $value) {
-                if ($this->fieldLocks->canEdit($locks, $field, $analystId)) {
+                if ($overrideLockOwnership || $this->fieldLocks->canEdit($locks, $field, $actorId)) {
                     $payload[$field] = $value;
                 }
             }
@@ -287,13 +311,20 @@ class MonitoringService
 
             foreach ($values as $field => $value) {
                 if (array_key_exists($field, $payload)) {
-                    $this->fieldLocks->lockField($table, $entry->id, $field, $analystId, $value);
+                    $this->fieldLocks->lockField($table, $entry->id, $field, $actorId, $value);
                 }
             }
         }
     }
 
-    private function saveIncubatorRows(Report $report, SaveMonitoringDto $dto, string $analystId): void
+    private function saveIncubatorRows(
+        Report $report,
+        SaveMonitoringDto $dto,
+        string $actorId,
+        bool $overrideLockOwnership = false,
+        bool $timeRequiresExistingValue = false,
+        bool $requiresExistingInOutActor = false,
+    ): void
     {
         foreach ($dto->incubators as $incubatorId => $row) {
             $incubator = $report->incubators()->whereKey($incubatorId)->first();
@@ -312,7 +343,7 @@ class MonitoringService
 
             $incubatorPayload = [];
             foreach ($incubatorValues as $field => $value) {
-                if ($this->fieldLocks->canEdit($incubatorLocks, $field, $analystId)) {
+                if ($overrideLockOwnership || $this->fieldLocks->canEdit($incubatorLocks, $field, $actorId)) {
                     $incubatorPayload[$field] = $value;
                 }
             }
@@ -323,7 +354,7 @@ class MonitoringService
 
             foreach ($incubatorValues as $field => $value) {
                 if (array_key_exists($field, $incubatorPayload)) {
-                    $this->fieldLocks->lockField($incubatorTable, $incubator->id, $field, $analystId, $value);
+                    $this->fieldLocks->lockField($incubatorTable, $incubator->id, $field, $actorId, $value);
                 }
             }
 
@@ -343,28 +374,47 @@ class MonitoringService
                     'time_out' => $entryRow['time_out'] ?? null,
                 ];
 
+                $hasExistingIncubatedActor = ! empty($entry->incubated_by);
+                $hasExistingRemovedActor   = ! empty($entry->removed_by);
+
                 $entryPayload = [];
                 foreach ($entryValues as $field => $value) {
-                    if ($this->fieldLocks->canEdit($entryLocks, $field, $analystId)) {
+                    if ($requiresExistingInOutActor) {
+                        if (in_array($field, ['date_in', 'time_in'], true) && ! $hasExistingIncubatedActor) {
+                            continue;
+                        }
+                        if (in_array($field, ['date_out', 'time_out'], true) && ! $hasExistingRemovedActor) {
+                            continue;
+                        }
+                    }
+
+                    $isTimeField = in_array($field, ['time_in', 'time_out'], true);
+                    $hasExistingTime = ! empty($entry->{$field});
+
+                    if ($timeRequiresExistingValue && $isTimeField && ! $hasExistingTime) {
+                        continue;
+                    }
+
+                    if ($overrideLockOwnership || $this->fieldLocks->canEdit($entryLocks, $field, $actorId)) {
                         $entryPayload[$field] = $value;
                     }
                 }
 
-                $hasIn = array_key_exists('date_in', $entryPayload)
-                    ? ! empty($entryPayload['date_in'])  || ! empty($entryPayload['time_in'])
+                $hasIn = (array_key_exists('date_in', $entryPayload) || array_key_exists('time_in', $entryPayload))
+                    ? ! empty($entryPayload['date_in'] ?? null) || ! empty($entryPayload['time_in'] ?? null)
                     : false;
-                $hasOut = array_key_exists('date_out', $entryPayload)
-                    ? ! empty($entryPayload['date_out']) || ! empty($entryPayload['time_out'])
+                $hasOut = (array_key_exists('date_out', $entryPayload) || array_key_exists('time_out', $entryPayload))
+                    ? ! empty($entryPayload['date_out'] ?? null) || ! empty($entryPayload['time_out'] ?? null)
                     : false;
 
-                $entryPayload['incubated_by'] = $hasIn  ? ($entry->incubated_by ?? $analystId) : $entry->incubated_by;
-                $entryPayload['removed_by']   = $hasOut ? ($entry->removed_by   ?? $analystId) : $entry->removed_by;
+                $entryPayload['incubated_by'] = $hasIn  ? ($entry->incubated_by ?? $actorId) : $entry->incubated_by;
+                $entryPayload['removed_by']   = $hasOut ? ($entry->removed_by   ?? $actorId) : $entry->removed_by;
 
                 $entry->fill($entryPayload)->save();
 
                 foreach ($entryValues as $field => $value) {
                     if (array_key_exists($field, $entryPayload)) {
-                        $this->fieldLocks->lockField($entryTable, $entry->id, $field, $analystId, $value);
+                        $this->fieldLocks->lockField($entryTable, $entry->id, $field, $actorId, $value);
                     }
                 }
             }
@@ -385,7 +435,13 @@ class MonitoringService
      * sub_column='A' receives the slot 'A' time, sub_column='B' receives
      * slot 'B' time, regardless of how many physical rows there are.
      */
-    private function saveSectionMonitoringRows(Report $report, SaveMonitoringDto $dto, string $analystId): void
+    private function saveSectionMonitoringRows(
+        Report $report,
+        SaveMonitoringDto $dto,
+        string $actorId,
+        bool $overrideLockOwnership = false,
+        bool $timeRequiresExistingValue = false,
+    ): void
     {
         foreach ($dto->sections as $instanceId => $row) {
             $instance = $this->sectionInstanceRepository->findByReportAndKey($report->id, $instanceId);
@@ -397,10 +453,10 @@ class MonitoringService
                 $instanceTable = $this->fieldLocks->tableOf($instance);
                 $instanceLocks = $this->fieldLocks->getForRow($instanceTable, $instance->id);
 
-                if ($this->fieldLocks->canEdit($instanceLocks, 'note', $analystId)) {
+                if ($overrideLockOwnership || $this->fieldLocks->canEdit($instanceLocks, 'note', $actorId)) {
                     $instance->note = $row['note'];
                     $instance->save();
-                    $this->fieldLocks->lockField($instanceTable, $instance->id, 'note', $analystId, $row['note']);
+                    $this->fieldLocks->lockField($instanceTable, $instance->id, 'note', $actorId, $row['note']);
                 }
             }
 
@@ -445,7 +501,14 @@ class MonitoringService
 
                         $payload = [];
                         foreach ($values as $field => $value) {
-                            if ($this->fieldLocks->canEdit($entryLocks, $field, $analystId)) {
+                            $isTimeField = in_array($field, ['time_start', 'time_end'], true);
+                            $hasExistingTime = ! empty($entry->{$field});
+
+                            if ($timeRequiresExistingValue && $isTimeField && ! $hasExistingTime) {
+                                continue;
+                            }
+
+                            if ($overrideLockOwnership || $this->fieldLocks->canEdit($entryLocks, $field, $actorId)) {
                                 $payload[$field] = $value;
                             }
                         }
@@ -454,7 +517,7 @@ class MonitoringService
 
                         foreach ($values as $field => $value) {
                             if (array_key_exists($field, $payload)) {
-                                $this->fieldLocks->lockField('section_entries', $entry->id, $field, $analystId, $value);
+                                $this->fieldLocks->lockField('section_entries', $entry->id, $field, $actorId, $value);
                             }
                         }
                     }
