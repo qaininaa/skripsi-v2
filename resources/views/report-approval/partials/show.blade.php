@@ -112,6 +112,7 @@
             'phase'            => 'monitoring',
             'allowOverrideLocks' => true,
             'monitoringTimeRequiresExistingValue' => true,
+            'monitoringLabelRequiresExistingValue' => true,
             'monitoringInOutRequiresExistingActor' => true,
         ])
     </form>
@@ -126,6 +127,7 @@
         'phase'            => 'reading',
         'allowOverrideLocks' => false,
         'monitoringTimeRequiresExistingValue' => false,
+        'monitoringLabelRequiresExistingValue' => false,
         'monitoringInOutRequiresExistingActor' => false,
     ])
 @endif

@@ -93,4 +93,28 @@ final class MicrobialValue
             default            => $v,
         };
     }
+
+    /**
+     * Display total B + F using lab notation.
+     */
+    public static function displayTotal(?string $bacteri, ?string $fungi): ?string
+    {
+        $bacteriCount = self::toCount($bacteri);
+        $fungiCount = self::toCount($fungi);
+
+        if ($bacteriCount === null && $fungiCount === null) {
+            return null;
+        }
+
+        if ($bacteriCount === self::TNTC || $fungiCount === self::TNTC) {
+            return 'TNTC';
+        }
+
+        $bacteriValue = $bacteriCount ?? 0;
+        $fungiValue = $fungiCount ?? 0;
+
+        return $bacteriValue === 0 && $fungiValue === 0
+            ? '<1'
+            : (string) ($bacteriValue + $fungiValue);
+    }
 }

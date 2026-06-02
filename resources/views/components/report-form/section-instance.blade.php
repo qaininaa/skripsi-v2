@@ -30,10 +30,12 @@
     'lockMap'  => [],
     'allowOverrideLocks' => false,
     'monitoringTimeRequiresExistingValue' => false,
+    'monitoringLabelRequiresExistingValue' => false,
 ])
 
 @php
     use Domain\Report\Support\SectionColumnLayout;
+    use Domain\Report\Support\MicrobialValue;
 
     $section = $instance->section;
     $columns = SectionColumnLayout::for($section);
@@ -402,12 +404,16 @@
                                     $spEntry      = $headerEntry($col['column_index'], $col['sub_columns'][0] ?? null);
                                     $spLockedBy   = $spEntry ? $lockOwner('section_entries', $spEntry->id, 'column_label_value') : null;
                                     $spLocked     = $spEntry ? $isLockedByOther('section_entries', $spEntry->id, 'column_label_value') : false;
+                                    $spHasExistingValue = filled($spEntry?->column_label_value);
+                                    $canEditSp = $canEditMonitoring
+                                        && ! $spLocked
+                                        && (! $monitoringLabelRequiresExistingValue || $spHasExistingValue);
                                     $isSettlePlate = $section->measurement_type === 'settle_plate';
                                     $spLabel       = $isSettlePlate ? 'SP:' : 'Shift:';
                                 @endphp
                                 <div class="mt-1 flex items-center justify-center gap-1 text-[10px]">
                                     <span class="text-gray-500">{{ $spLabel }}</span>
-                                    @if ($canEditMonitoring && ! $spLocked)
+                                    @if ($canEditSp)
                                         <input
                                             type="text"
                                             name="{{ $colNamePrefix }}[column_label_value]"
@@ -415,7 +421,7 @@
                                             class="w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-sky-500 focus:outline-none"
                                             placeholder="{{ $isSettlePlate ? 'SP' : 'Shift' }}"
                                         >
-                                    @elseif ($canEditMonitoring && $spLocked)
+                                    @elseif ($canEditMonitoring && $spHasExistingValue)
                                         <input
                                             type="text"
                                             value="{{ $spEntry?->column_label_value }}"
@@ -608,9 +614,7 @@
                                     $oldB       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.cfu_bacteri", $entry?->cfu_bacteri);
                                     $oldF       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.cfu_fungsi", $entry?->cfu_fungsi);
                                     $hasTime    = $entry?->hasMonitoringTime() ?? false;
-                                    $b          = is_numeric($oldB) ? (int) $oldB : null;
-                                    $f          = is_numeric($oldF) ? (int) $oldF : null;
-                                    $tt         = is_numeric($entry?->cfu_total) ? (int) $entry->cfu_total : (($b !== null || $f !== null) ? ((int)($b ?? 0) + (int)($f ?? 0)) : null);
+                                    $tt         = MicrobialValue::displayTotal($oldB, $oldF);
                                     $bLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'cfu_bacteri') : null;
                                     $fLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'cfu_fungsi') : null;
                                     $bLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'cfu_bacteri') : false;
@@ -687,7 +691,7 @@
                                             data-row-id="{{ $row->id }}"
                                             data-col-index="{{ $col['column_index'] }}"
                                         >
-                                            {{ $tt !== null ? $tt : 'N/A' }}
+                                            {{ $tt ?? 'N/A' }}
                                         </div>
                                     </div>
                                 </td>

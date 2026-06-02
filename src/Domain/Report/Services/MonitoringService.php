@@ -261,9 +261,9 @@ class MonitoringService
      * Supervisor correction on monitoring fields during pending review.
      *
      * Lock ownership is bypassed so supervisor can adjust monitoring inputs.
-     * Special rule for jam fields:
-     *  - time_start/time_end, time_in/time_out may be edited only when the
-     *    current persisted value is already non-empty (filled by analyst).
+     * Special rule for analyst-filled fields:
+     *  - time_start/time_end, time_in/time_out, and SP/Shift labels may be
+     *    edited only when the current persisted value is already non-empty.
      *
      * @throws \RuntimeException
      */
@@ -277,7 +277,7 @@ class MonitoringService
             $this->saveInstrumentRows($report, $dto, $supervisorId, true);
             $this->saveMediumRows($report, $dto, $supervisorId, true);
             $this->saveIncubatorRows($report, $dto, $supervisorId, true, true, true);
-            $this->saveSectionMonitoringRows($report, $dto, $supervisorId, true, true);
+            $this->saveSectionMonitoringRows($report, $dto, $supervisorId, true, true, true);
         });
     }
 
@@ -626,6 +626,7 @@ class MonitoringService
         string $actorId,
         bool $overrideLockOwnership = false,
         bool $timeRequiresExistingValue = false,
+        bool $labelRequiresExistingValue = false,
     ): void
     {
         foreach ($dto->sections as $instanceId => $row) {
@@ -692,9 +693,14 @@ class MonitoringService
                         $payload = [];
                         foreach ($values as $field => $value) {
                             $isTimeField = in_array($field, ['time_start', 'time_end'], true);
+                            $isLabelField = $field === 'column_label_value';
                             $hasExistingTime = ! empty($entry->{$field});
+                            $hasExistingLabel = ! empty($entry->{$field});
 
                             if ($timeRequiresExistingValue && $isTimeField && ! $hasExistingTime) {
+                                continue;
+                            }
+                            if ($labelRequiresExistingValue && $isLabelField && ! $hasExistingLabel) {
                                 continue;
                             }
 

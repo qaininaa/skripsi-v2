@@ -283,11 +283,7 @@ class ReadingService
                     ? $fillable['cfu_fungsi']
                     : $target->cfu_fungsi;
 
-                $bacteriCount = MicrobialValue::toCount($effectiveBacteri);
-                $fungsiCount  = MicrobialValue::toCount($effectiveFungsi);
-                $fillable['cfu_total'] = ($bacteriCount !== null || $fungsiCount !== null)
-                    ? (string) ((int) ($bacteriCount ?? 0) + (int) ($fungsiCount ?? 0))
-                    : null;
+                $fillable['cfu_total'] = MicrobialValue::displayTotal($effectiveBacteri, $effectiveFungsi);
 
                 $target->fill($fillable);
                 $dirtyFields = array_keys($target->getDirty());

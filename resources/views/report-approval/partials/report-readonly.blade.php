@@ -12,6 +12,7 @@
       $phase
       $allowOverrideLocks
       $monitoringTimeRequiresExistingValue
+      $monitoringLabelRequiresExistingValue
       $monitoringInOutRequiresExistingActor
 --}}
 @php
@@ -24,6 +25,7 @@
     $phase = $phase ?? 'reading';
     $allowOverrideLocks = $allowOverrideLocks ?? false;
     $monitoringTimeRequiresExistingValue = $monitoringTimeRequiresExistingValue ?? false;
+    $monitoringLabelRequiresExistingValue = $monitoringLabelRequiresExistingValue ?? false;
     $monitoringInOutRequiresExistingActor = $monitoringInOutRequiresExistingActor ?? false;
 
     $template = $report->reportTemplate;
@@ -82,6 +84,7 @@
             :lock-map="$lockMap ?? []"
             :allow-override-locks="$allowOverrideLocks"
             :monitoring-time-requires-existing-value="$monitoringTimeRequiresExistingValue"
+            :monitoring-label-requires-existing-value="$monitoringLabelRequiresExistingValue"
         />
     @endforeach
 </div>
