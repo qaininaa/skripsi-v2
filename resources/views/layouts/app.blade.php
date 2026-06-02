@@ -52,6 +52,9 @@
         </div>
 
         <x-modals.delete-modal />
+        <x-modals.start-report-modal />
+        <x-modals.save-confirm-modal />
+        <x-modals.duplicate-section-modal />
     </div>
 
     @stack('scripts')

@@ -61,26 +61,32 @@
                 </p>
 
                 <div class="mt-3 grid gap-4 sm:grid-cols-2">
-                    <div>
+                    <div x-data="{ showNewPassword: false }">
                         <label for="password" class="mb-1 block text-sm font-medium text-gray-700">Password Baru</label>
-                        <input
-                            type="password"
-                            id="password"
-                            name="password"
-                            autocomplete="new-password"
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                        >
+                        <div class="relative">
+                            <input
+                                :type="showNewPassword ? 'text' : 'password'"
+                                id="password"
+                                name="password"
+                                autocomplete="new-password"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                            >
+                            <x-buttons.password-toggle state="showNewPassword" />
+                        </div>
                     </div>
 
-                    <div>
+                    <div x-data="{ showPasswordConfirmation: false }">
                         <label for="password_confirmation" class="mb-1 block text-sm font-medium text-gray-700">Konfirmasi Password Baru</label>
-                        <input
-                            type="password"
-                            id="password_confirmation"
-                            name="password_confirmation"
-                            autocomplete="new-password"
-                            class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                        >
+                        <div class="relative">
+                            <input
+                                :type="showPasswordConfirmation ? 'text' : 'password'"
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                autocomplete="new-password"
+                                class="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                            >
+                            <x-buttons.password-toggle state="showPasswordConfirmation" />
+                        </div>
                     </div>
                 </div>
             </div>

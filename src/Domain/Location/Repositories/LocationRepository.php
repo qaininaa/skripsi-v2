@@ -123,4 +123,24 @@ class LocationRepository implements LocationRepositoryInterface
     {
         $location->delete();
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getBySection(string $sectionId)
+    {
+        return Location::query()
+            ->where('section_id', $sectionId)
+            ->orderBy('section_assigned_at')
+            ->orderBy('created_at')
+            ->get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findOrFail(string $id): Location
+    {
+        return Location::findOrFail($id);
+    }
 }

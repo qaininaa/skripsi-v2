@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\ReportTemplate;
 
+use Domain\ReportTemplate\Dtos\AssignLocationToSectionDto;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SectionAssignLocationRequest extends FormRequest
@@ -16,5 +17,10 @@ class SectionAssignLocationRequest extends FormRequest
         return [
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
         ];
+    }
+
+    public function toDTO(): AssignLocationToSectionDto
+    {
+        return new AssignLocationToSectionDto($this->validated());
     }
 }

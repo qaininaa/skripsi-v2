@@ -24,12 +24,12 @@ class ReportTemplateController extends Controller
     {
         $reportTemplates = $this->reportTemplateService->getReportTemplates($request->toDTO());
 
-        return view('report-template-management.index', compact('reportTemplates'));
+        return view('report-management.index', compact('reportTemplates'));
     }
 
     public function create(): View
     {
-        return view('report-template-management.create');
+        return view('report-management.create');
     }
 
     public function store(ReportTemplateStoreRequest $request): RedirectResponse
@@ -52,7 +52,7 @@ class ReportTemplateController extends Controller
     {
         $reportTemplate->load(['mediumTemplates', 'incubatorTemplates']);
 
-        return view('report-template-management.edit', compact('reportTemplate'));
+        return view('report-management.edit', compact('reportTemplate'));
     }
 
     public function update(ReportTemplateUpdateRequest $request, ReportTemplate $reportTemplate): RedirectResponse

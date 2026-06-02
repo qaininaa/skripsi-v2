@@ -65,11 +65,10 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
     {
         return DB::transaction(function () use ($data) {
             $reportTemplate = new ReportTemplate();
-            $reportTemplate->name          = $data->name;
-            $reportTemplate->annex_number  = $data->annex_number;
-            $reportTemplate->sop_code      = $data->sop_code;
-            $reportTemplate->sop_version   = $data->sop_version;
-            $reportTemplate->has_personnel = $data->has_personnel;
+            $reportTemplate->name         = $data->name;
+            $reportTemplate->annex_number = $data->annex_number;
+            $reportTemplate->sop_code     = $data->sop_code;
+            $reportTemplate->sop_version  = $data->sop_version;
             $reportTemplate->save();
 
             foreach ($data->medium_templates as $medium) {
@@ -101,11 +100,10 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
     public function updateReportTemplate(ReportTemplate $reportTemplate, UpdateReportTemplateDto $data): void
     {
         DB::transaction(function () use ($reportTemplate, $data) {
-            $reportTemplate->name          = $data->name;
-            $reportTemplate->annex_number  = $data->annex_number;
-            $reportTemplate->sop_code      = $data->sop_code;
-            $reportTemplate->sop_version   = $data->sop_version;
-            $reportTemplate->has_personnel = $data->has_personnel;
+            $reportTemplate->name         = $data->name;
+            $reportTemplate->annex_number = $data->annex_number;
+            $reportTemplate->sop_code     = $data->sop_code;
+            $reportTemplate->sop_version  = $data->sop_version;
             $reportTemplate->save();
 
             $reportTemplate->mediumTemplates()->delete();

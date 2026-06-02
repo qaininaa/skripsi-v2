@@ -70,4 +70,25 @@ interface UserRepositoryInterface
      * @return void
      */
     public function updatePassword(UpdateUserPasswordDto $data): void;
+
+    /**
+     * Find the first user with the given role, ordered by creation date.
+     *
+     * Used by the approval pipeline to assign supervisor / manager rows
+     * when there's no explicit per-report assignment.
+     */
+    public function findFirstByRole(string $role): ?User;
+
+    /**
+     * Find a user by id and role.
+     */
+    public function findByIdAndRole(string $id, string $role): ?User;
+
+    /**
+     * List users with one of the given roles. Used by the inbox dropdowns.
+     *
+     * @param  array<int, string>  $roles
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    public function listByRoles(array $roles): \Illuminate\Support\Collection;
 }

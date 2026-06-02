@@ -119,7 +119,7 @@ class SidebarService
             $sections[] = [
                 'label' => 'Laporan',
                 'items' => [
-                    $this->item('Laporan', 'laporan.index', 'laporan.*', 'icons/sidebar/reports.svg'),
+                    $this->item('Laporan', 'report-fill.index', 'report-fill.*', 'icons/sidebar/reports.svg'),
                 ],
             ];
         }
@@ -128,8 +128,8 @@ class SidebarService
             $sections[] = [
                 'label' => 'Laporan',
                 'items' => [
-                    $this->item('Laporan Masuk', 'supervisor.laporan-masuk', 'supervisor.laporan-masuk', 'icons/sidebar/inbox.svg'),
-                    $this->item('Sedang Dikerjakan', 'supervisor.laporan-sedang-dikerjakan', 'supervisor.laporan-sedang-dikerjakan', 'icons/sidebar/reports.svg'),
+                    $this->item('Laporan Masuk', 'supervisor.inbox', 'supervisor.inbox', 'icons/sidebar/inbox.svg'),
+                    $this->item('Sedang Dikerjakan', 'supervisor.in-progress', 'supervisor.in-progress', 'icons/sidebar/reports.svg'),
                 ],
             ];
         }
@@ -138,20 +138,18 @@ class SidebarService
             $sections[] = [
                 'label' => 'Laporan',
                 'items' => [
-                    $this->item('Laporan Masuk', 'manager.laporan-masuk', 'manager.laporan-masuk', 'icons/sidebar/inbox.svg'),
-                    $this->item('Sedang Dikerjakan', 'manager.laporan-sedang-dikerjakan', 'manager.laporan-sedang-dikerjakan', 'icons/sidebar/reports.svg'),
+                    $this->item('Laporan Masuk', 'manager.inbox', 'manager.inbox', 'icons/sidebar/inbox.svg'),
+                    $this->item('Sedang Dikerjakan', 'manager.in-progress', 'manager.in-progress', 'icons/sidebar/reports.svg'),
                 ],
             ];
         }
 
-        if ($role !== 'super') {
-            $sections[] = [
-                'label' => 'Arsip',
-                'items' => [
-                    $this->item('Arsip Laporan', 'arsip-laporan.index', 'arsip-laporan.*', 'icons/sidebar/archive.svg'),
-                ],
-            ];
-        }
+        $sections[] = [
+            'label' => 'Arsip',
+            'items' => [
+                $this->item('Arsip Laporan', 'arsip-laporan.index', 'arsip-laporan.*', 'icons/sidebar/archive.svg'),
+            ],
+        ];
 
         return $this->filterUnavailableRoutes($sections);
     }

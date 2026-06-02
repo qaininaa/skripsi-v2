@@ -32,7 +32,7 @@ class SectionController extends Controller
             fn ($section) => [$section->id => $this->sectionService->getAvailableLocations($section)]
         );
 
-        return view('report-template-management.show', compact('reportTemplate', 'sectionAvailable'));
+        return view('report-management.show', compact('reportTemplate', 'sectionAvailable'));
     }
 
     /**
@@ -91,7 +91,7 @@ class SectionController extends Controller
     public function assignLocation(SectionAssignLocationRequest $request, ReportTemplate $reportTemplate, Section $section): RedirectResponse
     {
         try {
-            $this->sectionService->assignLocation($section, $request->validated('location_id'));
+            $this->sectionService->assignLocation($section, $request->toDTO()->location_id);
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
