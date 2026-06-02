@@ -89,4 +89,12 @@ class UserService
             throw $th;
         }
     }
+
+    /**
+     * List supervisor users for report handoff selection.
+     */
+    public function listSupervisors(): \Illuminate\Support\Collection
+    {
+        return $this->repository->listByRoles(['supervisor']);
+    }
 }

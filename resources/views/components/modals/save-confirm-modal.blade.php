@@ -80,10 +80,46 @@
         </template>
 
         {{-- Variant: draft is just a label hint --}}
-        <template x-if="$store.saveConfirmModal.kind === 'draft'">
-            <p class="mt-2 text-sm text-gray-500">
-                Masukkan username dan password Anda untuk menyimpan.
-            </p>
+        <template x-if="$store.saveConfirmModal.kind === 'draft' && ! $store.saveConfirmModal.requiresSupervisor">
+            <p
+                class="mt-2 text-sm text-gray-500"
+                x-text="$store.saveConfirmModal.message || 'Masukkan username dan password Anda untuk menyimpan.'"
+            ></p>
+        </template>
+
+        {{-- Variant: send report to a specific supervisor --}}
+        <template x-if="$store.saveConfirmModal.requiresSupervisor">
+            <div class="mt-4 space-y-4">
+                <p
+                    class="text-sm text-gray-500"
+                    x-text="$store.saveConfirmModal.message || 'Setelah dikirim, data tidak dapat diubah lagi. Masukkan username dan password Anda untuk melanjutkan.'"
+                ></p>
+
+                <div>
+                    <label class="mb-1 block text-sm font-medium text-gray-700">Kirim ke Supervisor</label>
+                    <select
+                        x-model="$store.saveConfirmModal.selectedSupervisorId"
+                        @change="$store.saveConfirmModal.clearSupervisorError()"
+                        :class="$store.saveConfirmModal.supervisorError
+                            ? 'w-full rounded-lg border border-red-300 bg-red-50/30 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100'
+                            : 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100'"
+                        required
+                    >
+                        <option value="">-- Pilih Supervisor --</option>
+                        <template x-for="supervisor in $store.saveConfirmModal.supervisorOptions" :key="supervisor.id">
+                            <option
+                                :value="supervisor.id"
+                                x-text="supervisor.name"
+                            ></option>
+                        </template>
+                    </select>
+                    <p
+                        x-show="$store.saveConfirmModal.supervisorError"
+                        x-text="$store.saveConfirmModal.supervisorError"
+                        class="mt-1 text-xs text-red-600"
+                    ></p>
+                </div>
+            </div>
         </template>
 
         <form @submit.prevent="$store.saveConfirmModal.submit()" class="mt-4 space-y-4">
@@ -139,7 +175,7 @@
                 <button
                     type="submit"
                     class="rounded-lg bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 cursor-pointer"
-                    x-text="$store.saveConfirmModal.kind === 'finalize' ? 'Lanjutkan' : ($store.saveConfirmModal.submitLabel || 'Simpan')"
+                    x-text="$store.saveConfirmModal.requiresSupervisor ? ($store.saveConfirmModal.submitLabel || 'Kirim Laporan') : ($store.saveConfirmModal.kind === 'finalize' ? 'Lanjutkan' : ($store.saveConfirmModal.submitLabel || 'Simpan'))"
                 ></button>
             </div>
         </form>

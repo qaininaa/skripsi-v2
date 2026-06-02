@@ -139,6 +139,17 @@ class UserRepository implements UserRepositoryInterface
     /**
      * {@inheritDoc}
      */
+    public function findByIdAndRole(string $id, string $role): ?User
+    {
+        return User::query()
+            ->whereKey($id)
+            ->where('role', $role)
+            ->first();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function listByRoles(array $roles): \Illuminate\Support\Collection
     {
         return User::query()

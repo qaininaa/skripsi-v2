@@ -80,6 +80,11 @@ interface UserRepositoryInterface
     public function findFirstByRole(string $role): ?User;
 
     /**
+     * Find a user by id and role.
+     */
+    public function findByIdAndRole(string $id, string $role): ?User;
+
+    /**
      * List users with one of the given roles. Used by the inbox dropdowns.
      *
      * @param  array<int, string>  $roles

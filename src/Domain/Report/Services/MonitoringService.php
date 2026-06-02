@@ -124,7 +124,13 @@ class MonitoringService
      *
      * @throws \RuntimeException
      */
-    public function saveMonitoring(Report $report, string $analystId, SaveMonitoringDto $dto, string $action = self::ACTION_DRAFT): void
+    public function saveMonitoring(
+        Report $report,
+        string $analystId,
+        SaveMonitoringDto $dto,
+        string $action = self::ACTION_DRAFT,
+        ?string $supervisorId = null,
+    ): void
     {
         if ($report->locked_by !== $analystId) {
             throw new \RuntimeException('Anda bukan penanggung jawab monitoring laporan ini.');
@@ -140,7 +146,7 @@ class MonitoringService
             throw new \RuntimeException('Aksi penyimpanan tidak dikenali.');
         }
 
-        DB::transaction(function () use ($report, $dto, $analystId, $action) {
+        DB::transaction(function () use ($report, $dto, $analystId, $action, $supervisorId) {
             $this->saveInstrumentRows($report, $dto, $analystId);
             $this->saveMediumRows($report, $dto, $analystId);
             $this->saveIncubatorRows($report, $dto, $analystId);
@@ -151,7 +157,7 @@ class MonitoringService
             } elseif ($action === self::ACTION_TO_READING) {
                 $this->moveToReadingForRevision($report, $analystId);
             } elseif ($action === self::ACTION_FINALIZE_TO_REVIEW) {
-                $this->finalizeRevisionToReview($report, $analystId);
+                $this->finalizeRevisionToReview($report, $analystId, $supervisorId);
             } elseif ($action === self::ACTION_RELEASE) {
                 // "Simpan Monitoring" from the handoff modal should still
                 // stamp per-section monitoring sign-off (without phase move).
@@ -193,7 +199,7 @@ class MonitoringService
      *
      * @throws \RuntimeException
      */
-    private function finalizeRevisionToReview(Report $report, string $analystId): void
+    private function finalizeRevisionToReview(Report $report, string $analystId, ?string $supervisorId): void
     {
         if (! $this->isReturnedRevisionForAnalyst($report, $analystId)) {
             throw new \RuntimeException('Aksi ini hanya tersedia untuk laporan yang dikembalikan kepada Anda.');
@@ -215,7 +221,7 @@ class MonitoringService
         $report->locked_by = null;
         $report->save();
 
-        $this->approvalService->ensureSupervisorAssignment($report);
+        $this->approvalService->ensureSupervisorAssignment($report, $supervisorId);
     }
 
     /**

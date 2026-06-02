@@ -99,6 +99,12 @@
 
         $isAdmin = optional(auth()->user())->role === 'admin';
         $previewOnly = $previewOnly ?? false;
+        $supervisorOptions = collect($supervisors ?? [])
+            ->map(fn ($supervisor) => [
+                'id' => (string) $supervisor->id,
+                'name' => $supervisor->name,
+            ])
+            ->values();
 
         $currentUserId = (string) (auth()->id() ?? '');
         $returnedApproval = $report->approvals
@@ -146,9 +152,9 @@
             <div>
                 @if ($template)
                     <div class="flex items-center gap-2 text-base font-semibold text-gray-800">
-                        <span class="font-bold text-gray-700">Annex {{ $template->annex_number }}</span>
+                        <span class="font-semibold text-gray-700">Annex {{ $template->annex_number }}</span>
                         <span class="text-gray-400">—</span>
-                        <span>{{ $template->name }}</span>
+                        <span class="font-semibold text-gray-700">{{ $template->name }}</span>
                         <x-badges.report-status :status="$report->status" />
                     </div>
                 @endif
@@ -167,10 +173,13 @@
                             $store.saveConfirmModal.open({
                                 formId: 'report-form',
                                 kind: 'draft',
-                                title: 'Konfirmasi Kirim ke Supervisor',
+                                title: 'Konfirmasi Kirim Laporan',
                                 draftAction: @js($finalizeAction),
                                 selectedAction: @js($finalizeAction),
-                                submitLabel: 'Kirim ke Supervisor',
+                                submitLabel: 'Kirim Laporan',
+                                message: 'Setelah dikirim, data tidak dapat diubah lagi. Masukkan username dan password Anda untuk melanjutkan.',
+                                requiresSupervisor: true,
+                                supervisorOptions: @js($supervisorOptions),
                             });
                         "
                         class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
@@ -202,29 +211,71 @@
                         <button
                             type="button"
                             @click.prevent="
-                                $store.saveConfirmModal.open({
-                                    formId: 'report-form',
-                                    kind: 'draft',
-                                    title: 'Konfirmasi Kirim ke Supervisor',
-                                    draftAction: @js($sendToSupervisorAction),
-                                    selectedAction: @js($sendToSupervisorAction),
-                                    submitLabel: 'Kirim ke Supervisor',
-                                });
-                            "
+                            $store.saveConfirmModal.open({
+                                formId: 'report-form',
+                                kind: 'draft',
+                                title: 'Konfirmasi Kirim Laporan',
+                                draftAction: @js($sendToSupervisorAction),
+                                selectedAction: @js($sendToSupervisorAction),
+                                submitLabel: 'Kirim Laporan',
+                                message: 'Setelah dikirim, data tidak dapat diubah lagi. Masukkan username dan password Anda untuk melanjutkan.',
+                                requiresSupervisor: true,
+                                supervisorOptions: @js($supervisorOptions),
+                            });
+                        "
                             class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
                         >
                             Kirim ke Supervisor
                         </button>
                     @else
-                        <x-buttons.save-submit
-                            :form-id="'report-form'"
-                            :draft-action="$releaseAction"
-                            :finalize-action="$finalizeAction"
-                            :draft-label="$releaseLabel"
-                            :finalize-label="$finalizeLabel"
-                            :draft-description="$releaseDescription"
-                            :finalize-description="$finalizeDescription"
-                        />
+                        @if ($phase === 'reading')
+                            <button
+                                type="button"
+                                @click.prevent="
+                                    $store.saveConfirmModal.open({
+                                        formId: 'report-form',
+                                        kind: 'draft',
+                                        title: 'Simpan & Serahkan Laporan',
+                                        draftAction: @js($releaseAction),
+                                        selectedAction: @js($releaseAction),
+                                        submitLabel: 'Simpan Pembacaan',
+                                        message: @js($releaseDescription),
+                                    });
+                                "
+                                class="inline-flex items-center rounded-xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 cursor-pointer"
+                            >
+                                Simpan & Serahkan
+                            </button>
+                            <button
+                                type="button"
+                                @click.prevent="
+                                    $store.saveConfirmModal.open({
+                                        formId: 'report-form',
+                                        kind: 'draft',
+                                        title: 'Konfirmasi Kirim Laporan',
+                                        draftAction: @js($finalizeAction),
+                                        selectedAction: @js($finalizeAction),
+                                        submitLabel: 'Kirim Laporan',
+                                        message: 'Setelah dikirim, data tidak dapat diubah lagi. Masukkan username dan password Anda untuk melanjutkan.',
+                                        requiresSupervisor: true,
+                                        supervisorOptions: @js($supervisorOptions),
+                                    });
+                                "
+                                class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+                            >
+                                Kirim ke Supervisor
+                            </button>
+                        @else
+                            <x-buttons.save-submit
+                                :form-id="'report-form'"
+                                :draft-action="$releaseAction"
+                                :finalize-action="$finalizeAction"
+                                :draft-label="$releaseLabel"
+                                :finalize-label="$finalizeLabel"
+                                :draft-description="$releaseDescription"
+                                :finalize-description="$finalizeDescription"
+                            />
+                        @endif
                     @endif
                 @endif
                 {{--
@@ -254,7 +305,7 @@
                         draftDescription: @js($releaseDescription),
                         finalizeDescription: @js($finalizeDescription),
                     })"
-                    class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600"
+                    class="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-600"
                 >
                     <span>Simpan & Serahkan</span>
                 </button>
@@ -265,13 +316,13 @@
 
     <x-messages.success-message />
     <x-messages.error-message />
-    <x-messages.validation-errors :except="['username', 'password']" />
+    <x-messages.validation-errors :except="['username', 'password', 'supervisor_id']" />
 
     @if ($isRevisionForMe && $returnedApproval !== null)
         <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
-            <div class="text-lg font-semibold text-amber-900">Laporan dikembalikan untuk direvisi</div>
+            <div class=" font-semibold text-amber-900">Laporan dikembalikan untuk direvisi</div>
             @if (! empty($returnedApproval->notes))
-                <p class="mt-1 text-amber-700">“{{ $returnedApproval->notes }}”</p>
+                <p class="mt-1 text-amber-700 text-sm">“{{ $returnedApproval->notes }}”</p>
             @endif
             <p class="mt-1 text-sm text-amber-700">— {{ $returnedApproval->user?->name ?? $returnedApproval->role_label }}</p>
         </div>
@@ -323,15 +374,26 @@
         @php
             $usernameError = $errors->first('username');
             $passwordError = $errors->first('password');
-            $hasAuthError  = $usernameError !== '' || $passwordError !== '';
+            $supervisorError = $errors->first('supervisor_id');
+            $hasAuthError  = $usernameError !== '' || $passwordError !== '' || $supervisorError !== '';
             $oldUsername   = old('username', '');
             $oldAction     = old('action', $isReadingRevisionSendOnlyMode ? $finalizeAction : $draftAction);
             $isRevisionQuickAction = in_array($oldAction, [$toReadingAction, $sendToSupervisorAction], true);
-            if ($isReadingRevisionSendOnlyMode) {
+            $requiresSupervisor = ($phase === 'reading' && $oldAction === $finalizeAction)
+                || $oldAction === $sendToSupervisorAction;
+            $modalMessage = '';
+            if ($requiresSupervisor) {
                 $modalKind = 'draft';
-                $modalTitle = 'Konfirmasi Kirim ke Supervisor';
-                $effectiveDraftAction = $finalizeAction;
-                $effectiveSubmitLabel = 'Kirim ke Supervisor';
+                $modalTitle = 'Konfirmasi Kirim Laporan';
+                $effectiveDraftAction = $oldAction;
+                $effectiveSubmitLabel = 'Kirim Laporan';
+                $modalMessage = 'Setelah dikirim, data tidak dapat diubah lagi. Masukkan username dan password Anda untuk melanjutkan.';
+            } elseif ($phase === 'reading' && $oldAction === $releaseAction) {
+                $modalKind = 'draft';
+                $modalTitle = 'Simpan & Serahkan Laporan';
+                $effectiveDraftAction = $releaseAction;
+                $effectiveSubmitLabel = 'Simpan Pembacaan';
+                $modalMessage = $releaseDescription;
             } else {
                 $modalKind     = $isRevisionQuickAction
                     ? 'draft'
@@ -346,6 +408,7 @@
                     ? 'Ke Pembacaan'
                     : ($oldAction === $sendToSupervisorAction ? 'Kirim ke Supervisor' : 'Simpan');
             }
+            $oldSupervisorId = old('supervisor_id', '');
         @endphp
 
         @if ($hasAuthError)
@@ -360,9 +423,13 @@
                 data-finalize-label="{{ $finalizeLabel }}"
                 data-draft-description="{{ $releaseDescription }}"
                 data-finalize-description="{{ $finalizeDescription }}"
+                data-message="{{ $modalMessage }}"
                 data-username="{{ $oldUsername }}"
                 data-username-error="{{ $usernameError }}"
                 data-password-error="{{ $passwordError }}"
+                data-supervisor-error="{{ $supervisorError }}"
+                data-selected-supervisor-id="{{ $oldSupervisorId }}"
+                data-requires-supervisor="{{ $requiresSupervisor ? '1' : '0' }}"
                 data-selected-action="{{ $oldAction }}"
                 data-submit-label="{{ $effectiveSubmitLabel }}"
                 hidden
@@ -384,10 +451,15 @@
                         finalizeLabel:       d.finalizeLabel,
                         draftDescription:    d.draftDescription,
                         finalizeDescription: d.finalizeDescription,
+                        message:             d.message,
                         username:            d.username,
                         usernameError:       d.usernameError,
                         passwordError:       d.passwordError,
                         submitLabel:         d.submitLabel,
+                        requiresSupervisor:  d.requiresSupervisor === '1',
+                        supervisorOptions:   @js($supervisorOptions),
+                        selectedSupervisorId: d.selectedSupervisorId,
+                        supervisorError:     d.supervisorError,
                     });
                     // Re-select the previously chosen action.
                     store.selectedAction = d.selectedAction;

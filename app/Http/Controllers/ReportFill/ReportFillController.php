@@ -11,6 +11,7 @@ use Domain\Report\Models\Report;
 use Domain\Report\Services\MonitoringService;
 use Domain\Report\Services\ReadingService;
 use Domain\Report\Services\ReportService;
+use Domain\User\Services\UserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -27,6 +28,7 @@ class ReportFillController extends Controller
         protected MonitoringService $monitoringService,
         protected ReadingService $readingService,
         protected SectionInstanceRepositoryInterface $sectionInstances,
+        protected UserService $userService,
     ) {
     }
 
@@ -94,6 +96,7 @@ class ReportFillController extends Controller
             'phase'            => $this->currentPhase($report),
             'sectionInstances' => $bundle['instances'],
             'lockMap'          => $bundle['locks'],
+            'supervisors'      => $this->userService->listSupervisors(),
         ]);
     }
 
@@ -116,6 +119,7 @@ class ReportFillController extends Controller
             'phase'            => $this->currentPhase($report),
             'sectionInstances' => $bundle['instances'],
             'lockMap'          => $bundle['locks'],
+            'supervisors'      => $this->userService->listSupervisors(),
         ]);
     }
 
@@ -134,6 +138,7 @@ class ReportFillController extends Controller
                 $this->currentAnalystId(),
                 $request->toDTO(),
                 $request->action(),
+                $request->supervisorId(),
             );
         } catch (\RuntimeException $e) {
             return redirect()
@@ -172,6 +177,7 @@ class ReportFillController extends Controller
                 $this->currentAnalystId(),
                 $request->toDTO(),
                 $request->action(),
+                $request->supervisorId(),
             );
         } catch (\RuntimeException $e) {
             return redirect()

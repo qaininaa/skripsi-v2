@@ -77,7 +77,13 @@ class ReadingService
      *
      * @throws \RuntimeException
      */
-    public function saveReading(Report $report, string $analystId, SaveReadingDto $dto, string $action = self::ACTION_DRAFT): void
+    public function saveReading(
+        Report $report,
+        string $analystId,
+        SaveReadingDto $dto,
+        string $action = self::ACTION_DRAFT,
+        ?string $supervisorId = null,
+    ): void
     {
         if ($report->status !== Report::STATUS_IN_PROGRESS_READING) {
             throw new \RuntimeException('Laporan ini bukan dalam tahap pembacaan.');
@@ -89,7 +95,7 @@ class ReadingService
             throw new \RuntimeException('Aksi penyimpanan tidak dikenali.');
         }
 
-        DB::transaction(function () use ($report, $dto, $analystId, $action) {
+        DB::transaction(function () use ($report, $dto, $analystId, $action, $supervisorId) {
             foreach ($dto->sections as $instanceId => $payload) {
                 /** @var SectionInstance|null $instance */
                 $instance = $this->sectionInstanceRepository->findByReportAndKey(
@@ -110,7 +116,7 @@ class ReadingService
             }
 
             if ($action === self::ACTION_FINALIZE) {
-                $this->finalizeReading($report, $analystId);
+                $this->finalizeReading($report, $analystId, $supervisorId);
             } elseif ($action === self::ACTION_RELEASE) {
                 // Match monitoring handoff behavior:
                 // "Simpan Pembacaan" should stamp per-section reading sign-off
@@ -128,7 +134,7 @@ class ReadingService
      * reading data, then transition the report status. Empty sections stay
      * unsigned.
      */
-    private function finalizeReading(Report $report, string $analystId): void
+    private function finalizeReading(Report $report, string $analystId, ?string $supervisorId): void
     {
         $this->stampReadingSignatures($report, $analystId);
 
@@ -137,7 +143,7 @@ class ReadingService
         $report->save();
 
         // Hand off to supervisor by creating their approval row.
-        $this->approvalService->ensureSupervisorAssignment($report);
+        $this->approvalService->ensureSupervisorAssignment($report, $supervisorId);
     }
 
     /**

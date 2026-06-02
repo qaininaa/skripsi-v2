@@ -32,6 +32,7 @@ export const saveConfirmModalStore = {
     finalizeLabel: "Selesaikan",
     draftDescription: "",
     finalizeDescription: "",
+    message: "",
 
     username: "",
     password: "",
@@ -39,6 +40,10 @@ export const saveConfirmModalStore = {
     submitLabel: "Simpan",
     usernameError: "",
     passwordError: "",
+    requiresSupervisor: false,
+    supervisorOptions: [],
+    selectedSupervisorId: "",
+    supervisorError: "",
 
     open(config = {}) {
         this.formId              = config.formId              ?? "";
@@ -50,7 +55,10 @@ export const saveConfirmModalStore = {
         this.finalizeLabel       = config.finalizeLabel       ?? "Selesaikan";
         this.draftDescription    = config.draftDescription    ?? "";
         this.finalizeDescription = config.finalizeDescription ?? "";
+        this.message             = config.message             ?? "";
         this.submitLabel         = config.submitLabel         ?? "Simpan";
+        this.requiresSupervisor  = config.requiresSupervisor  ?? false;
+        this.supervisorOptions   = config.supervisorOptions   ?? [];
 
         this.selectedAction = config.selectedAction ?? this.draftAction;
         this.username       = config.username ?? "";
@@ -58,6 +66,8 @@ export const saveConfirmModalStore = {
         this.showPassword   = false;
         this.usernameError  = config.usernameError ?? "";
         this.passwordError  = config.passwordError ?? "";
+        this.selectedSupervisorId = config.selectedSupervisorId ?? "";
+        this.supervisorError      = config.supervisorError ?? "";
         this.isOpen         = true;
     },
 
@@ -72,11 +82,22 @@ export const saveConfirmModalStore = {
         // Clear any prior auth errors when re-submitting.
         this.usernameError = "";
         this.passwordError = "";
+        this.supervisorError = "";
+
+        if (this.requiresSupervisor && !this.selectedSupervisorId) {
+            this.supervisorError = "Supervisor tujuan wajib dipilih.";
+            return;
+        }
 
         // Inject (or update) hidden inputs for action / username / password.
         this.setHidden(form, "action",   this.selectedAction);
         this.setHidden(form, "username", this.username);
         this.setHidden(form, "password", this.password);
+        if (this.requiresSupervisor) {
+            this.setHidden(form, "supervisor_id", this.selectedSupervisorId);
+        } else {
+            this.removeHidden(form, "supervisor_id");
+        }
 
         form.submit();
     },
@@ -89,6 +110,10 @@ export const saveConfirmModalStore = {
         this.passwordError = "";
     },
 
+    clearSupervisorError() {
+        this.supervisorError = "";
+    },
+
     setHidden(form, name, value) {
         let el = form.querySelector(`input[name="${name}"][data-confirm="1"]`);
         if (!el) {
@@ -99,5 +124,12 @@ export const saveConfirmModalStore = {
             form.appendChild(el);
         }
         el.value = value;
+    },
+
+    removeHidden(form, name) {
+        const el = form.querySelector(`input[name="${name}"][data-confirm="1"]`);
+        if (el) {
+            el.remove();
+        }
     },
 };

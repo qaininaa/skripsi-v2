@@ -412,7 +412,7 @@
                                             type="text"
                                             name="{{ $colNamePrefix }}[column_label_value]"
                                             value="{{ old("sections.{$instance->id}.columns.{$col['column_index']}.column_label_value", $spEntry?->column_label_value) }}"
-                                            class="w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
+                                            class="w-14 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-sky-500 focus:outline-none"
                                             placeholder="{{ $isSettlePlate ? 'SP' : 'Shift' }}"
                                         >
                                     @elseif ($canEditMonitoring && $spLocked)
@@ -470,7 +470,7 @@
                                                 type="time"
                                                 name="{{ $slotName }}[time_start]"
                                                 value="{{ $valStart }}"
-                                                class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
+                                                class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-sky-500 focus:outline-none"
                                             >
                                             <button
                                                 type="button"
@@ -496,7 +496,7 @@
                                                 type="time"
                                                 name="{{ $slotName }}[time_end]"
                                                 value="{{ $valEnd }}"
-                                                class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-blue-500 focus:outline-none"
+                                                class="w-[4.5rem] rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-[10px] focus:border-sky-500 focus:outline-none"
                                             >
                                             <button
                                                 type="button"
@@ -555,10 +555,10 @@
             <tbody class="text-center">
                 @forelse ($rowsByFrequency as $frequency => $groupRows)
                     {{-- Frequency separator --}}
-                    <tr class="bg-blue-50/60">
+                    <tr class="bg-sky-50/60">
                         <td
                             colspan="{{ 5 + $headColCount + 4 + 1 }}"
-                            class="border-y border-blue-100 px-3 py-1 text-left text-[11px] font-semibold tracking-wide text-blue-700"
+                            class="border-y border-sky-100 px-3 py-1 text-left text-[11px] font-semibold tracking-wide text-sky-700"
                         >
                             FREKUENSI : {{ $frequencyLabels[$frequency] ?? strtoupper((string) $frequency) }}
                         </td>
@@ -625,7 +625,7 @@
                                                     data-reading="total"
                                                     data-row-id="{{ $row->id }}"
                                                     data-col-index="{{ $col['column_index'] }}"
-                                                    class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
+                                                    class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-sky-500 focus:outline-none"
                                                     placeholder=""
                                                 >
                                             @elseif ($canEditReading && $hasTime && $bLocked)
@@ -656,7 +656,7 @@
                                                     data-reading="fungi"
                                                     data-row-id="{{ $row->id }}"
                                                     data-col-index="{{ $col['column_index'] }}"
-                                                    class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
+                                                    class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-sky-500 focus:outline-none"
                                                     placeholder=""
                                                 >
                                             @elseif ($canEditReading && $hasTime && $fLocked)
@@ -749,7 +749,7 @@
                 name="{{ $namePrefix }}[note]"
                 rows="2"
                 maxlength="5000"
-                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
                 placeholder="Catatan untuk section ini..."
             >{{ old("sections.{$instance->id}.note", $instance->note) }}</textarea>
         @elseif ($canEditMonitoring && $noteLocked)

@@ -29,6 +29,12 @@ class SaveMonitoringRequest extends FormRequest
             ])],
             'username'    => ['required', 'string', 'max:255', new CurrentUserUsername()],
             'password'    => ['required', 'string', new CurrentUserPassword()],
+            'supervisor_id' => [
+                Rule::requiredIf(fn () => $this->input('action') === MonitoringService::ACTION_FINALIZE_TO_REVIEW),
+                'nullable',
+                'string',
+                Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'supervisor')),
+            ],
 
             'instruments'                              => ['nullable', 'array'],
             'instruments.*.no_id'                      => ['nullable', 'string', 'max:255'],
@@ -78,10 +84,17 @@ class SaveMonitoringRequest extends FormRequest
         return (string) $this->validated('action');
     }
 
+    public function supervisorId(): ?string
+    {
+        $supervisorId = $this->validated('supervisor_id');
+
+        return $supervisorId === null ? null : (string) $supervisorId;
+    }
+
     public function toDTO(): SaveMonitoringDto
     {
         $data = $this->validated();
-        unset($data['action'], $data['username'], $data['password']);
+        unset($data['action'], $data['username'], $data['password'], $data['supervisor_id']);
         return new SaveMonitoringDto($data);
     }
 }

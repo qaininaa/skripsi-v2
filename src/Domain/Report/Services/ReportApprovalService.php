@@ -62,10 +62,17 @@ class ReportApprovalService
      * decide whether that's an error or just leaves the report in a
      * "pending_review without assignee" state.
      */
-    public function ensureSupervisorAssignment(Report $report): ?ReportApproval
+    public function ensureSupervisorAssignment(Report $report, ?string $supervisorId = null): ?ReportApproval
     {
-        $supervisor = $this->users->findFirstByRole('supervisor');
+        $supervisor = $supervisorId === null
+            ? $this->users->findFirstByRole('supervisor')
+            : $this->users->findByIdAndRole($supervisorId, 'supervisor');
+
         if ($supervisor === null) {
+            if ($supervisorId !== null) {
+                throw new \RuntimeException('Supervisor tujuan tidak valid.');
+            }
+
             return null;
         }
 

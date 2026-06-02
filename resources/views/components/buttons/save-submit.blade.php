@@ -24,7 +24,7 @@
             finalizeDescription: @js($finalizeDescription),
         });
     "
-    class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+    class="inline-flex items-center rounded-xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 cursor-pointer"
 >
     {{ $label }}
 </button>

@@ -27,6 +27,12 @@ class SaveReadingRequest extends FormRequest
             ])],
             'username' => ['required', 'string', 'max:255', new CurrentUserUsername()],
             'password' => ['required', 'string', new CurrentUserPassword()],
+            'supervisor_id' => [
+                Rule::requiredIf(fn () => $this->input('action') === ReadingService::ACTION_FINALIZE),
+                'nullable',
+                'string',
+                Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'supervisor')),
+            ],
 
             'sections'                                              => ['nullable', 'array'],
             'sections.*.rows'                                       => ['nullable', 'array'],
@@ -41,10 +47,17 @@ class SaveReadingRequest extends FormRequest
         return (string) $this->validated('action');
     }
 
+    public function supervisorId(): ?string
+    {
+        $supervisorId = $this->validated('supervisor_id');
+
+        return $supervisorId === null ? null : (string) $supervisorId;
+    }
+
     public function toDTO(): SaveReadingDto
     {
         $data = $this->validated();
-        unset($data['action'], $data['username'], $data['password']);
+        unset($data['action'], $data['username'], $data['password'], $data['supervisor_id']);
         return new SaveReadingDto($data);
     }
 }
