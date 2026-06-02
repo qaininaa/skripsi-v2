@@ -31,6 +31,7 @@
     $editableClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100';
     $readonlyClass = 'w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-400 cursor-not-allowed';
     $lockedClass   = 'flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700';
+    $displayValue  = fn ($value) => filled($value) ? $value : 'N/A';
 @endphp
 
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
@@ -55,7 +56,7 @@
 
             <div class="space-y-3">
                 <h3 class="text-sm font-semibold uppercase tracking-wide text-sky-500">
-                    {{ strtoupper($medium->name ?? '—') }}
+                    {{ strtoupper($medium->name ?? 'N/A') }}
                 </h3>
 
                 {{-- Nomor Batch Medium --}}
@@ -71,7 +72,7 @@
                     @elseif (! $readonly && $batchLocked)
                         <input
                             type="text"
-                            value="{{ $medium->batch_number }}"
+                            value="{{ $displayValue($medium->batch_number) }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
@@ -79,8 +80,7 @@
                     @else
                         <input
                             type="text"
-                            value="{{ $medium->batch_number }}"
-                            placeholder="—"
+                            value="{{ $displayValue($medium->batch_number) }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
@@ -101,7 +101,7 @@
                         @elseif (! $readonly && $gptLocked)
                             <input
                                 type="text"
-                                value="{{ $medium->gpt_number }}"
+                                value="{{ $displayValue($medium->gpt_number) }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
@@ -109,8 +109,7 @@
                         @else
                             <input
                                 type="text"
-                                value="{{ $medium->gpt_number }}"
-                                placeholder="—"
+                                value="{{ $displayValue($medium->gpt_number) }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
@@ -132,16 +131,16 @@
                         >
                     @elseif (! $readonly && $expLocked)
                         <input
-                            type="date"
-                            value="{{ optional($medium->expiration_date)->format('Y-m-d') }}"
+                            type="{{ $medium->expiration_date ? 'date' : 'text' }}"
+                            value="{{ $medium->expiration_date ? optional($medium->expiration_date)->format('Y-m-d') : 'N/A' }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
                         <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $expLockedBy }}</p>
                     @else
                         <input
-                            type="date"
-                            value="{{ optional($medium->expiration_date)->format('Y-m-d') }}"
+                            type="{{ $medium->expiration_date ? 'date' : 'text' }}"
+                            value="{{ $medium->expiration_date ? optional($medium->expiration_date)->format('Y-m-d') : 'N/A' }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >

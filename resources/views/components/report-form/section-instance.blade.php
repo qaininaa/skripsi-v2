@@ -464,6 +464,9 @@
                                         @if ($sub !== null)
                                             <span class="font-semibold text-gray-700">{{ $sub }}:</span>
                                         @endif
+                                        @if (! $canEditStartTime && ! $canEditEndTime && blank($valStart) && blank($valEnd))
+                                            <span class="text-gray-600">N/A — N/A</span>
+                                        @else
                                         @if ($canEditStartTime)
                                             <input
                                                 id="{{ $startInputId }}"
@@ -481,13 +484,13 @@
                                             </button>
                                         @elseif ($canEditMonitoring)
                                             <input
-                                                type="time"
-                                                value="{{ $valStart }}"
+                                                type="{{ filled($valStart) ? 'time' : 'text' }}"
+                                                value="{{ filled($valStart) ? $valStart : 'N/A' }}"
                                                 disabled
                                                 class="w-[4.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
                                             >
                                         @else
-                                            <span class="text-gray-600">{{ $valStart ?: '--:--' }}</span>
+                                            <span class="text-gray-600">{{ filled($valStart) ? $valStart : 'N/A' }}</span>
                                         @endif
                                         <span class="text-gray-400">—</span>
                                         @if ($canEditEndTime)
@@ -507,13 +510,14 @@
                                             </button>
                                         @elseif ($canEditMonitoring)
                                             <input
-                                                type="time"
-                                                value="{{ $valEnd }}"
+                                                type="{{ filled($valEnd) ? 'time' : 'text' }}"
+                                                value="{{ filled($valEnd) ? $valEnd : 'N/A' }}"
                                                 disabled
                                                 class="w-[4.5rem] cursor-not-allowed rounded border border-gray-200 bg-gray-100 px-1 py-0.5 text-center text-[10px] text-gray-400"
                                             >
                                         @else
-                                            <span class="text-gray-600">{{ $valEnd ?: '--:--' }}</span>
+                                            <span class="text-gray-600">{{ filled($valEnd) ? $valEnd : 'N/A' }}</span>
+                                        @endif
                                         @endif
                                     </div>
                                     @if ($canEditMonitoring && ($startLocked || $endLocked))
@@ -526,7 +530,7 @@
                                 {{-- Pad MS header so its height matches other columns --}}
                                 @for ($i = 0; $i < $needsSpacer; $i++)
                                     <div class="invisible flex items-center justify-center gap-1 whitespace-nowrap text-[10px]">
-                                        <span>--:--</span><span>—</span><span>--:--</span>
+                                        <span>N/A</span>
                                     </div>
                                 @endfor
                             </div>
@@ -828,4 +832,3 @@
         </div>
     </div>
 </section>
-

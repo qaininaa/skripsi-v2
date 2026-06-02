@@ -39,6 +39,7 @@
     $editableClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100';
     $readonlyClass = 'w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-400 cursor-not-allowed';
     $lockedClass   = 'flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700';
+    $displayValue  = fn ($value) => filled($value) ? $value : 'N/A';
 
     $mediumTypeLabels = [
         'monitoring' => 'Tanggal Inkubasi Medium Monitoring',
@@ -54,7 +55,7 @@
     <div class="space-y-8">
         @foreach ($incubators as $incubator)
             @php
-                $incubatorName = $incubator->template?->label ?? '—';
+                $incubatorName = $incubator->template?->label ?? 'N/A';
                 $minDay        = $incubator->template?->min_day ?? null;
                 $entriesByType = $incubator->entries->keyBy('medium_type');
                 $rowOrder      = $hasSwab ? ['monitoring', 'swab'] : ['monitoring'];
@@ -100,7 +101,7 @@
                         @elseif (! $readonly && $noIdLocked)
                             <input
                                 type="text"
-                                value="{{ $incubator->no_id }}"
+                                value="{{ $displayValue($incubator->no_id) }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
@@ -108,8 +109,7 @@
                         @else
                             <input
                                 type="text"
-                                value="{{ $incubator->no_id }}"
-                                placeholder="—"
+                                value="{{ $displayValue($incubator->no_id) }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
@@ -128,16 +128,16 @@
                             >
                         @elseif (! $readonly && $calibLocked)
                             <input
-                                type="date"
-                                value="{{ optional($incubator->calibration_date)->format('Y-m-d') }}"
+                                type="{{ $incubator->calibration_date ? 'date' : 'text' }}"
+                                value="{{ $incubator->calibration_date ? optional($incubator->calibration_date)->format('Y-m-d') : 'N/A' }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
                             <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $calibOwner }}</p>
                         @else
                             <input
-                                type="date"
-                                value="{{ optional($incubator->calibration_date)->format('Y-m-d') }}"
+                                type="{{ $incubator->calibration_date ? 'date' : 'text' }}"
+                                value="{{ $incubator->calibration_date ? optional($incubator->calibration_date)->format('Y-m-d') : 'N/A' }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
@@ -156,16 +156,16 @@
                             >
                         @elseif (! $readonly && $dueLocked)
                             <input
-                                type="date"
-                                value="{{ optional($incubator->due_date_calibration)->format('Y-m-d') }}"
+                                type="{{ $incubator->due_date_calibration ? 'date' : 'text' }}"
+                                value="{{ $incubator->due_date_calibration ? optional($incubator->due_date_calibration)->format('Y-m-d') : 'N/A' }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
                             <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dueOwner }}</p>
                         @else
                             <input
-                                type="date"
-                                value="{{ optional($incubator->due_date_calibration)->format('Y-m-d') }}"
+                                type="{{ $incubator->due_date_calibration ? 'date' : 'text' }}"
+                                value="{{ $incubator->due_date_calibration ? optional($incubator->due_date_calibration)->format('Y-m-d') : 'N/A' }}"
                                 disabled
                                 class="{{ $readonlyClass }}"
                             >
@@ -335,24 +335,24 @@
                                     >
                                 @elseif (! $readonly && $dateInLocked)
                                     <input
-                                        type="date"
-                                        value="{{ optional($entry->date_in)->format('Y-m-d') }}"
+                                        type="{{ $entry->date_in ? 'date' : 'text' }}"
+                                        value="{{ $entry->date_in ? optional($entry->date_in)->format('Y-m-d') : 'N/A' }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dateInOwner }}</p>
                                 @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingIncubatedActor)
                                     <input
-                                        type="date"
-                                        value="{{ optional($entry->date_in)->format('Y-m-d') }}"
+                                        type="{{ $entry->date_in ? 'date' : 'text' }}"
+                                        value="{{ $entry->date_in ? optional($entry->date_in)->format('Y-m-d') : 'N/A' }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data diinkubasi oleh analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
-                                        type="date"
-                                        value="{{ optional($entry->date_in)->format('Y-m-d') }}"
+                                        type="{{ $entry->date_in ? 'date' : 'text' }}"
+                                        value="{{ $entry->date_in ? optional($entry->date_in)->format('Y-m-d') : 'N/A' }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
@@ -372,24 +372,24 @@
                                     >
                                 @elseif (! $readonly && $dateOutLocked)
                                     <input
-                                        type="date"
-                                        value="{{ optional($entry->date_out)->format('Y-m-d') }}"
+                                        type="{{ $entry->date_out ? 'date' : 'text' }}"
+                                        value="{{ $entry->date_out ? optional($entry->date_out)->format('Y-m-d') : 'N/A' }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dateOutOwner }}</p>
                                 @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingRemovedActor)
                                     <input
-                                        type="date"
-                                        value="{{ optional($entry->date_out)->format('Y-m-d') }}"
+                                        type="{{ $entry->date_out ? 'date' : 'text' }}"
+                                        value="{{ $entry->date_out ? optional($entry->date_out)->format('Y-m-d') : 'N/A' }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data dikeluarkan oleh analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
-                                        type="date"
-                                        value="{{ optional($entry->date_out)->format('Y-m-d') }}"
+                                        type="{{ $entry->date_out ? 'date' : 'text' }}"
+                                        value="{{ $entry->date_out ? optional($entry->date_out)->format('Y-m-d') : 'N/A' }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
@@ -409,32 +409,32 @@
                                     >
                                 @elseif (! $readonly && $timeInLocked)
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_in }}"
+                                        type="{{ $entry->time_in ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_in) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $timeInOwner }}</p>
                                 @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingIncubatedActor)
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_in }}"
+                                        type="{{ $entry->time_in ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_in) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data diinkubasi oleh analis, tidak bisa diedit SPV.</p>
                                 @elseif (! $readonly && $monitoringTimeRequiresExistingValue && ! $timeInHasExistingValue)
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_in }}"
+                                        type="{{ $entry->time_in ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_in) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Jam belum diisi analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_in }}"
+                                        type="{{ $entry->time_in ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_in) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
@@ -454,32 +454,32 @@
                                     >
                                 @elseif (! $readonly && $timeOutLocked)
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_out }}"
+                                        type="{{ $entry->time_out ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_out) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $timeOutOwner }}</p>
                                 @elseif (! $readonly && $monitoringInOutRequiresExistingActor && ! $hasExistingRemovedActor)
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_out }}"
+                                        type="{{ $entry->time_out ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_out) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Belum ada data dikeluarkan oleh analis, tidak bisa diedit SPV.</p>
                                 @elseif (! $readonly && $monitoringTimeRequiresExistingValue && ! $timeOutHasExistingValue)
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_out }}"
+                                        type="{{ $entry->time_out ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_out) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >
                                     <p class="mt-1 text-[11px] italic text-gray-400">Jam belum diisi analis, tidak bisa diedit SPV.</p>
                                 @else
                                     <input
-                                        type="time"
-                                        value="{{ $entry->time_out }}"
+                                        type="{{ $entry->time_out ? 'time' : 'text' }}"
+                                        value="{{ $displayValue($entry->time_out) }}"
                                         disabled
                                         class="{{ $readonlyClass }}"
                                     >

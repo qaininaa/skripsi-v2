@@ -36,6 +36,7 @@
     $editableClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100';
     $readonlyClass = 'w-full rounded-lg border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-400 cursor-not-allowed';
     $lockedClass   = 'flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700';
+    $displayValue  = fn ($value) => filled($value) ? $value : 'N/A';
 @endphp
 
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
@@ -80,7 +81,7 @@
                     @elseif (! $readonly && $noIdLocked)
                         <input
                             type="text"
-                            value="{{ $instrument->no_id }}"
+                            value="{{ $displayValue($instrument->no_id) }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
@@ -88,8 +89,7 @@
                     @else
                         <input
                             type="text"
-                            value="{{ $instrument->no_id }}"
-                            placeholder="—"
+                            value="{{ $displayValue($instrument->no_id) }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
@@ -108,16 +108,16 @@
                         >
                     @elseif (! $readonly && $calibLocked)
                         <input
-                            type="date"
-                            value="{{ optional($instrument->calibration_date)->format('Y-m-d') }}"
+                            type="{{ $instrument->calibration_date ? 'date' : 'text' }}"
+                            value="{{ $instrument->calibration_date ? optional($instrument->calibration_date)->format('Y-m-d') : 'N/A' }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
                         <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $calibLockedBy }}</p>
                     @else
                         <input
-                            type="date"
-                            value="{{ optional($instrument->calibration_date)->format('Y-m-d') }}"
+                            type="{{ $instrument->calibration_date ? 'date' : 'text' }}"
+                            value="{{ $instrument->calibration_date ? optional($instrument->calibration_date)->format('Y-m-d') : 'N/A' }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
@@ -136,16 +136,16 @@
                         >
                     @elseif (! $readonly && $dueLocked)
                         <input
-                            type="date"
-                            value="{{ optional($instrument->due_date)->format('Y-m-d') }}"
+                            type="{{ $instrument->due_date ? 'date' : 'text' }}"
+                            value="{{ $instrument->due_date ? optional($instrument->due_date)->format('Y-m-d') : 'N/A' }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
                         <p class="mt-1 text-[11px] italic text-gray-400">Telah diisi oleh {{ $dueLockedBy }}</p>
                     @else
                         <input
-                            type="date"
-                            value="{{ optional($instrument->due_date)->format('Y-m-d') }}"
+                            type="{{ $instrument->due_date ? 'date' : 'text' }}"
+                            value="{{ $instrument->due_date ? optional($instrument->due_date)->format('Y-m-d') : 'N/A' }}"
                             disabled
                             class="{{ $readonlyClass }}"
                         >
