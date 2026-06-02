@@ -150,6 +150,29 @@ class ReportRepository implements ReportRepositoryInterface
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public function countReturnedForAnalyst(string $analystId): int
+    {
+        return Report::query()
+            ->where(fn (Builder $query) => $this->applyAnalystTab($query, 'dikembalikan', $analystId))
+            ->count();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function countPendingReviewPipeline(): int
+    {
+        return Report::query()
+            ->whereIn('status', [
+                Report::STATUS_PENDING_REVIEW,
+                Report::STATUS_PENDING_APPROVAL,
+            ])
+            ->count();
+    }
+
+    /**
      * Apply a tab filter to a query builder, in place.
      */
     private function applyAnalystTab(Builder $query, string $tab, ?string $analystId = null): Builder

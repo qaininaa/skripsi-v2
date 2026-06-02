@@ -8,4 +8,10 @@
         description="Selamat datang di dashboard Analis."
         :name="$userName"
     />
+
+    <x-cards.review-notification
+        :note="$revisionNote ?? null"
+        :href="route('report-fill.index', ['tab' => 'dikembalikan'])"
+        action-label="Lihat Revisi"
+    />
 @endsection

@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use Domain\Report\Models\Report;
+use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
+use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Models\ReportApproval;
 use InvalidArgumentException;
 
@@ -11,6 +12,12 @@ use InvalidArgumentException;
  */
 class DashboardService
 {
+    public function __construct(
+        protected ReportRepositoryInterface $reports,
+        protected ReportApprovalRepositoryInterface $approvals,
+    ) {
+    }
+
     /**
      * Resolve the Blade view name for the given user role.
      *
@@ -62,22 +69,15 @@ class DashboardService
         $userId = (string) ($user->id ?? '');
 
         return match ($role) {
-            'supervisor' => ReportApproval::query()
-                ->where('step', ReportApproval::STEP_SUPERVISOR)
-                ->where('status', ReportApproval::STATUS_PENDING)
-                ->where('user_id', $userId)
-                ->count(),
-            'manager' => ReportApproval::query()
-                ->where('step', ReportApproval::STEP_MANAGER)
-                ->where('status', ReportApproval::STATUS_PENDING)
-                ->where('user_id', $userId)
-                ->count(),
-            default => Report::query()
-                ->whereIn('status', [
-                    Report::STATUS_PENDING_REVIEW,
-                    Report::STATUS_PENDING_APPROVAL,
-                ])
-                ->count(),
+            'supervisor' => $this->approvals->countByAssigneeTab(
+                ReportApproval::STEP_SUPERVISOR,
+                $userId,
+            )[ReportApproval::STATUS_PENDING] ?? 0,
+            'manager' => $this->approvals->countByAssigneeTab(
+                ReportApproval::STEP_MANAGER,
+                $userId,
+            )[ReportApproval::STATUS_PENDING] ?? 0,
+            default => $this->reports->countPendingReviewPipeline(),
         };
     }
 
@@ -93,5 +93,29 @@ class DashboardService
         }
 
         return "Ada {$count} laporan yang perlu ditinjau.";
+    }
+
+    /**
+     * Count reports returned to the given analyst for revision.
+     */
+    public function resolveRevisionCount(?object $user): int
+    {
+        if ($user === null || ($user->role ?? null) !== 'analyst') {
+            return 0;
+        }
+
+        return $this->reports->countReturnedForAnalyst((string) $user->id);
+    }
+
+    /**
+     * Build dashboard note for analyst revision work.
+     */
+    public function resolveRevisionNote(?object $user): ?string
+    {
+        $count = $this->resolveRevisionCount($user);
+
+        return $count > 0
+            ? "Ada {$count} laporan yang harus direvisi."
+            : null;
     }
 }

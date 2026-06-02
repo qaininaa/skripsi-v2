@@ -64,6 +64,16 @@ interface ReportRepositoryInterface
     public function countByAnalystTab(?string $analystId = null): array;
 
     /**
+     * Count reports returned to a specific analyst for revision.
+     */
+    public function countReturnedForAnalyst(string $analystId): int;
+
+    /**
+     * Count reports currently in review or approval pipeline.
+     */
+    public function countPendingReviewPipeline(): int;
+
+    /**
      * Persist a new report to the database.
      *
      * @param  CreateReportDto  $data
