@@ -15,7 +15,7 @@
     Form name conventions used here:
       SP/Shift  sections[{ID}][columns][{idx}][column_label_value]
       Time slot sections[{ID}][columns][{idx}][slots][{label|_}][time_start|time_end]
-      Reading   sections[{ID}][rows][{loc_id}][readings][{idx}][cfu_bacteri|cfu_fungsi]
+      Reading   sections[{ID}][rows][{loc_id}][readings][{idx}][cfu_bacteri|cfu_fungi]
       Note      sections[{ID}][note]
 
     Props:
@@ -264,7 +264,7 @@
         $draftMonitoringName = $findDraftNameByLocks(['time_start', 'time_end', 'column_label_value']) ?? $noteLock?->filler?->name;
     }
     if ($draftReadingName === null) {
-        $draftReadingName = $findDraftNameByLocks(['cfu_bacteri', 'cfu_fungsi']);
+        $draftReadingName = $findDraftNameByLocks(['cfu_bacteri', 'cfu_fungi']);
     }
 
     $statusForDuplicate = in_array($report->status, ['pending', 'in_progress_monitoring'], true);
@@ -612,13 +612,13 @@
                                     $entry      = $resolveEntry($row, $col);
                                     $readName   = "{$rowName}[readings][{$col['column_index']}]";
                                     $oldB       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.cfu_bacteri", $entry?->cfu_bacteri);
-                                    $oldF       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.cfu_fungsi", $entry?->cfu_fungsi);
+                                    $oldF       = old("sections.{$instance->id}.rows.{$row->id}.readings.{$col['column_index']}.cfu_fungi", $entry?->cfu_fungi);
                                     $hasTime    = $entry?->hasMonitoringTime() ?? false;
                                     $tt         = MicrobialValue::displayTotal($oldB, $oldF);
                                     $bLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'cfu_bacteri') : null;
-                                    $fLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'cfu_fungsi') : null;
+                                    $fLockedBy  = $entry ? $lockOwner('section_entries', $entry->id, 'cfu_fungi') : null;
                                     $bLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'cfu_bacteri') : false;
-                                    $fLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'cfu_fungsi') : false;
+                                    $fLocked    = $entry ? $isLockedByOther('section_entries', $entry->id, 'cfu_fungi') : false;
                                 @endphp
                                 <td class="border-x border-gray-100 px-1 py-1">
                                     <div class="grid grid-cols-3 gap-x-1 text-[11px]">
@@ -658,7 +658,7 @@
                                             @if ($canEditReading && $hasTime && ! $fLocked)
                                                 <input
                                                     type="text"
-                                                    name="{{ $readName }}[cfu_fungsi]"
+                                                    name="{{ $readName }}[cfu_fungi]"
                                                     value="{{ $oldF }}"
                                                     data-microbial
                                                     data-reading="fungi"

@@ -148,14 +148,14 @@ class ReadingService
 
     /**
      * True when at least one entry under the section has cfu_bacteri or
-     * cfu_fungsi populated.
+     * cfu_fungi populated.
      */
     private function sectionHasReadingData(SectionInstance $instance): bool
     {
         foreach ($instance->instanceLocations as $loc) {
             foreach ($loc->entries as $entry) {
                 if ($entry->cfu_bacteri !== null && $entry->cfu_bacteri !== ''
-                    || $entry->cfu_fungsi !== null && $entry->cfu_fungsi !== ''
+                    || $entry->cfu_fungi !== null && $entry->cfu_fungi !== ''
                 ) {
                     return true;
                 }
@@ -260,7 +260,7 @@ class ReadingService
 
                 $newValues = [
                     'cfu_bacteri' => MicrobialValue::normalise($values['cfu_bacteri'] ?? ($values['reading_total'] ?? null)),
-                    'cfu_fungsi'  => MicrobialValue::normalise($values['cfu_fungsi']  ?? ($values['reading_fungi'] ?? null)),
+                    'cfu_fungi'   => MicrobialValue::normalise($values['cfu_fungi']   ?? ($values['reading_fungi'] ?? null)),
                 ];
 
                 $entryLocks = $entryLocksMap[$target->id] ?? collect();
@@ -272,18 +272,18 @@ class ReadingService
                     }
                 }
 
-                if (! array_key_exists('cfu_bacteri', $fillable) && ! array_key_exists('cfu_fungsi', $fillable)) {
+                if (! array_key_exists('cfu_bacteri', $fillable) && ! array_key_exists('cfu_fungi', $fillable)) {
                     continue;
                 }
 
                 $effectiveBacteri = array_key_exists('cfu_bacteri', $fillable)
                     ? $fillable['cfu_bacteri']
                     : $target->cfu_bacteri;
-                $effectiveFungsi = array_key_exists('cfu_fungsi', $fillable)
-                    ? $fillable['cfu_fungsi']
-                    : $target->cfu_fungsi;
+                $effectiveFungi = array_key_exists('cfu_fungi', $fillable)
+                    ? $fillable['cfu_fungi']
+                    : $target->cfu_fungi;
 
-                $fillable['cfu_total'] = MicrobialValue::displayTotal($effectiveBacteri, $effectiveFungsi);
+                $fillable['cfu_total'] = MicrobialValue::displayTotal($effectiveBacteri, $effectiveFungi);
 
                 $target->fill($fillable);
                 $dirtyFields = array_keys($target->getDirty());

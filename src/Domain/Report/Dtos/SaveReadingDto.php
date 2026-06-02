@@ -5,7 +5,7 @@ namespace Domain\Report\Dtos;
 /**
  * Reading-phase payload structure:
  *   sections[{instance_id}][rows][{location_row_id}][readings][{column_index}][cfu_bacteri]
- *   sections[{instance_id}][rows][{location_row_id}][readings][{column_index}][cfu_fungsi]
+ *   sections[{instance_id}][rows][{location_row_id}][readings][{column_index}][cfu_fungi]
  */
 class SaveReadingDto
 {

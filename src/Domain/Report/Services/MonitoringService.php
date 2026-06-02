@@ -373,7 +373,7 @@ class MonitoringService
         foreach ($instance->instanceLocations as $loc) {
             foreach ($loc->entries as $entry) {
                 if (($entry->cfu_bacteri !== null && $entry->cfu_bacteri !== '')
-                    || ($entry->cfu_fungsi !== null && $entry->cfu_fungsi !== '')
+                    || ($entry->cfu_fungi !== null && $entry->cfu_fungi !== '')
                 ) {
                     return true;
                 }
@@ -452,7 +452,7 @@ class MonitoringService
             foreach ($loc->entries as $entry) {
                 $locks = $entryLocksMap[$entry->id] ?? collect();
 
-                foreach (['cfu_bacteri', 'cfu_fungsi'] as $field) {
+                foreach (['cfu_bacteri', 'cfu_fungi'] as $field) {
                     if ($entry->{$field} === null || $entry->{$field} === '') {
                         continue;
                     }
