@@ -11,7 +11,7 @@ use Domain\Report\Models\SectionInstance;
  *
  * Rules:
  *   - A reading is "Action breach" when cfu_bacteri ≥ alert_action_total
- *     OR cfu_fungsi ≥ alert_action_fungi.
+ *     OR cfu_fungi ≥ alert_action_fungi.
  *   - TNTC (PHP_INT_MAX from MicrobialValue) always breaches.
  *   - A row is TMS if ANY of its entries is an action breach.
  *   - A row with no readings yet remains null (not assessed).
@@ -31,7 +31,7 @@ final class LocationConclusion
 
         foreach ($entries as $entry) {
             $total = MicrobialValue::toCount($entry->cfu_bacteri);
-            $fungi = MicrobialValue::toCount($entry->cfu_fungsi);
+            $fungi = MicrobialValue::toCount($entry->cfu_fungi);
 
             if ($total === null && $fungi === null) {
                 continue;

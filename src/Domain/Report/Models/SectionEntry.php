@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * Two analyst phases write into this row:
  *   - monitoring → time_start, time_end, column_label_value
- *   - reading    → cfu_bacteri, cfu_fungsi, cfu_total
+ *   - reading    → cfu_bacteri, cfu_fungi, cfu_total
  *
  * @property string      $id
  * @property string      $section_instance_location_id
@@ -21,7 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $time_start
  * @property string|null $time_end
  * @property string|null $cfu_bacteri
- * @property string|null $cfu_fungsi
+ * @property string|null $cfu_fungi
  * @property string|null $cfu_total
  * @property string|null $conclusion   'MS' | 'TMS'
  */
@@ -40,7 +40,7 @@ class SectionEntry extends Model
         'time_start',
         'time_end',
         'cfu_bacteri',
-        'cfu_fungsi',
+        'cfu_fungi',
         'cfu_total',
         'conclusion',
     ];
