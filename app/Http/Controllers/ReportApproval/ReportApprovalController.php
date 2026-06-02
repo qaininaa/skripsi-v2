@@ -52,7 +52,7 @@ class ReportApprovalController extends Controller
             (string) Auth::id(),
         );
 
-        return view('report-approval.inbox', [
+        return view('report-inbox.index', [
             'reports'   => $reports,
             'counts'    => $counts,
             'activeTab' => $tab,
@@ -89,7 +89,7 @@ class ReportApprovalController extends Controller
             (string) Auth::id(),
         );
 
-        return view('report-approval.in-progress', [
+        return view('report-in-progress.index', [
             'reports'   => $reports,
             'showRoute' => $config['showRoute'],
             'previewRoute' => $config['previewRoute'],

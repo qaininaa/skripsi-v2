@@ -1,3 +1,9 @@
+@extends('layouts.app')
+
+@section('title', 'Sedang Dikerjakan - ' . $roleLabel)
+@section('page-title', 'Sedang Dikerjakan')
+
+@section('content')
 {{--
     Shared in-progress list for supervisor & manager.
     Lists every ongoing report (not completed/archived).
@@ -185,3 +191,4 @@
         {{ $reports->links() }}
     </div>
 </div>
+@endsection
