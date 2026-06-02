@@ -153,7 +153,11 @@ class ReportApprovalRepository implements ReportApprovalRepositoryInterface
     {
         match ($stage) {
             'pending' => $query->where('status', Report::STATUS_PENDING),
-            'monitoring' => $query->where('status', Report::STATUS_IN_PROGRESS_MONITORING),
+            'monitoring' => $query
+                ->where('status', Report::STATUS_IN_PROGRESS_MONITORING)
+                ->whereDoesntHave('approvals', function ($q) {
+                    $q->where('status', ReportApproval::STATUS_RETURNED);
+                }),
             'reading' => $query
                 ->where('status', Report::STATUS_IN_PROGRESS_READING)
                 ->whereDoesntHave('approvals', function ($q) {
@@ -162,7 +166,10 @@ class ReportApprovalRepository implements ReportApprovalRepositoryInterface
             'review_supervisor' => $query->where('status', Report::STATUS_PENDING_REVIEW),
             'approval_manager' => $query->where('status', Report::STATUS_PENDING_APPROVAL),
             'returned' => $query
-                ->where('status', Report::STATUS_IN_PROGRESS_READING)
+                ->whereIn('status', [
+                    Report::STATUS_IN_PROGRESS_MONITORING,
+                    Report::STATUS_IN_PROGRESS_READING,
+                ])
                 ->whereHas('approvals', function ($q) {
                     $q->where('status', ReportApproval::STATUS_RETURNED);
                 }),

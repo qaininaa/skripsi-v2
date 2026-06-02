@@ -141,12 +141,12 @@
         <div class="flex items-center gap-4">
             <a href="{{ route('report-fill.index') }}"
                class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
-                <span>&larr;</span><span>Kembali</span>
+                <span class="text-xl leading-none font-light">&lt;</span><span>Kembali</span>
             </a>
             <div>
                 @if ($template)
                     <div class="flex items-center gap-2 text-base font-semibold text-gray-800">
-                        <span class="font-bold text-gray-700">{{ $template->annex_number }}</span>
+                        <span class="font-bold text-gray-700">Annex {{ $template->annex_number }}</span>
                         <span class="text-gray-400">—</span>
                         <span>{{ $template->name }}</span>
                         <x-badges.report-status :status="$report->status" />
@@ -239,7 +239,7 @@
                     })"
                     class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
                 >
-                    <span>💾</span><span>Simpan Draft</span>
+                    <span>Simpan Draft</span>
                 </button>
                 <button
                     type="button"
@@ -256,7 +256,7 @@
                     })"
                     class="inline-flex items-center gap-2 rounded-lg bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-600"
                 >
-                    <span>📤</span><span>Simpan & Serahkan</span>
+                    <span>Simpan & Serahkan</span>
                 </button>
                 --}}
             </div>

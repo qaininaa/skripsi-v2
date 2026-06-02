@@ -33,7 +33,7 @@
         ],
         'in_progress_reading' => [
             'label' => 'Pembacaan',
-            'class' => 'bg-purple-100 text-purple-700',
+            'class' => 'bg-blue-100 text-blue-700',
         ],
         'pending_review' => [
             'label' => 'Direview Supervisor',
@@ -94,6 +94,21 @@
 
                         $supervisorApproval = $report->approvals->firstWhere('step', \Domain\Report\Models\ReportApproval::STEP_SUPERVISOR);
                         $managerApproval = $report->approvals->firstWhere('step', \Domain\Report\Models\ReportApproval::STEP_MANAGER);
+                        $latestReturnedApproval = $report->approvals
+                            ->where('status', \Domain\Report\Models\ReportApproval::STATUS_RETURNED)
+                            ->sortByDesc(fn ($approval) => $approval->updated_at?->getTimestamp() ?? 0)
+                            ->first();
+                        $isRevisionReport = $latestReturnedApproval !== null
+                            && in_array($status, ['in_progress_monitoring', 'in_progress_reading'], true);
+
+                        if ($isRevisionReport) {
+                            $meta = [
+                                'label' => $status === 'in_progress_monitoring'
+                                    ? 'Revisi Monitoring'
+                                    : 'Revisi Pembacaan',
+                                'class' => 'bg-orange-100 text-orange-700',
+                            ];
+                        }
 
                         $currentHandler = match ($status) {
                             'pending' => 'Belum ditugaskan',
@@ -137,6 +152,11 @@
                             <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $meta['class'] }}">
                                 {{ $meta['label'] }}
                             </span>
+                            @if ($isRevisionReport)
+                                <div class="mt-1 text-xs text-orange-700">
+                                    Dikembalikan oleh {{ $latestReturnedApproval->user?->name ?? $latestReturnedApproval->role_label }}
+                                </div>
+                            @endif
                         </td>
                         <td class="whitespace-nowrap px-6 py-5 text-sm text-gray-800">
                             {{ $currentHandler }}

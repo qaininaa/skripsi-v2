@@ -310,7 +310,7 @@
                 {{ $instance->displayLabel() }}
             </span>
             <div>
-                <h2 class="text-base font-bold text-gray-800">{{ $section->measurement_unit }}</h2>
+                <h2 class="text-base font-semibold text-gray-800">{{ $section->measurement_unit }}</h2>
                 <p class="mt-0.5 text-xs text-gray-500">
                     {{ $section->getMeasurementTypeLabel() }}
                     @if ($instance->parent_instance_id !== null)
@@ -626,7 +626,7 @@
                                                     data-row-id="{{ $row->id }}"
                                                     data-col-index="{{ $col['column_index'] }}"
                                                     class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
-                                                    placeholder="N/A"
+                                                    placeholder=""
                                                 >
                                             @elseif ($canEditReading && $hasTime && $bLocked)
                                                 <input
@@ -657,7 +657,7 @@
                                                     data-row-id="{{ $row->id }}"
                                                     data-col-index="{{ $col['column_index'] }}"
                                                     class="w-full min-w-[2.25rem] rounded border border-gray-300 px-1 py-0.5 text-center focus:border-blue-500 focus:outline-none"
-                                                    placeholder="N/A"
+                                                    placeholder=""
                                                 >
                                             @elseif ($canEditReading && $hasTime && $fLocked)
                                                 <input

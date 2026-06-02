@@ -42,7 +42,7 @@
 @endphp
 
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-    <h2 class="mb-4 text-base font-bold text-gray-800">1. Pemantauan Ruang</h2>
+    <h2 class="mb-4 text-base font-semibold text-gray-800">1. Pemantauan Ruang</h2>
 
     <div class="grid gap-4 lg:grid-cols-5">
         {{-- Tanggal Pemantauan Ruang --}}

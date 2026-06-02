@@ -2,9 +2,9 @@
 
 @php
     $map = [
-        'pending'                 => ['label' => 'Pending',              'class' => 'bg-yellow-100 text-yellow-700'],
-        'in_progress_monitoring'  => ['label' => 'Monitoring',           'class' => 'bg-blue-100 text-blue-700'],
-        'in_progress_reading'     => ['label' => 'Pembacaan',            'class' => 'bg-purple-100 text-purple-700'],
+        'pending'                 => ['label' => 'Pending',              'class' => 'bg-slate-100 text-slate-700'],
+        'in_progress_monitoring'  => ['label' => 'Monitoring',           'class' => 'bg-yellow-100 text-yellow-700'],
+        'in_progress_reading'     => ['label' => 'Pembacaan',            'class' => 'bg-blue-100 text-blue-700'],
         'pending_review'          => ['label' => 'Review',               'class' => 'bg-purple-100 text-purple-700'],
         'pending_approval'        => ['label' => 'Approval',             'class' => 'bg-indigo-100 text-indigo-700'],
         'completed'               => ['label' => 'Selesai',              'class' => 'bg-green-100 text-green-700'],

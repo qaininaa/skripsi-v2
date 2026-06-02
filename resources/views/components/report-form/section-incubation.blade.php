@@ -49,7 +49,7 @@
 @endphp
 
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-    <h2 class="mb-4 text-base font-bold text-gray-800">4. Proses Inkubasi Medium Monitoring</h2>
+    <h2 class="mb-4 text-base font-semibold text-gray-800">4. Proses Inkubasi Medium Monitoring</h2>
 
     <div class="space-y-8">
         @foreach ($incubators as $incubator)

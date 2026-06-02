@@ -39,7 +39,7 @@
 @endphp
 
 <section class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100">
-    <h2 class="mb-4 text-base font-bold text-gray-800">2. Identitas Instrumen</h2>
+    <h2 class="mb-4 text-base font-semibold text-gray-800">2. Identitas Instrumen</h2>
 
     <div class="space-y-6">
         @foreach ($instrumentEntries as $instrument)
