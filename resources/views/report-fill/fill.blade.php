@@ -128,7 +128,8 @@
 
         $isMonitoringRevisionMode = ! $readonly
             && $phase === 'monitoring'
-            && $isDualRoleRevision;
+            && $isRevisionForMe
+            && $hasMonitoringRole;
         $isReadingRevisionSendOnlyMode = ! $readonly
             && $isRevisionForMe
             && $phase === 'reading';
@@ -186,31 +187,28 @@
                     >
                         Kirim ke Supervisor
                     </button>
-                @else
-                    <x-buttons.save-draft
-                        :form-id="'report-form'"
-                        :draft-action="$draftAction"
-                    />
-                    @if ($isMonitoringRevisionMode)
+                @elseif ($isMonitoringRevisionMode)
+                    @if ($isDualRoleRevision)
                         <button
                             type="button"
                             @click.prevent="
                                 $store.saveConfirmModal.open({
                                     formId: 'report-form',
                                     kind: 'draft',
-                                    title: 'Konfirmasi Ke Pembacaan',
+                                    title: 'Konfirmasi Lanjut ke Pembacaan',
                                     draftAction: @js($toReadingAction),
                                     selectedAction: @js($toReadingAction),
-                                    submitLabel: 'Ke Pembacaan',
+                                    submitLabel: 'Lanjut ke Pembacaan',
                                 });
                             "
                             class="inline-flex items-center rounded-xl bg-amber-500 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 cursor-pointer"
                         >
-                            Ke Pembacaan
+                            Lanjut ke Pembacaan
                         </button>
-                        <button
-                            type="button"
-                            @click.prevent="
+                    @endif
+                    <button
+                        type="button"
+                        @click.prevent="
                             $store.saveConfirmModal.open({
                                 formId: 'report-form',
                                 kind: 'draft',
@@ -223,59 +221,62 @@
                                 supervisorOptions: @js($supervisorOptions),
                             });
                         "
+                        class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
+                    >
+                        Kirim ke Supervisor
+                    </button>
+                @else
+                    <x-buttons.save-draft
+                        :form-id="'report-form'"
+                        :draft-action="$draftAction"
+                    />
+                    @if ($phase === 'reading')
+                        <button
+                            type="button"
+                            @click.prevent="
+                                $store.saveConfirmModal.open({
+                                    formId: 'report-form',
+                                    kind: 'draft',
+                                    title: 'Simpan & Serahkan Laporan',
+                                    draftAction: @js($releaseAction),
+                                    selectedAction: @js($releaseAction),
+                                    submitLabel: 'Simpan Pembacaan',
+                                    message: @js($releaseDescription),
+                                });
+                            "
+                            class="inline-flex items-center rounded-xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 cursor-pointer"
+                        >
+                            Simpan & Serahkan
+                        </button>
+                        <button
+                            type="button"
+                            @click.prevent="
+                                $store.saveConfirmModal.open({
+                                    formId: 'report-form',
+                                    kind: 'draft',
+                                    title: 'Konfirmasi Kirim Laporan',
+                                    draftAction: @js($finalizeAction),
+                                    selectedAction: @js($finalizeAction),
+                                    submitLabel: 'Kirim Laporan',
+                                    message: 'Setelah dikirim, data tidak dapat diubah lagi. Masukkan username dan password Anda untuk melanjutkan.',
+                                    requiresSupervisor: true,
+                                    supervisorOptions: @js($supervisorOptions),
+                                });
+                            "
                             class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
                         >
                             Kirim ke Supervisor
                         </button>
                     @else
-                        @if ($phase === 'reading')
-                            <button
-                                type="button"
-                                @click.prevent="
-                                    $store.saveConfirmModal.open({
-                                        formId: 'report-form',
-                                        kind: 'draft',
-                                        title: 'Simpan & Serahkan Laporan',
-                                        draftAction: @js($releaseAction),
-                                        selectedAction: @js($releaseAction),
-                                        submitLabel: 'Simpan Pembacaan',
-                                        message: @js($releaseDescription),
-                                    });
-                                "
-                                class="inline-flex items-center rounded-xl bg-sky-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 cursor-pointer"
-                            >
-                                Simpan & Serahkan
-                            </button>
-                            <button
-                                type="button"
-                                @click.prevent="
-                                    $store.saveConfirmModal.open({
-                                        formId: 'report-form',
-                                        kind: 'draft',
-                                        title: 'Konfirmasi Kirim Laporan',
-                                        draftAction: @js($finalizeAction),
-                                        selectedAction: @js($finalizeAction),
-                                        submitLabel: 'Kirim Laporan',
-                                        message: 'Setelah dikirim, data tidak dapat diubah lagi. Masukkan username dan password Anda untuk melanjutkan.',
-                                        requiresSupervisor: true,
-                                        supervisorOptions: @js($supervisorOptions),
-                                    });
-                                "
-                                class="inline-flex items-center rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 cursor-pointer"
-                            >
-                                Kirim ke Supervisor
-                            </button>
-                        @else
-                            <x-buttons.save-submit
-                                :form-id="'report-form'"
-                                :draft-action="$releaseAction"
-                                :finalize-action="$finalizeAction"
-                                :draft-label="$releaseLabel"
-                                :finalize-label="$finalizeLabel"
-                                :draft-description="$releaseDescription"
-                                :finalize-description="$finalizeDescription"
-                            />
-                        @endif
+                        <x-buttons.save-submit
+                            :form-id="'report-form'"
+                            :draft-action="$releaseAction"
+                            :finalize-action="$finalizeAction"
+                            :draft-label="$releaseLabel"
+                            :finalize-label="$finalizeLabel"
+                            :draft-description="$releaseDescription"
+                            :finalize-description="$finalizeDescription"
+                        />
                     @endif
                 @endif
                 {{--
@@ -399,13 +400,13 @@
                     ? 'draft'
                     : (old('action') === $finalizeAction || old('action') === $releaseAction ? 'finalize' : 'draft');
                 $modalTitle    = $isRevisionQuickAction
-                    ? ($oldAction === $toReadingAction ? 'Konfirmasi Ke Pembacaan' : 'Konfirmasi Kirim ke Supervisor')
+                    ? ($oldAction === $toReadingAction ? 'Konfirmasi Lanjut ke Pembacaan' : 'Konfirmasi Kirim ke Supervisor')
                     : ($modalKind === 'finalize' ? 'Simpan & Serahkan Laporan' : 'Konfirmasi Simpan Draft');
                 $effectiveDraftAction = $isRevisionQuickAction
                     ? $oldAction
                     : ($modalKind === 'finalize' ? $releaseAction : $draftAction);
                 $effectiveSubmitLabel = $oldAction === $toReadingAction
-                    ? 'Ke Pembacaan'
+                    ? 'Lanjut ke Pembacaan'
                     : ($oldAction === $sendToSupervisorAction ? 'Kirim ke Supervisor' : 'Simpan');
             }
             $oldSupervisorId = old('supervisor_id', '');

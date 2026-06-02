@@ -146,6 +146,12 @@ class MonitoringService
             throw new \RuntimeException('Aksi penyimpanan tidak dikenali.');
         }
 
+        if ($this->isReturnedRevisionForAnalyst($report, $analystId)
+            && in_array($action, [self::ACTION_RELEASE, self::ACTION_FINALIZE], true)
+        ) {
+            throw new \RuntimeException('Gunakan tombol revisi yang tersedia untuk mengirim laporan ini.');
+        }
+
         DB::transaction(function () use ($report, $dto, $analystId, $action, $supervisorId) {
             $this->saveInstrumentRows($report, $dto, $analystId);
             $this->saveMediumRows($report, $dto, $analystId);
@@ -180,6 +186,10 @@ class MonitoringService
             throw new \RuntimeException('Aksi ini hanya tersedia untuk laporan yang dikembalikan kepada Anda.');
         }
 
+        if (! $this->isDualRoleAnalyst($report, $analystId)) {
+            throw new \RuntimeException('Lanjut ke pembacaan hanya untuk analis yang mengerjakan monitoring dan pembacaan.');
+        }
+
         $this->stampMonitoringSignatures($report, $analystId);
 
         $report->status    = Report::STATUS_IN_PROGRESS_READING;
@@ -205,8 +215,8 @@ class MonitoringService
             throw new \RuntimeException('Aksi ini hanya tersedia untuk laporan yang dikembalikan kepada Anda.');
         }
 
-        if (! $this->isDualRoleAnalyst($report, $analystId)) {
-            throw new \RuntimeException('Kirim langsung ke supervisor hanya untuk analis yang mengerjakan monitoring dan pembacaan.');
+        if (! $this->hasAnalystRole($report, $analystId, Analyst::TYPE_MONITORING)) {
+            throw new \RuntimeException('Kirim langsung ke supervisor hanya tersedia untuk analis monitoring laporan ini.');
         }
 
         $this->stampMonitoringSignatures($report, $analystId);
@@ -215,7 +225,9 @@ class MonitoringService
             throw new \RuntimeException('Belum ada data pembacaan. Gunakan tombol "Ke Pembacaan" terlebih dahulu.');
         }
 
-        $this->stampReadingSignaturesFromExistingData($report, $analystId);
+        if ($this->hasAnalystRole($report, $analystId, Analyst::TYPE_READING)) {
+            $this->stampReadingSignaturesFromExistingData($report, $analystId);
+        }
 
         $report->status    = Report::STATUS_PENDING_REVIEW;
         $report->locked_by = null;
@@ -243,18 +255,21 @@ class MonitoringService
      */
     private function isDualRoleAnalyst(Report $report, string $analystId): bool
     {
+        return $this->hasAnalystRole($report, $analystId, Analyst::TYPE_MONITORING)
+            && $this->hasAnalystRole($report, $analystId, Analyst::TYPE_READING);
+    }
+
+    /**
+     * Whether the analyst owns a specific phase role on this report.
+     */
+    private function hasAnalystRole(Report $report, string $analystId, string $role): bool
+    {
         $report->loadMissing('analysts');
 
-        $hasMonitoringRole = $report->analysts->contains(
-            fn ($analyst) => $analyst->type === Analyst::TYPE_MONITORING
+        return $report->analysts->contains(
+            fn ($analyst) => $analyst->type === $role
                 && (string) $analyst->user_id === $analystId
         );
-        $hasReadingRole = $report->analysts->contains(
-            fn ($analyst) => $analyst->type === Analyst::TYPE_READING
-                && (string) $analyst->user_id === $analystId
-        );
-
-        return $hasMonitoringRole && $hasReadingRole;
     }
 
     /**
@@ -390,10 +405,21 @@ class MonitoringService
     private function stampReadingSignaturesFromExistingData(Report $report, string $analystId): void
     {
         $report->load('sectionInstances.instanceLocations.entries');
+        $entryIds = [];
+
+        foreach ($report->sectionInstances as $instance) {
+            foreach ($instance->instanceLocations as $loc) {
+                foreach ($loc->entries as $entry) {
+                    $entryIds[] = $entry->id;
+                }
+            }
+        }
+
+        $entryLocksMap = $this->fieldLocks->getForRowsKeyed('section_entries', $entryIds);
         $now = now();
 
         foreach ($report->sectionInstances as $instance) {
-            if (! $this->sectionHasReadingData($instance)) {
+            if (! $this->sectionHasReadingDataByAnalyst($instance, $analystId, $entryLocksMap)) {
                 continue;
             }
 
@@ -411,19 +437,57 @@ class MonitoringService
     }
 
     /**
-     * Monitoring edits invalidate the full downstream chain for that section.
+     * True when this analyst owns at least one populated reading field in the
+     * section. Prevents a monitoring-only revision from re-signing another
+     * analyst's reading data.
+     *
+     * @param  array<string, \Illuminate\Support\Collection<int, \Domain\Report\Models\FieldLock>>  $entryLocksMap
+     */
+    private function sectionHasReadingDataByAnalyst(
+        SectionInstance $instance,
+        string $analystId,
+        array $entryLocksMap,
+    ): bool {
+        foreach ($instance->instanceLocations as $loc) {
+            foreach ($loc->entries as $entry) {
+                $locks = $entryLocksMap[$entry->id] ?? collect();
+
+                foreach (['cfu_bacteri', 'cfu_fungsi'] as $field) {
+                    if ($entry->{$field} === null || $entry->{$field} === '') {
+                        continue;
+                    }
+
+                    if ($locks->contains(
+                        fn ($lock) => $lock->field_name === $field
+                            && (string) $lock->filled_by === $analystId
+                    )) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Monitoring edits invalidate this analyst's monitoring sign-off and the
+     * downstream review chain for that section.
      * This is called only for analyst edits (not supervisor correction mode).
      */
-    private function invalidateSignaturesForEditedMonitoringSection(SectionInstance $instance): void
+    private function invalidateSignaturesForEditedMonitoringSection(SectionInstance $instance, string $analystId): void
     {
         SectionSignature::query()
             ->where('section_instance_id', $instance->id)
-            ->whereIn('role', [
-                SectionSignature::ROLE_MONITORING,
-                SectionSignature::ROLE_READING,
-                SectionSignature::ROLE_REVIEW,
-                SectionSignature::ROLE_APPROVAL,
-            ])
+            ->where(function ($query) use ($analystId) {
+                $query->whereIn('role', [
+                    SectionSignature::ROLE_REVIEW,
+                    SectionSignature::ROLE_APPROVAL,
+                ])->orWhere(function ($query) use ($analystId) {
+                    $query->where('role', SectionSignature::ROLE_MONITORING)
+                        ->where('signed_by', $analystId);
+                });
+            })
             ->delete();
     }
 
@@ -732,7 +796,7 @@ class MonitoringService
             }
 
             if ($sectionChanged && ! $overrideLockOwnership) {
-                $this->invalidateSignaturesForEditedMonitoringSection($instance);
+                $this->invalidateSignaturesForEditedMonitoringSection($instance, $actorId);
             }
         }
     }

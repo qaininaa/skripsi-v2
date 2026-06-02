@@ -36,9 +36,9 @@ use Illuminate\Support\Facades\DB;
  *
  *    Either supervisor or manager may return to an analyst:
  *      ReportApproval(current step).status = returned + notes + returned_to_user_id
- *      Per-section reading signatures are wiped so the analyst re-signs.
+ *      Analyst signatures are kept until the returned analyst edits a section.
  *      Any later (downstream) approval rows are removed.
- *      Report.status = in_progress_reading + locked_by = returnedToUserId
+ *      Report.status returns to the analyst's phase + locked_by = returnedToUserId
  *
  * Auto-approve scope:
  *   Both review and approval signatures are stamped only on section instances
@@ -325,7 +325,7 @@ class ReportApprovalService
     /**
      * Reset the report so the analyst can fix it and resubmit.
      *
-     * - Status → in_progress_reading (analyst gets back the editable phase)
+     * - Status returns to the analyst's editable phase
      * - Locked by the analyst the report was returned to
      * - Supervisor + manager signatures are cleared so downstream roles re-sign.
      *   Analyst signatures are preserved and only invalidated per-section when
@@ -333,7 +333,7 @@ class ReportApprovalService
      */
     private function resetForRevision(Report $report, string $analystId): void
     {
-        $report->loadMissing(['sectionInstances', 'analysts']);
+        $report->load(['sectionInstances', 'analysts']);
 
         $nextStatus = $this->resolveRevisionStatusForAnalyst($report, $analystId);
 
@@ -357,8 +357,9 @@ class ReportApprovalService
     }
 
     /**
-     * If the returned analyst is both monitoring and reading owner on this
-     * report, send revision back to monitoring so they can fix both phases.
+     * Send the revision back to the analyst's responsibility phase.
+     * Monitoring owners must return to monitoring, even if they do not also
+     * own reading. Reading-only owners return to reading.
      */
     private function resolveRevisionStatusForAnalyst(Report $report, string $analystId): string
     {
@@ -371,11 +372,15 @@ class ReportApprovalService
                 && (string) $analyst->user_id === $analystId
         );
 
-        $isDualRoleOwner = $hasMonitoringRole && $hasReadingRole;
+        if ($hasMonitoringRole) {
+            return Report::STATUS_IN_PROGRESS_MONITORING;
+        }
 
-        return $isDualRoleOwner
-            ? Report::STATUS_IN_PROGRESS_MONITORING
-            : Report::STATUS_IN_PROGRESS_READING;
+        if ($hasReadingRole) {
+            return Report::STATUS_IN_PROGRESS_READING;
+        }
+
+        throw new \RuntimeException('Analis tujuan pengembalian tidak memiliki peran pada laporan ini.');
     }
 
     /**
