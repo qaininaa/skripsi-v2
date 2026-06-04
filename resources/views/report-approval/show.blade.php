@@ -9,7 +9,8 @@
         $saveMonitoringRoute = $saveMonitoringRoute ?? null;
         $isPending = $isPending ?? false;
         $canEditMonitoring = $canEditMonitoring ?? false;
-        $saveMonitoringConfirmAction = 'save_monitoring_supervisor';
+        $saveMonitoringFormId = 'approval-monitoring-form';
+        $saveMonitoringConfirmAction = 'save_monitoring_approval';
     @endphp
 
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -40,7 +41,7 @@
                         type="button"
                         @click.prevent="
                             $store.saveConfirmModal.open({
-                                formId: 'supervisor-monitoring-form',
+                                formId: @js($saveMonitoringFormId),
                                 kind: 'draft',
                                 title: 'Konfirmasi Simpan Perubahan',
                                 draftAction: @js($saveMonitoringConfirmAction),
@@ -77,7 +78,7 @@
 
     @if ($canEditMonitoring)
         <form
-            id="supervisor-monitoring-form"
+            id="{{ $saveMonitoringFormId }}"
             action="{{ route($saveMonitoringRoute, $report) }}"
             method="POST"
             class="space-y-6"
@@ -218,7 +219,7 @@
                     if (! store) return;
 
                     store.open({
-                        formId: 'supervisor-monitoring-form',
+                        formId: @json($saveMonitoringFormId),
                         kind: 'draft',
                         title: 'Konfirmasi Simpan Monitoring',
                         draftAction: @json($saveMonitoringConfirmAction),
