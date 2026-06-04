@@ -73,8 +73,8 @@
         $phase ??= $report->isReadingPhase() ? 'reading' : 'monitoring';
 
         $formAction = $phase === 'reading'
-            ? route('report-fill.save-reading', $report)
-            : route('report-fill.save-monitoring', $report);
+            ? route('report.save-reading', $report)
+            : route('report.save-monitoring', $report);
 
         // Inline "Simpan Draft" button keeps the lock and stays on this page.
         $draftAction        = 'draft';
@@ -146,7 +146,7 @@
     {{-- Header --}}
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-4">
-            <a href="{{ route('report-fill.index') }}"
+            <a href="{{ route('report.index') }}"
                class="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
                 <span class="text-xl leading-none font-light">&lt;</span><span>Kembali</span>
             </a>

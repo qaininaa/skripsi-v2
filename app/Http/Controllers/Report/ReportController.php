@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Controllers\ReportFill;
+namespace App\Http\Controllers\Report;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ReportFill\ReportFillIndexRequest;
-use App\Http\Requests\ReportFill\SaveMonitoringRequest;
-use App\Http\Requests\ReportFill\SaveReadingRequest;
+use App\Http\Requests\Report\AnalystReportIndexRequest;
+use App\Http\Requests\Report\SaveMonitoringRequest;
+use App\Http\Requests\Report\SaveReadingRequest;
 use Domain\Report\Services\MonitoringService;
 use Domain\Report\Services\ReadingService;
 use Domain\Report\Services\ReportService;
@@ -20,7 +20,7 @@ use Illuminate\View\View;
  * The fill-in form is shared between monitoring and reading phases — the same
  * blade view is reused with the readonly flag flipped based on ownership.
  */
-class ReportFillController extends Controller
+class ReportController extends Controller
 {
     public function __construct(
         protected ReportService $reportService,
@@ -32,13 +32,13 @@ class ReportFillController extends Controller
     /**
      * Inbox: tabs (Semua, Belum Dikerjakan, ...) + table of reports.
      */
-    public function index(ReportFillIndexRequest $request): View
+    public function index(AnalystReportIndexRequest $request): View
     {
         $dto = $request->toDTO();
         $reports = $this->reportService->getReportsForAnalyst($dto);
         $counts = $this->reportService->countByAnalystTab($this->currentAnalystId());
 
-        return view('report-fill.index', [
+        return view('report.index', [
             'reports' => $reports,
             'counts' => $counts,
             'activeTab' => $dto->tab,
@@ -58,11 +58,11 @@ class ReportFillController extends Controller
             $this->reportService->startAnalystWork($report, $this->currentAnalystId());
         } catch (\RuntimeException $e) {
             return redirect()
-                ->route('report-fill.index')
+                ->route('report.index')
                 ->with('error', $e->getMessage());
         }
 
-        return redirect()->route('report-fill.fill', $report);
+        return redirect()->route('report.fill', $report);
     }
 
     /**
@@ -80,7 +80,7 @@ class ReportFillController extends Controller
     {
         $data = $this->reportService->getFillViewData($report, $this->currentAnalystId(), true);
 
-        return view('report-fill.fill', [
+        return view('report.fill', [
             'report' => $data['report'],
             'readonly' => $data['readonly'],
             'previewOnly' => $data['previewOnly'],
@@ -99,7 +99,7 @@ class ReportFillController extends Controller
     {
         $data = $this->reportService->getFillViewData($report, $this->currentAnalystId(), false);
 
-        return view('report-fill.fill', [
+        return view('report.fill', [
             'report' => $data['report'],
             'readonly' => $data['readonly'],
             'previewOnly' => $data['previewOnly'],
@@ -136,19 +136,19 @@ class ReportFillController extends Controller
 
         return match ($request->action()) {
             MonitoringService::ACTION_TO_READING => redirect()
-                ->route('report-fill.fill', $report)
+                ->route('report.fill', $report)
                 ->with('success', 'Monitoring revisi tersimpan. Anda masuk ke tahap pembacaan.'),
             MonitoringService::ACTION_FINALIZE_TO_REVIEW => redirect()
-                ->route('report-fill.index')
+                ->route('report.index')
                 ->with('success', 'Revisi monitoring tersimpan dan laporan langsung dikirim ke supervisor.'),
             MonitoringService::ACTION_FINALIZE => redirect()
-                ->route('report-fill.index')
+                ->route('report.index')
                 ->with('success', 'Monitoring selesai. Laporan berlanjut ke tahap pembacaan.'),
             MonitoringService::ACTION_RELEASE => redirect()
-                ->route('report-fill.index')
+                ->route('report.index')
                 ->with('success', 'Monitoring tersimpan. Analis lain dapat melanjutkan.'),
             default => redirect()
-                ->route('report-fill.fill', $report)
+                ->route('report.fill', $report)
                 ->with('success', 'Draft monitoring berhasil disimpan.'),
         };
     }
@@ -175,13 +175,13 @@ class ReportFillController extends Controller
 
         return match ($request->action()) {
             ReadingService::ACTION_FINALIZE => redirect()
-                ->route('report-fill.index')
+                ->route('report.index')
                 ->with('success', 'Pembacaan selesai. Laporan dikirim untuk review.'),
             ReadingService::ACTION_RELEASE => redirect()
-                ->route('report-fill.index')
+                ->route('report.index')
                 ->with('success', 'Pembacaan tersimpan. Analis lain dapat melanjutkan.'),
             default => redirect()
-                ->route('report-fill.fill', $report)
+                ->route('report.fill', $report)
                 ->with('success', 'Draft pembacaan berhasil disimpan.'),
         };
     }

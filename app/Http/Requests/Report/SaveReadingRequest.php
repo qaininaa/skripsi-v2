@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\ReportFill;
+namespace App\Http\Requests\Report;
 
 use App\Rules\CurrentUserPassword;
 use App\Rules\CurrentUserUsername;
@@ -20,13 +20,13 @@ class SaveReadingRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'action'   => ['required', Rule::in([
+            'action' => ['required', Rule::in([
                 ReadingService::ACTION_DRAFT,
                 ReadingService::ACTION_RELEASE,
                 ReadingService::ACTION_FINALIZE,
             ])],
-            'username' => ['required', 'string', 'max:255', new CurrentUserUsername()],
-            'password' => ['required', 'string', new CurrentUserPassword()],
+            'username' => ['required', 'string', 'max:255', new CurrentUserUsername],
+            'password' => ['required', 'string', new CurrentUserPassword],
             'supervisor_id' => [
                 Rule::requiredIf(fn () => $this->input('action') === ReadingService::ACTION_FINALIZE),
                 'nullable',
@@ -34,11 +34,11 @@ class SaveReadingRequest extends FormRequest
                 Rule::exists('users', 'id')->where(fn ($query) => $query->where('role', 'supervisor')),
             ],
 
-            'sections'                                              => ['nullable', 'array'],
-            'sections.*.rows'                                       => ['nullable', 'array'],
-            'sections.*.rows.*.readings'                            => ['nullable', 'array'],
-            'sections.*.rows.*.readings.*.cfu_bacteri'              => ['nullable', 'string', 'max:10', new MicrobialCount()],
-            'sections.*.rows.*.readings.*.cfu_fungi'                => ['nullable', 'string', 'max:10', new MicrobialCount()],
+            'sections' => ['nullable', 'array'],
+            'sections.*.rows' => ['nullable', 'array'],
+            'sections.*.rows.*.readings' => ['nullable', 'array'],
+            'sections.*.rows.*.readings.*.cfu_bacteri' => ['nullable', 'string', 'max:10', new MicrobialCount],
+            'sections.*.rows.*.readings.*.cfu_fungi' => ['nullable', 'string', 'max:10', new MicrobialCount],
         ];
     }
 
@@ -58,6 +58,7 @@ class SaveReadingRequest extends FormRequest
     {
         $data = $this->validated();
         unset($data['action'], $data['username'], $data['password'], $data['supervisor_id']);
+
         return new SaveReadingDto($data);
     }
 }

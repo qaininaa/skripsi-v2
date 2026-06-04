@@ -5,11 +5,11 @@ use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Location\LocationController;
 use App\Http\Controllers\PasswordPolicy\PasswordPolicyController;
+use App\Http\Controllers\Report\ReportController;
 use App\Http\Controllers\ReportApproval\ReportApprovalController;
 use App\Http\Controllers\ReportArchive\ReportArchiveController;
 use App\Http\Controllers\ReportAssignment\ReportAssignmentController;
 use App\Http\Controllers\ReportAssignment\SectionInstanceController;
-use App\Http\Controllers\ReportFill\ReportFillController;
 use App\Http\Controllers\ReportTemplate\ReportTemplateController;
 use App\Http\Controllers\ReportTemplate\SectionController;
 use App\Http\Controllers\Room\RoomController;
@@ -102,15 +102,15 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         )->name('report-assignment.sections.duplicate.destroy');
     });
 
-    // Report Fill — Analyst report fill-in process
-    Route::middleware('role:analyst')->prefix('report-fill')->name('report-fill.')->group(function () {
-        Route::get('/', [ReportFillController::class, 'index'])->name('index');
-        Route::post('/{report}/start', [ReportFillController::class, 'start'])->name('start');
-        Route::get('/{report}/preview', [ReportFillController::class, 'preview'])->name('preview');
-        Route::get('/{report}', [ReportFillController::class, 'show'])->name('show');
-        Route::get('/{report}/fill', [ReportFillController::class, 'fill'])->name('fill');
-        Route::put('/{report}/monitoring', [ReportFillController::class, 'saveMonitoring'])->name('save-monitoring');
-        Route::put('/{report}/reading', [ReportFillController::class, 'saveReading'])->name('save-reading');
+    // Report — Analyst report fill-in process
+    Route::middleware('role:analyst')->prefix('report')->name('report.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::post('/{report}/start', [ReportController::class, 'start'])->name('start');
+        Route::get('/{report}/preview', [ReportController::class, 'preview'])->name('preview');
+        Route::get('/{report}', [ReportController::class, 'show'])->name('show');
+        Route::get('/{report}/fill', [ReportController::class, 'fill'])->name('fill');
+        Route::put('/{report}/monitoring', [ReportController::class, 'saveMonitoring'])->name('save-monitoring');
+        Route::put('/{report}/reading', [ReportController::class, 'saveReading'])->name('save-reading');
     });
 
     // Report Approval — Supervisor approval step

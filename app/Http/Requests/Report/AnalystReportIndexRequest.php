@@ -1,11 +1,11 @@
 <?php
 
-namespace App\Http\Requests\ReportFill;
+namespace App\Http\Requests\Report;
 
 use Domain\Report\Dtos\GetAnalystReportsFilterDto;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ReportFillIndexRequest extends FormRequest
+class AnalystReportIndexRequest extends FormRequest
 {
     public function authorize(): bool
     {

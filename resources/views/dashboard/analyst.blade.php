@@ -11,7 +11,7 @@
 
     <x-cards.review-notification
         :note="$revisionNote ?? null"
-        :href="route('report-fill.index', ['tab' => 'dikembalikan'])"
+        :href="route('report.index', ['tab' => 'dikembalikan'])"
         action-label="Lihat Revisi"
     />
 @endsection

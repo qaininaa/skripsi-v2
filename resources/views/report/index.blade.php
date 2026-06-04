@@ -45,7 +45,7 @@
                         $count    = $counts[$key] ?? 0;
                     @endphp
                     <a
-                        href="{{ route('report-fill.index', ['tab' => $key]) }}"
+                        href="{{ route('report.index', ['tab' => $key]) }}"
                         class="relative inline-flex items-center gap-2 whitespace-nowrap px-4 py-4 text-sm font-medium transition-colors
                             {{ $isActive ? 'text-blue-600' : 'text-gray-500 hover:text-gray-700' }}"
                     >
@@ -122,23 +122,23 @@
                                     $canResume     = $isLocker && ($inMonitoring || $inReading);
                                 @endphp
                                 <div class="flex items-center justify-center gap-2">
-                                    <x-buttons.view :href="route('report-fill.preview', $report)" />
+                                    <x-buttons.view :href="route('report.preview', $report)" />
 
                                     @if ($isReturnedForMe && $canResume)
-                                        <x-buttons.resume :href="route('report-fill.fill', $report)" label="Revisi" />
+                                        <x-buttons.resume :href="route('report.fill', $report)" label="Revisi" />
                                     @elseif ($canResume)
-                                        <x-buttons.resume :href="route('report-fill.fill', $report)" />
+                                        <x-buttons.resume :href="route('report.fill', $report)" />
                                     @elseif ($canStart)
                                         @if ($isReturnedForMe)
                                             <x-buttons.start
-                                                :action="route('report-fill.start', $report)"
+                                                :action="route('report.start', $report)"
                                                 :product-name="$report->product_name"
                                                 :batch-number="$report->batch_number"
                                                 label="Revisi"
                                             />
                                         @else
                                             <x-buttons.start
-                                                :action="route('report-fill.start', $report)"
+                                                :action="route('report.start', $report)"
                                                 :product-name="$report->product_name"
                                                 :batch-number="$report->batch_number"
                                             />
