@@ -28,7 +28,7 @@ class SidebarService
      */
     public function buildForUser(?User $user): array
     {
-        if (!$user) {
+        if (! $user) {
             return [
                 'roleLabel' => null,
                 'sections' => [],
@@ -52,7 +52,7 @@ class SidebarService
      * Resolve a human-readable label for the given role slug.
      *
      * @param  string  $role  The role slug.
-     * @return string         The localized role label.
+     * @return string The localized role label.
      */
     protected function resolveRoleLabel(string $role): string
     {
@@ -119,7 +119,7 @@ class SidebarService
             $sections[] = [
                 'label' => 'Laporan',
                 'items' => [
-                    $this->item('Laporan', 'report-fill.index', 'report-fill.*', 'icons/sidebar/reports.svg'),
+                    $this->item('Laporan', 'report.index', 'report.*', 'icons/sidebar/reports.svg'),
                 ],
             ];
         }
@@ -157,10 +157,10 @@ class SidebarService
     /**
      * Create a single navigation item array.
      *
-     * @param  string  $label          The display label.
-     * @param  string  $routeName      The named route to link to.
+     * @param  string  $label  The display label.
+     * @param  string  $routeName  The named route to link to.
      * @param  string  $activePattern  The route pattern used to determine active state (supports wildcards).
-     * @param  string  $icon           The asset path to the sidebar icon SVG.
+     * @param  string  $icon  The asset path to the sidebar icon SVG.
      * @return array{label: string, route: string, activePattern: string, icon: string}
      */
     protected function item(string $label, string $routeName, string $activePattern, string $icon): array

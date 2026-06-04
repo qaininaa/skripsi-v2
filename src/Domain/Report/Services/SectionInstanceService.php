@@ -31,8 +31,7 @@ class SectionInstanceService
         protected SectionInstanceRepositoryInterface $sectionInstances,
         protected LocationRepositoryInterface $locations,
         protected ReportRepositoryInterface $reports,
-    ) {
-    }
+    ) {}
 
     /**
      * Bootstrap section_instances + locations + entries for a freshly created
@@ -51,6 +50,26 @@ class SectionInstanceService
             }
             $this->createInitialInstance($report, $section);
         }
+    }
+
+    /**
+     * Duplicate an existing section instance into a new sibling.
+     *
+     * @throws \RuntimeException When the report status disallows duplication.
+     */
+    public function duplicateByIds(string $reportId, string $instanceId, ?string $reason = null): SectionInstance
+    {
+        $source = $this->sectionInstances->findByReportAndKey($reportId, $instanceId, [
+            'report',
+            'section',
+            'instanceLocations',
+        ]);
+
+        if ($source === null) {
+            throw new \RuntimeException('Section tidak ditemukan pada laporan ini.');
+        }
+
+        return $this->duplicate($source, $reason);
     }
 
     /**
@@ -79,17 +98,17 @@ class SectionInstanceService
             $next = $this->sectionInstances->nextInstanceNumber($source->report_id, $source->section_id);
 
             $copy = $this->sectionInstances->createInstance([
-                'report_id'           => $source->report_id,
-                'section_id'          => $source->section_id,
-                'instance_number'     => $next,
-                'parent_instance_id'  => $source->id,
-                'duplication_reason'  => $reason,
+                'report_id' => $source->report_id,
+                'section_id' => $source->section_id,
+                'instance_number' => $next,
+                'parent_instance_id' => $source->id,
+                'duplication_reason' => $reason,
             ]);
 
             // Snapshot the location rows from the source. Entries start blank.
             $sourceRows = $source->instanceLocations()->orderBy('display_order')->get();
             $rows = $sourceRows->map(fn ($row) => [
-                'location_id'   => $row->location_id,
+                'location_id' => $row->location_id,
                 'display_order' => $row->display_order,
             ])->all();
 
@@ -103,6 +122,25 @@ class SectionInstanceService
 
             return $copy;
         });
+    }
+
+    /**
+     * Delete a duplicated section instance.
+     *
+     * @throws \RuntimeException When section is original or report status disallows deletion.
+     */
+    public function deleteDuplicateByIds(string $reportId, string $instanceId): void
+    {
+        $target = $this->sectionInstances->findByReportAndKey($reportId, $instanceId, [
+            'report',
+            'children',
+        ]);
+
+        if ($target === null) {
+            throw new \RuntimeException('Section tidak ditemukan pada laporan ini.');
+        }
+
+        $this->deleteDuplicate($target);
     }
 
     /**
@@ -149,15 +187,15 @@ class SectionInstanceService
     {
         return DB::transaction(function () use ($report, $section) {
             $instance = $this->sectionInstances->createInstance([
-                'report_id'       => $report->id,
-                'section_id'      => $section->id,
+                'report_id' => $report->id,
+                'section_id' => $section->id,
                 'instance_number' => 1,
             ]);
 
             $locations = $this->locations->getBySection($section->id);
 
             $rows = $locations->values()->map(fn ($loc, $index) => [
-                'location_id'   => $loc->id,
+                'location_id' => $loc->id,
                 'display_order' => $index,
             ])->all();
             $this->sectionInstances->createInstanceLocations($instance, $rows);
@@ -182,7 +220,7 @@ class SectionInstanceService
             foreach ($column['sub_columns'] as $sub) {
                 $rows[] = [
                     'column_index' => $column['column_index'],
-                    'sub_column'   => $sub,
+                    'sub_column' => $sub,
                 ];
             }
         }

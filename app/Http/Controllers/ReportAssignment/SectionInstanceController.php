@@ -4,8 +4,6 @@ namespace App\Http\Controllers\ReportAssignment;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\DuplicateSectionRequest;
-use Domain\Report\Models\Report;
-use Domain\Report\Models\SectionInstance;
 use Domain\Report\Services\SectionInstanceService;
 use Illuminate\Http\RedirectResponse;
 
@@ -19,23 +17,18 @@ class SectionInstanceController extends Controller
 {
     public function __construct(
         protected SectionInstanceService $service,
-    ) {
-    }
+    ) {}
 
     /**
      * Duplicate a section instance into a new sibling row.
      */
     public function duplicate(
         DuplicateSectionRequest $request,
-        Report $report,
-        SectionInstance $instance,
+        string $report,
+        string $instance,
     ): RedirectResponse {
-        if ($instance->report_id !== $report->id) {
-            abort(404);
-        }
-
         try {
-            $this->service->duplicate($instance, $request->toDTO()->reason);
+            $this->service->duplicateByIds($report, $instance, $request->toDTO()->reason);
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -51,15 +44,11 @@ class SectionInstanceController extends Controller
      * Delete a duplicated section instance.
      */
     public function destroyDuplicate(
-        Report $report,
-        SectionInstance $instance,
+        string $report,
+        string $instance,
     ): RedirectResponse {
-        if ($instance->report_id !== $report->id) {
-            abort(404);
-        }
-
         try {
-            $this->service->deleteDuplicate($instance);
+            $this->service->deleteDuplicateByIds($report, $instance);
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()

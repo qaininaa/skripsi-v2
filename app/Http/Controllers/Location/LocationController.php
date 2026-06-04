@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Location\LocationIndexRequest;
 use App\Http\Requests\Location\LocationStoreRequest;
 use App\Http\Requests\Location\LocationUpdateRequest;
-use Domain\Location\Models\Location;
 use Domain\Location\Services\LocationService;
 use Domain\Room\Dtos\GetRoomsFilterDto;
 use Domain\Room\Services\RoomService;
@@ -18,20 +17,19 @@ class LocationController extends Controller
     public function __construct(
         protected LocationService $locationService,
         protected RoomService $roomService,
-    ) {
-    }
+    ) {}
 
     public function index(LocationIndexRequest $request): View
     {
         $locations = $this->locationService->getDataLocations($request->toDTO());
-        $rooms     = $this->roomService->getDataRooms(new GetRoomsFilterDto());
+        $rooms = $this->roomService->getDataRooms(new GetRoomsFilterDto);
 
         return view('location-management.index', compact('locations', 'rooms'));
     }
 
     public function create(): View
     {
-        $rooms = $this->roomService->getDataRooms(new GetRoomsFilterDto());
+        $rooms = $this->roomService->getDataRooms(new GetRoomsFilterDto);
 
         return view('location-management.create', compact('rooms'));
     }
@@ -49,17 +47,18 @@ class LocationController extends Controller
         return redirect()->route('location.index')->with('success', 'Berhasil menambahkan lokasi baru');
     }
 
-    public function edit(Location $location): View
+    public function edit(string $location): View
     {
-        $rooms = $this->roomService->getDataRooms(new GetRoomsFilterDto());
+        $location = $this->locationService->findLocationById($location);
+        $rooms = $this->roomService->getDataRooms(new GetRoomsFilterDto);
 
         return view('location-management.edit', compact('location', 'rooms'));
     }
 
-    public function update(LocationUpdateRequest $request, Location $location): RedirectResponse
+    public function update(LocationUpdateRequest $request, string $location): RedirectResponse
     {
         try {
-            $this->locationService->updateLocation($location, $request->toDTO());
+            $this->locationService->updateLocationById($location, $request->toDTO());
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -70,9 +69,9 @@ class LocationController extends Controller
         return redirect()->route('location.index')->with('success', 'Berhasil memperbarui lokasi');
     }
 
-    public function destroy(Location $location): RedirectResponse
+    public function destroy(string $location): RedirectResponse
     {
-        $this->locationService->deleteLocation($location);
+        $this->locationService->deleteLocationById($location);
 
         return redirect()->route('location.index')->with('success', 'Berhasil menghapus lokasi');
     }

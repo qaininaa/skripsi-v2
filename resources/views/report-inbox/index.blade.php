@@ -1,3 +1,9 @@
+@extends('layouts.app')
+
+@section('title', 'Laporan Masuk - ' . $roleLabel)
+@section('page-title', 'Laporan Masuk')
+
+@section('content')
 {{--
     Shared inbox table for supervisor & manager.
 
@@ -100,3 +106,4 @@
         {{ $reports->links() }}
     </div>
 </div>
+@endsection

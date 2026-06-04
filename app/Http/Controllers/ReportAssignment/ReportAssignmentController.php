@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\ReportIndexRequest;
 use App\Http\Requests\Report\ReportStoreRequest;
 use App\Http\Requests\Report\ReportUpdateRequest;
-use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
-use Domain\Report\Models\Report;
 use Domain\Report\Services\ReportService;
 use Domain\ReportTemplate\Dtos\GetReportTemplatesFilterDto;
 use Domain\ReportTemplate\Services\ReportTemplateService;
@@ -22,9 +20,7 @@ class ReportAssignmentController extends Controller
     public function __construct(
         protected ReportService $reportService,
         protected ReportTemplateService $reportTemplateService,
-        protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
-    ) {
-    }
+    ) {}
 
     public function index(ReportIndexRequest $request): View
     {
@@ -35,7 +31,7 @@ class ReportAssignmentController extends Controller
 
     public function create(): View
     {
-        $reportTemplates = $this->reportTemplateService->getReportTemplates(new GetReportTemplatesFilterDto());
+        $reportTemplates = $this->reportTemplateService->getReportTemplates(new GetReportTemplatesFilterDto);
 
         return view('report-assignment.create', compact('reportTemplates'));
     }
@@ -47,9 +43,10 @@ class ReportAssignmentController extends Controller
         return redirect()->route('report-assignment.index')->with('success', 'Berhasil menambahkan tugas pelaporan baru.');
     }
 
-    public function edit(Report $report): View
+    public function edit(string $report): View
     {
-        $reportTemplates = $this->reportTemplateService->getReportTemplates(new GetReportTemplatesFilterDto());
+        $report = $this->reportService->findReportById($report);
+        $reportTemplates = $this->reportTemplateService->getReportTemplates(new GetReportTemplatesFilterDto);
 
         return view('report-assignment.edit', compact('report', 'reportTemplates'));
     }
@@ -57,7 +54,7 @@ class ReportAssignmentController extends Controller
     /**
      * Show: detail laporan + daftar section instances dengan opsi duplikasi.
      */
-    public function show(Report $report): View
+    public function show(string $report): View
     {
         return $this->preview($report);
     }
@@ -65,24 +62,22 @@ class ReportAssignmentController extends Controller
     /**
      * Read-only preview detail for admin QC.
      */
-    public function preview(Report $report): View
+    public function preview(string $report): View
     {
-        $report->load($this->detailRelations());
-
-        $bundle = $this->sectionInstanceRepository->getInstancesForReportWithLocks($report);
+        $data = $this->reportService->getAssignmentDetailData($report);
 
         return view('report-assignment.show', [
-            'report'           => $report,
-            'sectionInstances' => $bundle['instances'],
-            'lockMap'          => $bundle['locks'],
-            'phase'            => $report->isReadingPhase() ? 'reading' : 'monitoring',
+            'report' => $data['report'],
+            'sectionInstances' => $data['sectionInstances'],
+            'lockMap' => $data['lockMap'],
+            'phase' => $data['phase'],
         ]);
     }
 
-    public function update(ReportUpdateRequest $request, Report $report): RedirectResponse
+    public function update(ReportUpdateRequest $request, string $report): RedirectResponse
     {
         try {
-            $this->reportService->updateReport($report, $request->toDTO());
+            $this->reportService->updateReportById($report, $request->toDTO());
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -93,10 +88,10 @@ class ReportAssignmentController extends Controller
         return redirect()->route('report-assignment.index')->with('success', 'Berhasil memperbarui tugas pelaporan.');
     }
 
-    public function destroy(Report $report): RedirectResponse
+    public function destroy(string $report): RedirectResponse
     {
         try {
-            $this->reportService->deleteReport($report);
+            $this->reportService->deleteReportById($report);
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -104,25 +99,5 @@ class ReportAssignmentController extends Controller
         }
 
         return redirect()->route('report-assignment.index')->with('success', 'Berhasil menghapus tugas pelaporan.');
-    }
-
-    /**
-     * Relations needed by the admin detail page to render full report preview.
-     *
-     * @return array<int, string>
-     */
-    private function detailRelations(): array
-    {
-        return [
-            'reportTemplate.mediumTemplates',
-            'reportTemplate.incubatorTemplates',
-            'lockedByUser',
-            'analysts.user',
-            'instrumentEntries',
-            'mediumEntries.template',
-            'incubators.template',
-            'incubators.entries.incubatedBy',
-            'incubators.entries.removedBy',
-        ];
     }
 }

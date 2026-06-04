@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ReportTemplate\ReportTemplateIndexRequest;
 use App\Http\Requests\ReportTemplate\ReportTemplateStoreRequest;
 use App\Http\Requests\ReportTemplate\ReportTemplateUpdateRequest;
-use Domain\ReportTemplate\Models\ReportTemplate;
 use Domain\ReportTemplate\Services\ReportTemplateService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -48,17 +47,17 @@ class ReportTemplateController extends Controller
             ->with('success', 'Berhasil membuat template laporan baru.');
     }
 
-    public function edit(ReportTemplate $reportTemplate): View
+    public function edit(string $reportTemplate): View
     {
-        $reportTemplate->load(['mediumTemplates', 'incubatorTemplates']);
+        $reportTemplate = $this->reportTemplateService->getReportTemplateForEdit($reportTemplate);
 
         return view('report-management.edit', compact('reportTemplate'));
     }
 
-    public function update(ReportTemplateUpdateRequest $request, ReportTemplate $reportTemplate): RedirectResponse
+    public function update(ReportTemplateUpdateRequest $request, string $reportTemplate): RedirectResponse
     {
         try {
-            $this->reportTemplateService->updateReportTemplate($reportTemplate, $request->toDTO());
+            $this->reportTemplateService->updateReportTemplateById($reportTemplate, $request->toDTO());
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -71,9 +70,9 @@ class ReportTemplateController extends Controller
             ->with('success', 'Berhasil memperbarui template laporan.');
     }
 
-    public function destroy(ReportTemplate $reportTemplate): RedirectResponse
+    public function destroy(string $reportTemplate): RedirectResponse
     {
-        $this->reportTemplateService->deleteReportTemplate($reportTemplate);
+        $this->reportTemplateService->deleteReportTemplateById($reportTemplate);
 
         return redirect()
             ->route('report-templates.index')

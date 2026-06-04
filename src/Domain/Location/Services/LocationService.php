@@ -8,6 +8,7 @@ use Domain\Location\Dtos\GetLocationsFilterDto;
 use Domain\Location\Dtos\UpdateLocationDto;
 use Domain\Location\Interfaces\LocationRepositoryInterface;
 use Domain\Location\Models\Location;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 /**
  * Handles business logic for the Location domain.
@@ -28,7 +29,7 @@ class LocationService
      * Retrieve a paginated, filtered list of locations.
      *
      * @param  GetLocationsFilterDto  $dto  Filter parameters (search, room_id).
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getDataLocations(GetLocationsFilterDto $dto)
     {
@@ -46,13 +47,13 @@ class LocationService
      * If found, returns it without creating a duplicate.
      *
      * @param  CreateLocationDto  $dto  Data for the new location.
-     * @return Location                 The newly created or existing location.
+     * @return Location The newly created or existing location.
      */
     public function createLocation(CreateLocationDto $dto): Location
     {
         try {
             $existing = $this->repository->getLocationByRoomAndNumber(new GetLocationDto([
-                'room_id'    => $dto->room_id,
+                'room_id' => $dto->room_id,
                 'loc_number' => $dto->loc_number,
             ]));
 
@@ -72,17 +73,16 @@ class LocationService
      * Validates that the new room_id + loc_number combination is not already
      * taken by a different location. Throws RuntimeException if a conflict is found.
      *
-     * @param  Location           $location  The location model to update.
-     * @param  UpdateLocationDto  $dto       New data for the location.
-     * @return void
+     * @param  Location  $location  The location model to update.
+     * @param  UpdateLocationDto  $dto  New data for the location.
      *
-     * @throws \RuntimeException  If another location with the same room and number already exists.
+     * @throws \RuntimeException If another location with the same room and number already exists.
      */
     public function updateLocation(Location $location, UpdateLocationDto $dto): void
     {
         try {
             $existing = $this->repository->getLocationByRoomAndNumber(new GetLocationDto([
-                'room_id'    => $dto->room_id,
+                'room_id' => $dto->room_id,
                 'loc_number' => $dto->loc_number,
                 'exclude_id' => $location->id,
             ]));
@@ -98,10 +98,22 @@ class LocationService
     }
 
     /**
+     * Find location by ID.
+     */
+    public function findLocationById(string $locationId): Location
+    {
+        return $this->repository->findOrFail($locationId);
+    }
+
+    public function updateLocationById(string $locationId, UpdateLocationDto $dto): void
+    {
+        $this->updateLocation($this->findLocationById($locationId), $dto);
+    }
+
+    /**
      * Delete a location.
      *
      * @param  Location  $location  The location model to delete.
-     * @return void
      */
     public function deleteLocation(Location $location): void
     {
@@ -110,5 +122,10 @@ class LocationService
         } catch (\Throwable $th) {
             throw $th;
         }
+    }
+
+    public function deleteLocationById(string $locationId): void
+    {
+        $this->deleteLocation($this->findLocationById($locationId));
     }
 }

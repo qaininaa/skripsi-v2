@@ -1,3 +1,9 @@
+@props([
+    'action',
+    'returnTargets',
+    'roleLabel',
+])
+
 {{--
     Return-to-analyst modal. Both supervisor & manager use the same shape:
     pick an analyst, write notes, confirm with username + password.

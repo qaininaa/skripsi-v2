@@ -6,9 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ReportTemplate\SectionAssignLocationRequest;
 use App\Http\Requests\ReportTemplate\SectionStoreRequest;
 use App\Http\Requests\ReportTemplate\SectionUpdateRequest;
-use Domain\Location\Models\Location;
-use Domain\ReportTemplate\Models\ReportTemplate;
-use Domain\ReportTemplate\Models\Section;
 use Domain\ReportTemplate\Services\SectionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -17,31 +14,28 @@ class SectionController extends Controller
 {
     public function __construct(
         protected SectionService $sectionService,
-    ) {
-    }
+    ) {}
 
     /**
      * Show the detail page for a report template (includes section management).
      */
-    public function show(ReportTemplate $reportTemplate): View
+    public function show(string $reportTemplate): View
     {
-        $reportTemplate = $this->sectionService->getTemplateWithSections($reportTemplate);
+        $data = $this->sectionService->getTemplateSectionData($reportTemplate);
 
-        // Pre-load available locations per section for the inline select
-        $sectionAvailable = $reportTemplate->sections->mapWithKeys(
-            fn ($section) => [$section->id => $this->sectionService->getAvailableLocations($section)]
-        );
-
-        return view('report-management.show', compact('reportTemplate', 'sectionAvailable'));
+        return view('report-management.show', [
+            'reportTemplate' => $data['reportTemplate'],
+            'sectionAvailable' => $data['sectionAvailable'],
+        ]);
     }
 
     /**
      * Store a new section for the given report template.
      */
-    public function store(SectionStoreRequest $request, ReportTemplate $reportTemplate): RedirectResponse
+    public function store(SectionStoreRequest $request, string $reportTemplate): RedirectResponse
     {
         try {
-            $this->sectionService->createSection($request->toDTO($reportTemplate->id));
+            $this->sectionService->createSection($request->toDTO($reportTemplate));
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -57,10 +51,10 @@ class SectionController extends Controller
     /**
      * Update an existing section.
      */
-    public function update(SectionUpdateRequest $request, ReportTemplate $reportTemplate, Section $section): RedirectResponse
+    public function update(SectionUpdateRequest $request, string $reportTemplate, string $section): RedirectResponse
     {
         try {
-            $this->sectionService->updateSection($section, $request->toDTO());
+            $this->sectionService->updateSectionById($reportTemplate, $section, $request->toDTO());
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -76,9 +70,9 @@ class SectionController extends Controller
     /**
      * Delete a section.
      */
-    public function destroy(ReportTemplate $reportTemplate, Section $section): RedirectResponse
+    public function destroy(string $reportTemplate, string $section): RedirectResponse
     {
-        $this->sectionService->deleteSection($section);
+        $this->sectionService->deleteSectionById($reportTemplate, $section);
 
         return redirect()
             ->route('report-templates.show', $reportTemplate)
@@ -88,10 +82,10 @@ class SectionController extends Controller
     /**
      * Assign a location to a section via inline form POST.
      */
-    public function assignLocation(SectionAssignLocationRequest $request, ReportTemplate $reportTemplate, Section $section): RedirectResponse
+    public function assignLocation(SectionAssignLocationRequest $request, string $reportTemplate, string $section): RedirectResponse
     {
         try {
-            $this->sectionService->assignLocation($section, $request->toDTO()->location_id);
+            $this->sectionService->assignLocationById($reportTemplate, $section, $request->toDTO()->location_id);
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -106,10 +100,10 @@ class SectionController extends Controller
     /**
      * Remove a location from a section.
      */
-    public function removeLocation(ReportTemplate $reportTemplate, Section $section, Location $location): RedirectResponse
+    public function removeLocation(string $reportTemplate, string $section, string $location): RedirectResponse
     {
         try {
-            $this->sectionService->removeLocation($section, $location->id);
+            $this->sectionService->removeLocationById($reportTemplate, $section, $location);
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()

@@ -7,6 +7,9 @@ use Domain\User\Dtos\GetUsersFilterDto;
 use Domain\User\Dtos\UpdateUserDto;
 use Domain\User\Interfaces\UserRepositoryInterface;
 use Domain\User\Models\User;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
 
 /**
  * Handles business logic for user management (CRUD operations).
@@ -27,7 +30,7 @@ class UserService
      * Retrieve a paginated, filtered list of users.
      *
      * @param  GetUsersFilterDto  $dto  Filter parameters (search, role).
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getDataUsers(GetUsersFilterDto $dto)
     {
@@ -45,7 +48,7 @@ class UserService
      * The new user's password_changed_at is set to null, requiring a password change on first login.
      *
      * @param  CreateUserDto  $dto  Data for the new user.
-     * @return User                 The newly created user model.
+     * @return User The newly created user model.
      */
     public function createUser(CreateUserDto $dto): User
     {
@@ -62,9 +65,8 @@ class UserService
      * If the DTO includes a password reset, the password is updated and
      * password_changed_at is reset to null.
      *
-     * @param  User           $user  The user model to update.
-     * @param  UpdateUserDto  $dto   New data to apply.
-     * @return void
+     * @param  User  $user  The user model to update.
+     * @param  UpdateUserDto  $dto  New data to apply.
      */
     public function updateUser(User $user, UpdateUserDto $dto): void
     {
@@ -76,10 +78,29 @@ class UserService
     }
 
     /**
+     * Find a user by ID.
+     *
+     * @throws \RuntimeException
+     */
+    public function findUserById(string $userId): User
+    {
+        $user = $this->repository->findById($userId);
+        if ($user === null) {
+            throw (new ModelNotFoundException)->setModel(User::class, [$userId]);
+        }
+
+        return $user;
+    }
+
+    public function updateUserById(string $userId, UpdateUserDto $dto): void
+    {
+        $this->updateUser($this->findUserById($userId), $dto);
+    }
+
+    /**
      * Delete a user.
      *
      * @param  User  $user  The user model to delete.
-     * @return void
      */
     public function deleteUser(User $user): void
     {
@@ -90,11 +111,31 @@ class UserService
         }
     }
 
+    public function deleteUserById(string $userId): void
+    {
+        $this->deleteUser($this->findUserById($userId));
+    }
+
     /**
      * List supervisor users for report handoff selection.
      */
-    public function listSupervisors(): \Illuminate\Support\Collection
+    public function listSupervisors(): Collection
     {
         return $this->repository->listByRoles(['supervisor']);
+    }
+
+    /**
+     * Supervisor options ready for view/dropdown usage.
+     *
+     * @return Collection<int, array{id: string, name: string}>
+     */
+    public function listSupervisorOptions(): Collection
+    {
+        return $this->listSupervisors()
+            ->map(fn (User $supervisor) => [
+                'id' => (string) $supervisor->id,
+                'name' => $supervisor->name,
+            ])
+            ->values();
     }
 }

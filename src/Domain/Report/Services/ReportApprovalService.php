@@ -3,15 +3,21 @@
 namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\ApproveReportDto;
+use Domain\Report\Dtos\GetApprovalReportsFilterDto;
+use Domain\Report\Dtos\GetInProgressReportsFilterDto;
 use Domain\Report\Dtos\ReturnReportDto;
+use Domain\Report\Interfaces\AnalystRepositoryInterface;
 use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
+use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
+use Domain\Report\Interfaces\SectionSignatureRepositoryInterface;
 use Domain\Report\Models\Analyst;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\ReportApproval;
 use Domain\Report\Models\SectionInstance;
 use Domain\Report\Models\SectionSignature;
 use Domain\User\Interfaces\UserRepositoryInterface;
+use Domain\User\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -47,12 +53,21 @@ use Illuminate\Support\Facades\DB;
  */
 class ReportApprovalService
 {
+    public const STEP_SUPERVISOR = ReportApproval::STEP_SUPERVISOR;
+
+    public const STEP_MANAGER = ReportApproval::STEP_MANAGER;
+
+    public const STATUS_PENDING = ReportApproval::STATUS_PENDING;
+
     public function __construct(
         protected ReportApprovalRepositoryInterface $approvals,
         protected ReportRepositoryInterface $reports,
+        protected AnalystRepositoryInterface $analysts,
+        protected SectionInstanceRepositoryInterface $sectionInstances,
+        protected SectionSignatureRepositoryInterface $sectionSignatures,
         protected UserRepositoryInterface $users,
-    ) {
-    }
+        protected ReportFormViewDataService $formViewData,
+    ) {}
 
     /**
      * Bootstrap the supervisor approval row when a report transitions into
@@ -85,6 +100,72 @@ class ReportApprovalService
     }
 
     /**
+     * Inbox listing and tab counts for a role assignee.
+     *
+     * @return array{reports: mixed, counts: array<string, int>}
+     */
+    public function getInboxData(GetApprovalReportsFilterDto $dto): array
+    {
+        return [
+            'reports' => $this->approvals->getReportsForAssignee($dto),
+            'counts' => $this->approvals->countByAssigneeTab($dto->step, $dto->userId),
+        ];
+    }
+
+    /**
+     * Ongoing report listing and stage counts.
+     *
+     * @return array{reports: mixed, counts: array<string, int>}
+     */
+    public function getInProgressData(GetInProgressReportsFilterDto $dto): array
+    {
+        return [
+            'reports' => $this->approvals->getInProgressReportsForAssignee($dto->step, $dto->userId, $dto->stage),
+            'counts' => $this->approvals->countInProgressByStage($dto->step, $dto->userId),
+        ];
+    }
+
+    /**
+     * Find an approval assigned to the actor for display pages.
+     */
+    public function findApprovalForAssignee(string $reportId, int $step, string $userId): ?ReportApproval
+    {
+        $approval = $this->approvals->findByReportAndStep($reportId, $step);
+
+        if ($approval === null || (string) $approval->user_id !== $userId) {
+            return null;
+        }
+
+        return $approval;
+    }
+
+    /**
+     * Build report approval detail page data.
+     *
+     * @return array{report: Report, approval: ReportApproval|null, sectionInstances: mixed, lockMap: array, returnTargets: Collection, isPending: bool}
+     */
+    public function getApprovalDetailData(string $reportId, ?ReportApproval $approval, bool $previewOnly): array
+    {
+        $report = $this->reports->findByIdWithRelations($reportId, $this->approvalDetailRelations());
+        if ($report === null) {
+            throw new \RuntimeException('Laporan tidak ditemukan.');
+        }
+
+        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+
+        return array_merge($this->formViewData->forReport($report), [
+            'report' => $report,
+            'approval' => $approval,
+            'sectionInstances' => $bundle['instances'],
+            'lockMap' => $bundle['locks'],
+            'returnTargets' => $previewOnly ? collect() : $this->returnTargetsForReport($report),
+            'isPending' => ! $previewOnly
+                && $approval !== null
+                && $approval->status === ReportApproval::STATUS_PENDING,
+        ]);
+    }
+
+    /**
      * Supervisor approves: stamp review signatures on signed sections,
      * create manager approval row, transition report to pending_approval.
      *
@@ -102,7 +183,7 @@ class ReportApprovalService
             $now = now();
 
             $this->approvals->update($approval, [
-                'status'    => ReportApproval::STATUS_APPROVED,
+                'status' => ReportApproval::STATUS_APPROVED,
                 'signed_at' => $now,
             ]);
 
@@ -122,12 +203,15 @@ class ReportApprovalService
                     ReportApproval::ROLE_MANAGER,
                     (string) $manager->id,
                 );
-                $report->status = Report::STATUS_PENDING_APPROVAL;
+                $this->reports->updateMeta($report, [
+                    'status' => Report::STATUS_PENDING_APPROVAL,
+                ]);
             } else {
                 // No manager exists — short-circuit to completed.
-                $report->status = Report::STATUS_COMPLETED;
+                $this->reports->updateMeta($report, [
+                    'status' => Report::STATUS_COMPLETED,
+                ]);
             }
-            $report->save();
         });
     }
 
@@ -149,7 +233,7 @@ class ReportApprovalService
             $now = now();
 
             $this->approvals->update($approval, [
-                'status'    => ReportApproval::STATUS_APPROVED,
+                'status' => ReportApproval::STATUS_APPROVED,
                 'signed_at' => $now,
             ]);
 
@@ -160,8 +244,9 @@ class ReportApprovalService
                 $now,
             );
 
-            $report->status = Report::STATUS_COMPLETED;
-            $report->save();
+            $this->reports->updateMeta($report, [
+                'status' => Report::STATUS_COMPLETED,
+            ]);
         });
     }
 
@@ -182,8 +267,8 @@ class ReportApprovalService
 
         DB::transaction(function () use ($report, $approval, $dto) {
             $this->approvals->update($approval, [
-                'status'              => ReportApproval::STATUS_RETURNED,
-                'notes'               => $dto->notes,
+                'status' => ReportApproval::STATUS_RETURNED,
+                'notes' => $dto->notes,
                 'returned_to_user_id' => $dto->returnedToUserId,
             ]);
 
@@ -208,8 +293,8 @@ class ReportApprovalService
 
         DB::transaction(function () use ($report, $approval, $dto) {
             $this->approvals->update($approval, [
-                'status'              => ReportApproval::STATUS_RETURNED,
-                'notes'               => $dto->notes,
+                'status' => ReportApproval::STATUS_RETURNED,
+                'notes' => $dto->notes,
                 'returned_to_user_id' => $dto->returnedToUserId,
             ]);
 
@@ -220,7 +305,7 @@ class ReportApprovalService
                 ReportApproval::STEP_SUPERVISOR,
             );
             if ($supervisorApproval !== null) {
-                $supervisorApproval->delete();
+                $this->approvals->delete($supervisorApproval);
             }
 
             $this->resetForRevision($report, $dto->returnedToUserId);
@@ -230,18 +315,14 @@ class ReportApprovalService
     /**
      * List analysts (monitoring + reading) for the inbox return-to dropdown.
      *
-     * @return Collection<int, \Domain\User\Models\User>
+     * @return Collection<int, User>
      */
     public function returnTargetsForReport(Report $report): Collection
     {
-        $report->loadMissing('analysts.user');
-
-        return $report->analysts
-            ->whereIn('type', [Analyst::TYPE_MONITORING, Analyst::TYPE_READING])
-            ->pluck('user')
-            ->filter()
-            ->unique('id')
-            ->values();
+        return $this->analysts->getUsersForReportByTypes($report->id, [
+            Analyst::TYPE_MONITORING,
+            Analyst::TYPE_READING,
+        ]);
     }
 
     /**
@@ -272,23 +353,14 @@ class ReportApprovalService
      */
     private function stampSignatures(Report $report, string $role, string $userId, \DateTimeInterface $when): void
     {
-        $report->loadMissing(['sectionInstances.signatures']);
+        $instances = $this->sectionInstances->getInstancesWithSignaturesForReport($report->id);
 
-        foreach ($report->sectionInstances as $instance) {
+        foreach ($instances as $instance) {
             if (! $this->sectionWasSignedByAnalyst($instance)) {
                 continue;
             }
 
-            SectionSignature::firstOrCreate(
-                [
-                    'section_instance_id' => $instance->id,
-                    'role'                => $role,
-                ],
-                [
-                    'signed_by' => $userId,
-                    'signed_at' => $when,
-                ],
-            );
+            $this->sectionSignatures->signRole($instance->id, $role, $userId, $when);
         }
     }
 
@@ -309,10 +381,11 @@ class ReportApprovalService
      */
     private function assertReturnTargetIsAnalyst(Report $report, string $userId): void
     {
-        $report->loadMissing('analysts');
-
-        $allowed = $report->analysts
-            ->whereIn('type', [Analyst::TYPE_MONITORING, Analyst::TYPE_READING])
+        $allowed = $this->analysts
+            ->getForReportByTypes($report->id, [
+                Analyst::TYPE_MONITORING,
+                Analyst::TYPE_READING,
+            ])
             ->pluck('user_id')
             ->map(fn ($id) => (string) $id)
             ->all();
@@ -333,25 +406,18 @@ class ReportApprovalService
      */
     private function resetForRevision(Report $report, string $analystId): void
     {
-        $report->load(['sectionInstances', 'analysts']);
-
         $nextStatus = $this->resolveRevisionStatusForAnalyst($report, $analystId);
 
-        $instanceIds = $report->sectionInstances->pluck('id')->all();
-        if (! empty($instanceIds)) {
-            $rolesToDelete = [
+        $this->sectionSignatures->deleteBySectionIdsAndRoles(
+            $this->sectionInstances->getInstanceIdsForReport($report->id),
+            [
                 SectionSignature::ROLE_REVIEW,
                 SectionSignature::ROLE_APPROVAL,
-            ];
-
-            SectionSignature::query()
-                ->whereIn('section_instance_id', $instanceIds)
-                ->whereIn('role', $rolesToDelete)
-                ->delete();
-        }
+            ],
+        );
 
         $this->reports->updateMeta($report, [
-            'status'    => $nextStatus,
+            'status' => $nextStatus,
             'locked_by' => $analystId,
         ]);
     }
@@ -363,13 +429,15 @@ class ReportApprovalService
      */
     private function resolveRevisionStatusForAnalyst(Report $report, string $analystId): string
     {
-        $hasMonitoringRole = $report->analysts->contains(
-            fn ($analyst) => $analyst->type === Analyst::TYPE_MONITORING
-                && (string) $analyst->user_id === $analystId
+        $hasMonitoringRole = $this->analysts->existsForReport(
+            $report->id,
+            $analystId,
+            Analyst::TYPE_MONITORING,
         );
-        $hasReadingRole = $report->analysts->contains(
-            fn ($analyst) => $analyst->type === Analyst::TYPE_READING
-                && (string) $analyst->user_id === $analystId
+        $hasReadingRole = $this->analysts->existsForReport(
+            $report->id,
+            $analystId,
+            Analyst::TYPE_READING,
         );
 
         if ($hasMonitoringRole) {
@@ -395,23 +463,38 @@ class ReportApprovalService
         $existing = $this->approvals->findByReportAndStep($reportId, $step);
         if ($existing !== null) {
             $this->approvals->update($existing, [
-                'role_label'          => $roleLabel,
-                'user_id'             => $userId,
-                'status'              => ReportApproval::STATUS_PENDING,
-                'signed_at'           => null,
-                'notes'               => null,
+                'role_label' => $roleLabel,
+                'user_id' => $userId,
+                'status' => ReportApproval::STATUS_PENDING,
+                'signed_at' => null,
+                'notes' => null,
                 'returned_to_user_id' => null,
             ]);
 
-            return $existing->fresh() ?? $existing;
+            return $this->approvals->refresh($existing);
         }
 
         return $this->approvals->createOrSkip([
-            'report_id'  => $reportId,
-            'step'       => $step,
+            'report_id' => $reportId,
+            'step' => $step,
             'role_label' => $roleLabel,
-            'user_id'    => $userId,
-            'status'     => ReportApproval::STATUS_PENDING,
+            'user_id' => $userId,
+            'status' => ReportApproval::STATUS_PENDING,
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function approvalDetailRelations(): array
+    {
+        return [
+            'reportTemplate',
+            'createdByUser',
+            'lockedByUser',
+            'analysts.user',
+            'approvals.user',
+            'approvals.returnedToUser',
+        ];
     }
 }

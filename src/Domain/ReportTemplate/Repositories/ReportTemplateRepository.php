@@ -7,6 +7,7 @@ use Domain\ReportTemplate\Dtos\GetReportTemplatesFilterDto;
 use Domain\ReportTemplate\Dtos\UpdateReportTemplateDto;
 use Domain\ReportTemplate\Interfaces\ReportTemplateRepositoryInterface;
 use Domain\ReportTemplate\Models\ReportTemplate;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
 class ReportTemplateRepository implements ReportTemplateRepositoryInterface
@@ -14,8 +15,7 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
     /**
      * Retrieve a paginated, filtered list of report templates with child counts.
      *
-     * @param  GetReportTemplatesFilterDto  $data
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getReportTemplates(GetReportTemplatesFilterDto $data)
     {
@@ -23,8 +23,8 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
             ->withCount(['mediumTemplates', 'incubatorTemplates'])
             ->when($data->search !== null, function ($query) use ($data) {
                 $query->where(function ($sub) use ($data) {
-                    $sub->where('name', 'like', '%' . $data->search . '%')
-                        ->orWhere('sop_code', 'like', '%' . $data->search . '%');
+                    $sub->where('name', 'like', '%'.$data->search.'%')
+                        ->orWhere('sop_code', 'like', '%'.$data->search.'%');
                 });
             })
             ->orderBy('annex_number')
@@ -34,12 +34,6 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
 
     /**
      * Find a report template by its unique combination.
-     *
-     * @param  int          $annexNumber
-     * @param  string       $sopCode
-     * @param  string       $sopVersion
-     * @param  string|null  $excludeId
-     * @return ReportTemplate|null
      */
     public function findByUniqueCombination(
         int $annexNumber,
@@ -56,19 +50,34 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public function findById(string $id): ?ReportTemplate
+    {
+        return ReportTemplate::find($id);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findByIdWithRelations(string $id, array $with): ?ReportTemplate
+    {
+        return ReportTemplate::query()
+            ->with($with)
+            ->find($id);
+    }
+
+    /**
      * Persist a new report template with its medium and incubator templates in a transaction.
-     *
-     * @param  CreateReportTemplateDto  $data
-     * @return ReportTemplate
      */
     public function createReportTemplate(CreateReportTemplateDto $data): ReportTemplate
     {
         return DB::transaction(function () use ($data) {
-            $reportTemplate = new ReportTemplate();
-            $reportTemplate->name         = $data->name;
+            $reportTemplate = new ReportTemplate;
+            $reportTemplate->name = $data->name;
             $reportTemplate->annex_number = $data->annex_number;
-            $reportTemplate->sop_code     = $data->sop_code;
-            $reportTemplate->sop_version  = $data->sop_version;
+            $reportTemplate->sop_code = $data->sop_code;
+            $reportTemplate->sop_version = $data->sop_version;
             $reportTemplate->save();
 
             foreach ($data->medium_templates as $medium) {
@@ -79,7 +88,7 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
 
             foreach ($data->incubator_templates as $incubator) {
                 $reportTemplate->incubatorTemplates()->create([
-                    'label'   => $incubator['label'],
+                    'label' => $incubator['label'],
                     'min_day' => $incubator['min_day'],
                 ]);
             }
@@ -92,18 +101,14 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
      * Update an existing report template and replace all its children.
      *
      * Children are deleted and re-created to keep the logic simple and consistent.
-     *
-     * @param  ReportTemplate           $reportTemplate
-     * @param  UpdateReportTemplateDto  $data
-     * @return void
      */
     public function updateReportTemplate(ReportTemplate $reportTemplate, UpdateReportTemplateDto $data): void
     {
         DB::transaction(function () use ($reportTemplate, $data) {
-            $reportTemplate->name         = $data->name;
+            $reportTemplate->name = $data->name;
             $reportTemplate->annex_number = $data->annex_number;
-            $reportTemplate->sop_code     = $data->sop_code;
-            $reportTemplate->sop_version  = $data->sop_version;
+            $reportTemplate->sop_code = $data->sop_code;
+            $reportTemplate->sop_version = $data->sop_version;
             $reportTemplate->save();
 
             $reportTemplate->mediumTemplates()->delete();
@@ -116,7 +121,7 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
             $reportTemplate->incubatorTemplates()->delete();
             foreach ($data->incubator_templates as $incubator) {
                 $reportTemplate->incubatorTemplates()->create([
-                    'label'   => $incubator['label'],
+                    'label' => $incubator['label'],
                     'min_day' => $incubator['min_day'],
                 ]);
             }
@@ -125,9 +130,6 @@ class ReportTemplateRepository implements ReportTemplateRepositoryInterface
 
     /**
      * Delete a report template. Cascade handles children via DB constraint.
-     *
-     * @param  ReportTemplate  $reportTemplate
-     * @return void
      */
     public function deleteReportTemplate(ReportTemplate $reportTemplate): void
     {

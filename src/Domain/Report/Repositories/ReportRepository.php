@@ -3,13 +3,14 @@
 namespace Domain\Report\Repositories;
 
 use Domain\Report\Dtos\CreateReportDto;
-use Domain\Report\Dtos\GetArchiveReportsFilterDto;
 use Domain\Report\Dtos\GetAnalystReportsFilterDto;
+use Domain\Report\Dtos\GetArchiveReportsFilterDto;
 use Domain\Report\Dtos\GetReportsFilterDto;
 use Domain\Report\Dtos\UpdateReportDto;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\ReportApproval;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -22,8 +23,7 @@ class ReportRepository implements ReportRepositoryInterface
     /**
      * Retrieve a paginated, filtered list of reports (admin scope).
      *
-     * @param  GetReportsFilterDto  $data
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getReports(GetReportsFilterDto $data)
     {
@@ -37,8 +37,8 @@ class ReportRepository implements ReportRepositoryInterface
             ])
             ->when($data->search !== null, function ($query) use ($data) {
                 $query->where(function ($sub) use ($data) {
-                    $sub->where('product_name', 'like', '%' . $data->search . '%')
-                        ->orWhere('batch_number', 'like', '%' . $data->search . '%');
+                    $sub->where('product_name', 'like', '%'.$data->search.'%')
+                        ->orWhere('batch_number', 'like', '%'.$data->search.'%');
                 });
             })
             ->when($data->status !== null, function ($query) use ($data) {
@@ -61,10 +61,10 @@ class ReportRepository implements ReportRepositoryInterface
             })
             ->when($data->search !== null, function ($query) use ($data) {
                 $query->where(function ($sub) use ($data) {
-                    $sub->where('product_name', 'like', '%' . $data->search . '%')
-                        ->orWhere('batch_number', 'like', '%' . $data->search . '%')
+                    $sub->where('product_name', 'like', '%'.$data->search.'%')
+                        ->orWhere('batch_number', 'like', '%'.$data->search.'%')
                         ->orWhereHas('reportTemplate', function ($templateQuery) use ($data) {
-                            $templateQuery->where('name', 'like', '%' . $data->search . '%');
+                            $templateQuery->where('name', 'like', '%'.$data->search.'%');
                         });
                 });
             })
@@ -119,8 +119,7 @@ class ReportRepository implements ReportRepositoryInterface
      *   - dikirim: status = completed
      *   - dikembalikan: returned approvals targeted to current analyst
      *
-     * @param  GetAnalystReportsFilterDto  $data
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getReportsForAnalyst(GetAnalystReportsFilterDto $data)
     {
@@ -178,15 +177,15 @@ class ReportRepository implements ReportRepositoryInterface
     private function applyAnalystTab(Builder $query, string $tab, ?string $analystId = null): Builder
     {
         return match ($tab) {
-            'belum_dikerjakan'    => $query->where('status', Report::STATUS_PENDING),
+            'belum_dikerjakan' => $query->where('status', Report::STATUS_PENDING),
             'sedang_dimonitoring' => $query->where('status', Report::STATUS_IN_PROGRESS_MONITORING),
-            'sedang_dibaca'       => $query->where('status', Report::STATUS_IN_PROGRESS_READING),
-            'dikirim'             => $query->whereIn('status', [
+            'sedang_dibaca' => $query->where('status', Report::STATUS_IN_PROGRESS_READING),
+            'dikirim' => $query->whereIn('status', [
                 Report::STATUS_PENDING_REVIEW,
                 Report::STATUS_PENDING_APPROVAL,
                 Report::STATUS_COMPLETED,
             ]),
-            'dikembalikan'        => $query
+            'dikembalikan' => $query
                 ->whereIn('status', [
                     Report::STATUS_IN_PROGRESS_MONITORING,
                     Report::STATUS_IN_PROGRESS_READING,
@@ -195,7 +194,7 @@ class ReportRepository implements ReportRepositoryInterface
                     $q->where('status', ReportApproval::STATUS_RETURNED)
                         ->when($analystId !== null, fn (Builder $sq) => $sq->where('returned_to_user_id', $analystId));
                 }),
-            default               => $query->whereIn('status', [
+            default => $query->whereIn('status', [
                 Report::STATUS_PENDING,
                 Report::STATUS_IN_PROGRESS_MONITORING,
                 Report::STATUS_IN_PROGRESS_READING,
@@ -208,18 +207,15 @@ class ReportRepository implements ReportRepositoryInterface
 
     /**
      * Persist a new report to the database.
-     *
-     * @param  CreateReportDto  $data
-     * @return Report
      */
     public function createReport(CreateReportDto $data): Report
     {
-        $report = new Report();
+        $report = new Report;
         $report->report_template_id = $data->report_template_id;
-        $report->product_name       = $data->product_name;
-        $report->batch_number       = $data->batch_number;
-        $report->status             = $data->status;
-        $report->created_by         = $data->created_by;
+        $report->product_name = $data->product_name;
+        $report->batch_number = $data->batch_number;
+        $report->status = $data->status;
+        $report->created_by = $data->created_by;
         $report->save();
 
         return $report;
@@ -227,24 +223,17 @@ class ReportRepository implements ReportRepositoryInterface
 
     /**
      * Update an existing report with new data.
-     *
-     * @param  Report           $report
-     * @param  UpdateReportDto  $data
-     * @return void
      */
     public function updateReport(Report $report, UpdateReportDto $data): void
     {
         $report->report_template_id = $data->report_template_id;
-        $report->product_name       = $data->product_name;
-        $report->batch_number       = $data->batch_number;
+        $report->product_name = $data->product_name;
+        $report->batch_number = $data->batch_number;
         $report->save();
     }
 
     /**
      * Delete a report from the database.
-     *
-     * @param  Report  $report
-     * @return void
      */
     public function deleteReport(Report $report): void
     {
@@ -257,6 +246,32 @@ class ReportRepository implements ReportRepositoryInterface
     public function findById(string $id): ?Report
     {
         return Report::find($id);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function findByIdWithRelations(string $id, array $with): ?Report
+    {
+        return Report::query()
+            ->with($with)
+            ->find($id);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function refresh(Report $report, array $with = []): Report
+    {
+        return $report->fresh($with) ?? $report;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function loadRelations(Report $report, array $relations): Report
+    {
+        return $report->load($relations);
     }
 
     /**

@@ -3,13 +3,14 @@
 namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\SaveReadingDto;
+use Domain\Report\Interfaces\AnalystRepositoryInterface;
+use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
+use Domain\Report\Interfaces\SectionSignatureRepositoryInterface;
 use Domain\Report\Models\Analyst;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionInstance;
 use Domain\Report\Models\SectionSignature;
-use Domain\Report\Services\FieldLockService;
-use Domain\Report\Services\ReportApprovalService;
 use Domain\Report\Support\LocationConclusion;
 use Domain\Report\Support\MicrobialValue;
 use Illuminate\Support\Facades\DB;
@@ -32,16 +33,20 @@ use Illuminate\Support\Facades\DB;
  */
 class ReadingService
 {
-    public const ACTION_DRAFT    = 'draft';
-    public const ACTION_RELEASE  = 'release';
+    public const ACTION_DRAFT = 'draft';
+
+    public const ACTION_RELEASE = 'release';
+
     public const ACTION_FINALIZE = 'finalize_reading';
 
     public function __construct(
+        protected ReportRepositoryInterface $reports,
+        protected AnalystRepositoryInterface $analysts,
         protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
+        protected SectionSignatureRepositoryInterface $sectionSignatures,
         protected FieldLockService $fieldLocks,
         protected ReportApprovalService $approvalService,
-    ) {
-    }
+    ) {}
 
     /**
      * Lock the report to the analyst as the reading owner.
@@ -59,16 +64,13 @@ class ReadingService
         }
 
         return DB::transaction(function () use ($report, $analystId) {
-            $report->locked_by = $analystId;
-            $report->save();
-
-            Analyst::firstOrCreate([
-                'report_id' => $report->id,
-                'user_id'   => $analystId,
-                'type'      => Analyst::TYPE_READING,
+            $this->reports->updateMeta($report, [
+                'locked_by' => $analystId,
             ]);
 
-            return $report->fresh();
+            $this->analysts->attach($report->id, $analystId, Analyst::TYPE_READING);
+
+            return $this->reports->refresh($report);
         });
     }
 
@@ -83,8 +85,7 @@ class ReadingService
         SaveReadingDto $dto,
         string $action = self::ACTION_DRAFT,
         ?string $supervisorId = null,
-    ): void
-    {
+    ): void {
         if ($report->status !== Report::STATUS_IN_PROGRESS_READING) {
             throw new \RuntimeException('Laporan ini bukan dalam tahap pembacaan.');
         }
@@ -122,8 +123,9 @@ class ReadingService
                 // "Simpan Pembacaan" should stamp per-section reading sign-off
                 // without moving the phase yet.
                 $this->stampReadingSignatures($report, $analystId);
-                $report->locked_by = null;
-                $report->save();
+                $this->reports->updateMeta($report, [
+                    'locked_by' => null,
+                ]);
             }
             // ACTION_DRAFT: keep locked_by on the current reading analyst.
         });
@@ -138,9 +140,10 @@ class ReadingService
     {
         $this->stampReadingSignatures($report, $analystId);
 
-        $report->status    = Report::STATUS_PENDING_REVIEW;
-        $report->locked_by = null;
-        $report->save();
+        $this->reports->updateMeta($report, [
+            'status' => Report::STATUS_PENDING_REVIEW,
+            'locked_by' => null,
+        ]);
 
         // Hand off to supervisor by creating their approval row.
         $this->approvalService->ensureSupervisorAssignment($report, $supervisorId);
@@ -161,6 +164,7 @@ class ReadingService
                 }
             }
         }
+
         return false;
     }
 
@@ -170,26 +174,21 @@ class ReadingService
      */
     private function stampReadingSignatures(Report $report, string $analystId): void
     {
-        // Force-refresh relations because saveReadingForInstance() touched
-        // entries earlier in this transaction; loadMissing would keep the
-        // stale (pre-save) collection and skip the signature.
-        $report->load('sectionInstances.instanceLocations.entries');
+        // Force-refresh via repository because saveReadingForInstance()
+        // touched entries earlier in this transaction.
+        $instances = $this->sectionInstanceRepository->getInstancesWithEntriesForReport($report->id);
         $now = now();
 
-        foreach ($report->sectionInstances as $instance) {
+        foreach ($instances as $instance) {
             if (! $this->sectionHasReadingData($instance)) {
                 continue;
             }
 
-            SectionSignature::firstOrCreate(
-                [
-                    'section_instance_id' => $instance->id,
-                    'role'                => SectionSignature::ROLE_READING,
-                    'signed_by'           => $analystId,
-                ],
-                [
-                    'signed_at' => $now,
-                ],
+            $this->sectionSignatures->sign(
+                $instance->id,
+                SectionSignature::ROLE_READING,
+                $analystId,
+                $now,
             );
         }
     }
@@ -200,21 +199,21 @@ class ReadingService
      */
     private function invalidateSignaturesForEditedSection(SectionInstance $instance): void
     {
-        SectionSignature::query()
-            ->where('section_instance_id', $instance->id)
-            ->whereIn('role', [
+        $this->sectionSignatures->deleteBySectionAndRoles(
+            $instance->id,
+            [
                 SectionSignature::ROLE_READING,
                 SectionSignature::ROLE_REVIEW,
                 SectionSignature::ROLE_APPROVAL,
-            ])
-            ->delete();
+            ],
+        );
     }
 
     /**
      * Persist reading values for a section instance.
      *
      * @param  array<string, array{readings: array<int, array<string, mixed>>}>  $rows
-     *         keyed by section_instance_location id
+     *                                                                                  keyed by section_instance_location id
      */
     private function saveReadingForInstance(SectionInstance $instance, array $rows, string $analystId): bool
     {
@@ -260,7 +259,7 @@ class ReadingService
 
                 $newValues = [
                     'cfu_bacteri' => MicrobialValue::normalise($values['cfu_bacteri'] ?? ($values['reading_total'] ?? null)),
-                    'cfu_fungi'   => MicrobialValue::normalise($values['cfu_fungi']   ?? ($values['reading_fungi'] ?? null)),
+                    'cfu_fungi' => MicrobialValue::normalise($values['cfu_fungi'] ?? ($values['reading_fungi'] ?? null)),
                 ];
 
                 $entryLocks = $entryLocksMap[$target->id] ?? collect();
@@ -285,13 +284,11 @@ class ReadingService
 
                 $fillable['cfu_total'] = MicrobialValue::displayTotal($effectiveBacteri, $effectiveFungi);
 
-                $target->fill($fillable);
-                $dirtyFields = array_keys($target->getDirty());
+                $dirtyFields = $this->sectionInstanceRepository->updateEntryAndGetDirtyFields($target, $fillable);
                 if (empty($dirtyFields)) {
                     continue;
                 }
 
-                $target->save();
                 $sectionChanged = true;
 
                 foreach ($newValues as $field => $value) {
@@ -310,7 +307,7 @@ class ReadingService
      */
     private function recomputeConclusions(SectionInstance $instance): void
     {
-        $instance->loadMissing(['instanceLocations.entries', 'instanceLocations.location']);
+        $this->sectionInstanceRepository->loadRelations($instance, ['instanceLocations.entries', 'instanceLocations.location']);
 
         foreach ($instance->instanceLocations as $row) {
             $verdict = LocationConclusion::forRow($row->location, $row->entries);
@@ -318,13 +315,15 @@ class ReadingService
             // for queries) and aggregate at instance level.
             foreach ($row->entries as $entry) {
                 if ($entry->conclusion !== $verdict) {
-                    $entry->conclusion = $verdict;
-                    $entry->save();
+                    $this->sectionInstanceRepository->updateEntry($entry, [
+                        'conclusion' => $verdict,
+                    ]);
                 }
             }
         }
 
-        $instance->final_conclusion = LocationConclusion::forInstance($instance);
-        $instance->save();
+        $this->sectionInstanceRepository->updateInstance($instance, [
+            'final_conclusion' => LocationConclusion::forInstance($instance),
+        ]);
     }
 }

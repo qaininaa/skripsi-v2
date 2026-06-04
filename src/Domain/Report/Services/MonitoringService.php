@@ -3,19 +3,19 @@
 namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\SaveMonitoringDto;
+use Domain\Report\Interfaces\AnalystRepositoryInterface;
+use Domain\Report\Interfaces\MonitoringEntryRepositoryInterface;
+use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
+use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
+use Domain\Report\Interfaces\SectionSignatureRepositoryInterface;
 use Domain\Report\Models\Analyst;
-use Domain\Report\Models\Incubator;
-use Domain\Report\Models\IncubatorEntry;
-use Domain\Report\Models\InstrumentEntry;
-use Domain\Report\Models\MediumEntry;
+use Domain\Report\Models\FieldLock;
 use Domain\Report\Models\Report;
-use Domain\Report\Models\ReportApproval;
 use Domain\Report\Models\SectionInstance;
 use Domain\Report\Models\SectionSignature;
-use Domain\Report\Services\FieldLockService;
-use Domain\Report\Services\ReportApprovalService;
 use Domain\Report\Support\MicrobialValue;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -42,10 +42,14 @@ use Illuminate\Support\Facades\DB;
  */
 class MonitoringService
 {
-    public const ACTION_DRAFT    = 'draft';                  // save & keep lock; analyst stays on the form.
-    public const ACTION_RELEASE  = 'release';                // save + sign sections with data + release lock.
+    public const ACTION_DRAFT = 'draft';                  // save & keep lock; analyst stays on the form.
+
+    public const ACTION_RELEASE = 'release';                // save + sign sections with data + release lock.
+
     public const ACTION_FINALIZE = 'finalize_monitoring';    // sign off + transition to reading phase.
+
     public const ACTION_TO_READING = 'to_reading';           // revision-only: keep lock and switch to reading stage.
+
     public const ACTION_FINALIZE_TO_REVIEW = 'finalize_to_review'; // revision-only: send directly to supervisor.
 
     /**
@@ -55,11 +59,15 @@ class MonitoringService
     private const DEFAULT_INSTRUMENTS = ['Air Sampler'];
 
     public function __construct(
+        protected ReportRepositoryInterface $reports,
+        protected ReportApprovalRepositoryInterface $approvals,
+        protected AnalystRepositoryInterface $analysts,
+        protected MonitoringEntryRepositoryInterface $monitoringEntries,
         protected SectionInstanceRepositoryInterface $sectionInstanceRepository,
+        protected SectionSignatureRepositoryInterface $sectionSignatures,
         protected FieldLockService $fieldLocks,
         protected ReportApprovalService $approvalService,
-    ) {
-    }
+    ) {}
 
     /**
      * Lock the report to the given analyst and bootstrap all the entry rows
@@ -88,22 +96,24 @@ class MonitoringService
         }
 
         return DB::transaction(function () use ($report, $analystId) {
-            $report->locked_by             = $analystId;
-            $report->status                = Report::STATUS_IN_PROGRESS_MONITORING;
-            $report->monitoring_started_at = $report->monitoring_started_at ?? now();
-            $report->save();
+            $this->reports->updateMeta($report, [
+                'locked_by' => $analystId,
+                'status' => Report::STATUS_IN_PROGRESS_MONITORING,
+                'monitoring_started_at' => $report->monitoring_started_at ?? now(),
+            ]);
 
-            Analyst::firstOrCreate([
-                'report_id' => $report->id,
-                'user_id'   => $analystId,
-                'type'      => Analyst::TYPE_MONITORING,
+            $this->analysts->attach($report->id, $analystId, Analyst::TYPE_MONITORING);
+            $this->reports->loadRelations($report, [
+                'reportTemplate.mediumTemplates',
+                'reportTemplate.incubatorTemplates',
+                'reportTemplate.sections',
             ]);
 
             $this->bootstrapInstrumentEntries($report);
             $this->bootstrapMediumEntries($report);
             $this->bootstrapIncubators($report);
 
-            return $report->fresh([
+            return $this->reports->refresh($report, [
                 'reportTemplate',
                 'lockedByUser',
                 'instrumentEntries',
@@ -130,8 +140,7 @@ class MonitoringService
         SaveMonitoringDto $dto,
         string $action = self::ACTION_DRAFT,
         ?string $supervisorId = null,
-    ): void
-    {
+    ): void {
         if ($report->locked_by !== $analystId) {
             throw new \RuntimeException('Anda bukan penanggung jawab monitoring laporan ini.');
         }
@@ -169,8 +178,9 @@ class MonitoringService
                 // stamp per-section monitoring sign-off (without phase move).
                 $this->stampMonitoringSignatures($report, $analystId);
                 // Release the lock so a fellow analyst may take over.
-                $report->locked_by = null;
-                $report->save();
+                $this->reports->updateMeta($report, [
+                    'locked_by' => null,
+                ]);
             }
             // ACTION_DRAFT: keep locked_by on the current analyst.
         });
@@ -192,15 +202,12 @@ class MonitoringService
 
         $this->stampMonitoringSignatures($report, $analystId);
 
-        $report->status    = Report::STATUS_IN_PROGRESS_READING;
-        $report->locked_by = $analystId;
-        $report->save();
-
-        Analyst::firstOrCreate([
-            'report_id' => $report->id,
-            'user_id'   => $analystId,
-            'type'      => Analyst::TYPE_READING,
+        $this->reports->updateMeta($report, [
+            'status' => Report::STATUS_IN_PROGRESS_READING,
+            'locked_by' => $analystId,
         ]);
+
+        $this->analysts->attach($report->id, $analystId, Analyst::TYPE_READING);
     }
 
     /**
@@ -229,9 +236,10 @@ class MonitoringService
             $this->stampReadingSignaturesFromExistingData($report, $analystId);
         }
 
-        $report->status    = Report::STATUS_PENDING_REVIEW;
-        $report->locked_by = null;
-        $report->save();
+        $this->reports->updateMeta($report, [
+            'status' => Report::STATUS_PENDING_REVIEW,
+            'locked_by' => null,
+        ]);
 
         $this->approvalService->ensureSupervisorAssignment($report, $supervisorId);
     }
@@ -241,13 +249,7 @@ class MonitoringService
      */
     private function isReturnedRevisionForAnalyst(Report $report, string $analystId): bool
     {
-        $report->loadMissing('approvals');
-
-        return $report->approvals
-            ->contains(function ($approval) use ($analystId) {
-                return $approval->status === ReportApproval::STATUS_RETURNED
-                    && (string) $approval->returned_to_user_id === $analystId;
-            });
+        return $this->approvals->hasReturnedForAnalyst($report->id, $analystId);
     }
 
     /**
@@ -264,35 +266,46 @@ class MonitoringService
      */
     private function hasAnalystRole(Report $report, string $analystId, string $role): bool
     {
-        $report->loadMissing('analysts');
-
-        return $report->analysts->contains(
-            fn ($analyst) => $analyst->type === $role
-                && (string) $analyst->user_id === $analystId
-        );
+        return $this->analysts->existsForReport($report->id, $analystId, $role);
     }
 
     /**
-     * Supervisor correction on monitoring fields during pending review.
+     * Approver correction on monitoring fields during pending review/approval.
      *
-     * Lock ownership is bypassed so supervisor can adjust monitoring inputs.
+     * Lock ownership is bypassed so supervisor/manager can adjust monitoring inputs.
      * Special rule for analyst-filled fields:
      *  - time_start/time_end, time_in/time_out, and SP/Shift labels may be
      *    edited only when the current persisted value is already non-empty.
      *
      * @throws \RuntimeException
      */
-    public function saveMonitoringBySupervisor(Report $report, string $supervisorId, SaveMonitoringDto $dto): void
-    {
-        if ($report->status !== Report::STATUS_PENDING_REVIEW) {
-            throw new \RuntimeException('Perbaikan monitoring hanya tersedia saat tahap review supervisor.');
+    public function saveMonitoringByApprover(
+        Report $report,
+        string $actorId,
+        int $approvalStep,
+        string $expectedReportStatus,
+        SaveMonitoringDto $dto,
+    ): void {
+        if ($report->status !== $expectedReportStatus) {
+            throw new \RuntimeException('Perbaikan monitoring tidak tersedia pada tahap laporan saat ini.');
         }
 
-        DB::transaction(function () use ($report, $dto, $supervisorId) {
-            $this->saveInstrumentRows($report, $dto, $supervisorId, true);
-            $this->saveMediumRows($report, $dto, $supervisorId, true);
-            $this->saveIncubatorRows($report, $dto, $supervisorId, true, true, true);
-            $this->saveSectionMonitoringRows($report, $dto, $supervisorId, true, true, true);
+        $approval = $this->approvals->findByReportAndStep($report->id, $approvalStep);
+        if ($approval === null) {
+            throw new \RuntimeException('Laporan ini tidak menunggu tindakan Anda.');
+        }
+        if ((string) $approval->user_id !== $actorId) {
+            throw new \RuntimeException('Laporan ini bukan ditugaskan kepada Anda.');
+        }
+        if ($approval->status !== ReportApprovalService::STATUS_PENDING) {
+            throw new \RuntimeException('Laporan ini sudah diproses sebelumnya.');
+        }
+
+        DB::transaction(function () use ($report, $dto, $actorId) {
+            $this->saveInstrumentRows($report, $dto, $actorId, true);
+            $this->saveMediumRows($report, $dto, $actorId, true);
+            $this->saveIncubatorRows($report, $dto, $actorId, true, true, true);
+            $this->saveSectionMonitoringRows($report, $dto, $actorId, true, true, true);
         });
     }
 
@@ -305,9 +318,10 @@ class MonitoringService
     {
         $this->stampMonitoringSignatures($report, $analystId);
 
-        $report->status    = Report::STATUS_IN_PROGRESS_READING;
-        $report->locked_by = null;
-        $report->save();
+        $this->reports->updateMeta($report, [
+            'status' => Report::STATUS_IN_PROGRESS_READING,
+            'locked_by' => null,
+        ]);
     }
 
     /**
@@ -320,26 +334,21 @@ class MonitoringService
      */
     private function stampMonitoringSignatures(Report $report, string $analystId): void
     {
-        // Force-refresh relations because saveSectionMonitoringRows() touched
-        // entries earlier in this transaction; loadMissing would keep the
-        // stale (pre-save) collection and skip the signature.
-        $report->load('sectionInstances.instanceLocations.entries');
+        // Force-refresh via repository because saveSectionMonitoringRows()
+        // touched entries earlier in this transaction.
+        $instances = $this->sectionInstanceRepository->getInstancesWithEntriesForReport($report->id);
         $now = now();
 
-        foreach ($report->sectionInstances as $instance) {
+        foreach ($instances as $instance) {
             if (! $this->sectionHasMonitoringData($instance)) {
                 continue;
             }
 
-            SectionSignature::firstOrCreate(
-                [
-                    'section_instance_id' => $instance->id,
-                    'role'                => SectionSignature::ROLE_MONITORING,
-                    'signed_by'           => $analystId,
-                ],
-                [
-                    'signed_at' => $now,
-                ],
+            $this->sectionSignatures->sign(
+                $instance->id,
+                SectionSignature::ROLE_MONITORING,
+                $analystId,
+                $now,
             );
         }
     }
@@ -388,9 +397,9 @@ class MonitoringService
      */
     private function reportHasReadingData(Report $report): bool
     {
-        $report->load('sectionInstances.instanceLocations.entries');
+        $instances = $this->sectionInstanceRepository->getInstancesWithEntriesForReport($report->id);
 
-        foreach ($report->sectionInstances as $instance) {
+        foreach ($instances as $instance) {
             if ($this->sectionHasReadingData($instance)) {
                 return true;
             }
@@ -404,10 +413,10 @@ class MonitoringService
      */
     private function stampReadingSignaturesFromExistingData(Report $report, string $analystId): void
     {
-        $report->load('sectionInstances.instanceLocations.entries');
+        $instances = $this->sectionInstanceRepository->getInstancesWithEntriesForReport($report->id);
         $entryIds = [];
 
-        foreach ($report->sectionInstances as $instance) {
+        foreach ($instances as $instance) {
             foreach ($instance->instanceLocations as $loc) {
                 foreach ($loc->entries as $entry) {
                     $entryIds[] = $entry->id;
@@ -418,20 +427,16 @@ class MonitoringService
         $entryLocksMap = $this->fieldLocks->getForRowsKeyed('section_entries', $entryIds);
         $now = now();
 
-        foreach ($report->sectionInstances as $instance) {
+        foreach ($instances as $instance) {
             if (! $this->sectionHasReadingDataByAnalyst($instance, $analystId, $entryLocksMap)) {
                 continue;
             }
 
-            SectionSignature::firstOrCreate(
-                [
-                    'section_instance_id' => $instance->id,
-                    'role'                => SectionSignature::ROLE_READING,
-                    'signed_by'           => $analystId,
-                ],
-                [
-                    'signed_at' => $now,
-                ],
+            $this->sectionSignatures->sign(
+                $instance->id,
+                SectionSignature::ROLE_READING,
+                $analystId,
+                $now,
             );
         }
     }
@@ -441,7 +446,7 @@ class MonitoringService
      * section. Prevents a monitoring-only revision from re-signing another
      * analyst's reading data.
      *
-     * @param  array<string, \Illuminate\Support\Collection<int, \Domain\Report\Models\FieldLock>>  $entryLocksMap
+     * @param  array<string, Collection<int, FieldLock>>  $entryLocksMap
      */
     private function sectionHasReadingDataByAnalyst(
         SectionInstance $instance,
@@ -477,24 +482,13 @@ class MonitoringService
      */
     private function invalidateSignaturesForEditedMonitoringSection(SectionInstance $instance, string $analystId): void
     {
-        SectionSignature::query()
-            ->where('section_instance_id', $instance->id)
-            ->where(function ($query) use ($analystId) {
-                $query->whereIn('role', [
-                    SectionSignature::ROLE_REVIEW,
-                    SectionSignature::ROLE_APPROVAL,
-                ])->orWhere(function ($query) use ($analystId) {
-                    $query->where('role', SectionSignature::ROLE_MONITORING)
-                        ->where('signed_by', $analystId);
-                });
-            })
-            ->delete();
+        $this->sectionSignatures->deleteForEditedMonitoringSection($instance->id, $analystId);
     }
 
     private function saveInstrumentRows(Report $report, SaveMonitoringDto $dto, string $actorId, bool $overrideLockOwnership = false): void
     {
         foreach ($dto->instruments as $toolName => $row) {
-            $instrument = $report->instrumentEntries()->where('tool_name', $toolName)->first();
+            $instrument = $this->monitoringEntries->findInstrumentEntry($report, $toolName);
             if ($instrument === null) {
                 continue;
             }
@@ -503,9 +497,9 @@ class MonitoringService
             $locks = $this->fieldLocks->getForRow($table, $instrument->id);
 
             $values = [
-                'no_id'            => $row['no_id']            ?? null,
+                'no_id' => $row['no_id'] ?? null,
                 'calibration_date' => $row['calibration_date'] ?? null,
-                'due_date'         => $row['due_date']         ?? null,
+                'due_date' => $row['due_date'] ?? null,
             ];
 
             $payload = [];
@@ -516,7 +510,7 @@ class MonitoringService
             }
 
             if (! empty($payload)) {
-                $instrument->fill($payload)->save();
+                $this->monitoringEntries->updateInstrumentEntry($instrument, $payload);
             }
 
             foreach ($values as $field => $value) {
@@ -530,7 +524,7 @@ class MonitoringService
     private function saveMediumRows(Report $report, SaveMonitoringDto $dto, string $actorId, bool $overrideLockOwnership = false): void
     {
         foreach ($dto->mediums as $entryId => $row) {
-            $entry = $report->mediumEntries()->whereKey($entryId)->first();
+            $entry = $this->monitoringEntries->findMediumEntry($report, $entryId);
             if ($entry === null) {
                 continue;
             }
@@ -539,7 +533,7 @@ class MonitoringService
             $locks = $this->fieldLocks->getForRow($table, $entry->id);
 
             $values = [
-                'batch_number'    => $row['batch_number']    ?? null,
+                'batch_number' => $row['batch_number'] ?? null,
                 'expiration_date' => $row['expiration_date'] ?? null,
             ];
             // Swab Kit must never carry a GPT number.
@@ -555,7 +549,7 @@ class MonitoringService
             }
 
             if (! empty($payload)) {
-                $entry->fill($payload)->save();
+                $this->monitoringEntries->updateMediumEntry($entry, $payload);
             }
 
             foreach ($values as $field => $value) {
@@ -573,10 +567,9 @@ class MonitoringService
         bool $overrideLockOwnership = false,
         bool $timeRequiresExistingValue = false,
         bool $requiresExistingInOutActor = false,
-    ): void
-    {
+    ): void {
         foreach ($dto->incubators as $incubatorId => $row) {
-            $incubator = $report->incubators()->whereKey($incubatorId)->first();
+            $incubator = $this->monitoringEntries->findIncubator($report, $incubatorId);
             if ($incubator === null) {
                 continue;
             }
@@ -585,8 +578,8 @@ class MonitoringService
             $incubatorLocks = $this->fieldLocks->getForRow($incubatorTable, $incubator->id);
 
             $incubatorValues = [
-                'no_id'                => $row['no_id']                ?? null,
-                'calibration_date'     => $row['calibration_date']     ?? null,
+                'no_id' => $row['no_id'] ?? null,
+                'calibration_date' => $row['calibration_date'] ?? null,
                 'due_date_calibration' => $row['due_date_calibration'] ?? null,
             ];
 
@@ -598,7 +591,7 @@ class MonitoringService
             }
 
             if (! empty($incubatorPayload)) {
-                $incubator->fill($incubatorPayload)->save();
+                $this->monitoringEntries->updateIncubator($incubator, $incubatorPayload);
             }
 
             foreach ($incubatorValues as $field => $value) {
@@ -608,7 +601,7 @@ class MonitoringService
             }
 
             foreach (($row['entries'] ?? []) as $mediumType => $entryRow) {
-                $entry = $incubator->entries()->where('medium_type', $mediumType)->first();
+                $entry = $this->monitoringEntries->findIncubatorEntry($incubator, $mediumType);
                 if ($entry === null) {
                     continue;
                 }
@@ -617,14 +610,14 @@ class MonitoringService
                 $entryLocks = $this->fieldLocks->getForRow($entryTable, $entry->id);
 
                 $entryValues = [
-                    'date_in'  => $entryRow['date_in']  ?? null,
-                    'time_in'  => $entryRow['time_in']  ?? null,
+                    'date_in' => $entryRow['date_in'] ?? null,
+                    'time_in' => $entryRow['time_in'] ?? null,
                     'date_out' => $entryRow['date_out'] ?? null,
                     'time_out' => $entryRow['time_out'] ?? null,
                 ];
 
                 $hasExistingIncubatedActor = ! empty($entry->incubated_by);
-                $hasExistingRemovedActor   = ! empty($entry->removed_by);
+                $hasExistingRemovedActor = ! empty($entry->removed_by);
 
                 $entryPayload = [];
                 foreach ($entryValues as $field => $value) {
@@ -656,10 +649,10 @@ class MonitoringService
                     ? ! empty($entryPayload['date_out'] ?? null) || ! empty($entryPayload['time_out'] ?? null)
                     : false;
 
-                $entryPayload['incubated_by'] = $hasIn  ? ($entry->incubated_by ?? $actorId) : $entry->incubated_by;
-                $entryPayload['removed_by']   = $hasOut ? ($entry->removed_by   ?? $actorId) : $entry->removed_by;
+                $entryPayload['incubated_by'] = $hasIn ? ($entry->incubated_by ?? $actorId) : $entry->incubated_by;
+                $entryPayload['removed_by'] = $hasOut ? ($entry->removed_by ?? $actorId) : $entry->removed_by;
 
-                $entry->fill($entryPayload)->save();
+                $this->monitoringEntries->updateIncubatorEntry($entry, $entryPayload);
 
                 foreach ($entryValues as $field => $value) {
                     if (array_key_exists($field, $entryPayload)) {
@@ -691,8 +684,7 @@ class MonitoringService
         bool $overrideLockOwnership = false,
         bool $timeRequiresExistingValue = false,
         bool $labelRequiresExistingValue = false,
-    ): void
-    {
+    ): void {
         foreach ($dto->sections as $instanceId => $row) {
             $instance = $this->sectionInstanceRepository->findByReportAndKey($report->id, $instanceId);
             if ($instance === null) {
@@ -706,9 +698,11 @@ class MonitoringService
                 $instanceLocks = $this->fieldLocks->getForRow($instanceTable, $instance->id);
 
                 if ($overrideLockOwnership || $this->fieldLocks->canEdit($instanceLocks, 'note', $actorId)) {
-                    $instance->note = $row['note'];
-                    if ($instance->isDirty('note')) {
-                        $instance->save();
+                    $dirtyFields = $this->sectionInstanceRepository->updateInstanceAndGetDirtyFields($instance, [
+                        'note' => $row['note'],
+                    ]);
+
+                    if (in_array('note', $dirtyFields, true)) {
                         $sectionChanged = true;
                         $this->fieldLocks->lockField($instanceTable, $instance->id, 'note', $actorId, $row['note']);
                     }
@@ -727,11 +721,11 @@ class MonitoringService
 
             $columns = $row['columns'] ?? [];
             foreach ($columns as $colIdx => $colData) {
-                $colIdx  = (int) $colIdx;
+                $colIdx = (int) $colIdx;
                 $columnLabelValue = MicrobialValue::normalise(
                     $colData['column_label_value'] ?? ($colData['sp_value'] ?? null)
                 );
-                $slots   = $colData['slots'] ?? [];
+                $slots = $colData['slots'] ?? [];
 
                 foreach ($instance->instanceLocations as $loc) {
                     foreach ($loc->entries as $entry) {
@@ -739,17 +733,17 @@ class MonitoringService
                             continue;
                         }
                         $slotKey = $entry->sub_column ?? '_';
-                        $slot    = $slots[$slotKey] ?? null;
+                        $slot = $slots[$slotKey] ?? null;
 
                         $rawTimeStart = $slot['time_start'] ?? null;
-                        $rawTimeEnd   = $slot['time_end']   ?? null;
-                        $timeStart    = ($rawTimeStart !== null && $rawTimeStart !== '') ? $rawTimeStart : null;
-                        $timeEnd      = ($rawTimeEnd   !== null && $rawTimeEnd   !== '') ? $rawTimeEnd   : null;
+                        $rawTimeEnd = $slot['time_end'] ?? null;
+                        $timeStart = ($rawTimeStart !== null && $rawTimeStart !== '') ? $rawTimeStart : null;
+                        $timeEnd = ($rawTimeEnd !== null && $rawTimeEnd !== '') ? $rawTimeEnd : null;
 
                         $values = [
                             'time_start' => $timeStart,
-                            'time_end'   => $timeEnd,
-                            'column_label_value'   => $columnLabelValue,
+                            'time_end' => $timeEnd,
+                            'column_label_value' => $columnLabelValue,
                         ];
 
                         $entryLocks = $entryLocksMap[$entry->id] ?? collect();
@@ -777,13 +771,11 @@ class MonitoringService
                             continue;
                         }
 
-                        $entry->fill($payload);
-                        $dirtyFields = array_keys($entry->getDirty());
+                        $dirtyFields = $this->sectionInstanceRepository->updateEntryAndGetDirtyFields($entry, $payload);
                         if (empty($dirtyFields)) {
                             continue;
                         }
 
-                        $entry->save();
                         $sectionChanged = true;
 
                         foreach ($dirtyFields as $field) {
@@ -808,10 +800,7 @@ class MonitoringService
     private function bootstrapInstrumentEntries(Report $report): void
     {
         foreach (self::DEFAULT_INSTRUMENTS as $tool) {
-            InstrumentEntry::firstOrCreate(
-                ['report_id' => $report->id, 'tool_name' => $tool],
-                ['tool_name' => $tool],
-            );
+            $this->monitoringEntries->findOrCreateInstrumentEntry($report->id, $tool);
         }
     }
 
@@ -832,13 +821,11 @@ class MonitoringService
         foreach ($template->mediumTemplates as $mediumTemplate) {
             $isSwab = str_contains(strtolower($mediumTemplate->name), 'swab');
 
-            MediumEntry::firstOrCreate(
+            $this->monitoringEntries->findOrCreateMediumEntry(
+                $report->id,
+                $mediumTemplate->id,
                 [
-                    'report_id' => $report->id,
-                    'medium_id' => $mediumTemplate->id,
-                ],
-                [
-                    'name'    => $mediumTemplate->name,
+                    'name' => $mediumTemplate->name,
                     'is_swab' => $isSwab,
                 ],
             );
@@ -860,12 +847,9 @@ class MonitoringService
         $needsSwab = $template->hasSwab();
 
         foreach ($template->incubatorTemplates as $incubatorTemplate) {
-            $incubator = Incubator::firstOrCreate(
-                [
-                    'report_id'             => $report->id,
-                    'incubator_template_id' => $incubatorTemplate->id,
-                ],
-                [],
+            $incubator = $this->monitoringEntries->findOrCreateIncubator(
+                $report->id,
+                $incubatorTemplate->id,
             );
 
             $mediumTypes = ['monitoring'];
@@ -874,13 +858,7 @@ class MonitoringService
             }
 
             foreach ($mediumTypes as $mediumType) {
-                IncubatorEntry::firstOrCreate(
-                    [
-                        'incubator_id' => $incubator->id,
-                        'medium_type'  => $mediumType,
-                    ],
-                    [],
-                );
+                $this->monitoringEntries->findOrCreateIncubatorEntry($incubator->id, $mediumType);
             }
         }
     }

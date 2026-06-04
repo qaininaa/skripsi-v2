@@ -8,26 +8,24 @@ use Domain\ReportTemplate\Dtos\CreateSectionDto;
 use Domain\ReportTemplate\Dtos\UpdateSectionDto;
 use Domain\ReportTemplate\Interfaces\SectionRepositoryInterface;
 use Domain\ReportTemplate\Models\Section;
+use Illuminate\Support\Collection;
 
 class SectionRepository implements SectionRepositoryInterface
 {
     /**
      * Persist a new section to the database.
-     *
-     * @param  CreateSectionDto  $data
-     * @return Section
      */
     public function createSection(CreateSectionDto $data): Section
     {
-        $section = new Section();
+        $section = new Section;
         $section->report_template_id = $data->report_template_id;
-        $section->measurement_unit   = $data->measurement_unit;
-        $section->measurement_type   = $data->measurement_type;
-        $section->max_column         = $data->max_column;
-        $section->column_label       = $data->column_label;
-        $section->time_slot_type     = $data->time_slot_type;
-        $section->has_machine_setup  = $data->has_machine_setup;
-        $section->order              = $data->order;
+        $section->measurement_unit = $data->measurement_unit;
+        $section->measurement_type = $data->measurement_type;
+        $section->max_column = $data->max_column;
+        $section->column_label = $data->column_label;
+        $section->time_slot_type = $data->time_slot_type;
+        $section->has_machine_setup = $data->has_machine_setup;
+        $section->order = $data->order;
         $section->save();
 
         return $section;
@@ -35,28 +33,29 @@ class SectionRepository implements SectionRepositoryInterface
 
     /**
      * Update an existing section.
-     *
-     * @param  Section           $section
-     * @param  UpdateSectionDto  $data
-     * @return void
      */
     public function updateSection(Section $section, UpdateSectionDto $data): void
     {
-        $section->measurement_unit  = $data->measurement_unit;
-        $section->measurement_type  = $data->measurement_type;
-        $section->max_column        = $data->max_column;
-        $section->column_label      = $data->column_label;
-        $section->time_slot_type    = $data->time_slot_type;
+        $section->measurement_unit = $data->measurement_unit;
+        $section->measurement_type = $data->measurement_type;
+        $section->max_column = $data->max_column;
+        $section->column_label = $data->column_label;
+        $section->time_slot_type = $data->time_slot_type;
         $section->has_machine_setup = $data->has_machine_setup;
-        $section->order             = $data->order;
+        $section->order = $data->order;
         $section->save();
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public function findById(string $id): ?Section
+    {
+        return Section::find($id);
+    }
+
+    /**
      * Delete a section. Cascade on DB will nullify location section_id.
-     *
-     * @param  Section  $section
-     * @return void
      */
     public function deleteSection(Section $section): void
     {
@@ -65,28 +64,22 @@ class SectionRepository implements SectionRepositoryInterface
 
     /**
      * Assign a location to a section by setting section_id and section_assigned_at.
-     *
-     * @param  AssignLocationToSectionDto  $data
-     * @return void
      */
     public function assignLocation(AssignLocationToSectionDto $data): void
     {
         Location::where('id', $data->location_id)->update([
-            'section_id'          => $data->section_id,
+            'section_id' => $data->section_id,
             'section_assigned_at' => now(),
         ]);
     }
 
     /**
      * Remove a location from a section by nullifying section_id.
-     *
-     * @param  string  $locationId
-     * @return void
      */
     public function removeLocation(string $locationId): void
     {
         Location::where('id', $locationId)->update([
-            'section_id'          => null,
+            'section_id' => null,
             'section_assigned_at' => null,
         ]);
     }
@@ -95,8 +88,7 @@ class SectionRepository implements SectionRepositoryInterface
      * Get locations that match the section's measurement_type and are either
      * unassigned (section_id is null) or already assigned to this section.
      *
-     * @param  Section  $section
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function getAvailableLocations(Section $section)
     {

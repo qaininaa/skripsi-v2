@@ -6,6 +6,7 @@
 @section('content')
 
     <x-messages.success-message />
+    <x-messages.error-message />
 
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
