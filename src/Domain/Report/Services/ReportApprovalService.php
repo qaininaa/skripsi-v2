@@ -66,6 +66,7 @@ class ReportApprovalService
         protected SectionInstanceRepositoryInterface $sectionInstances,
         protected SectionSignatureRepositoryInterface $sectionSignatures,
         protected UserRepositoryInterface $users,
+        protected ReportFormViewDataService $formViewData,
     ) {}
 
     /**
@@ -141,7 +142,7 @@ class ReportApprovalService
     /**
      * Build report approval detail page data.
      *
-     * @return array{report: Report, approval: ReportApproval|null, sectionInstances: mixed, lockMap: array, returnTargets: Collection}
+     * @return array{report: Report, approval: ReportApproval|null, sectionInstances: mixed, lockMap: array, returnTargets: Collection, isPending: bool}
      */
     public function getApprovalDetailData(string $reportId, ?ReportApproval $approval, bool $previewOnly): array
     {
@@ -152,13 +153,16 @@ class ReportApprovalService
 
         $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
 
-        return [
+        return array_merge($this->formViewData->forReport($report), [
             'report' => $report,
             'approval' => $approval,
             'sectionInstances' => $bundle['instances'],
             'lockMap' => $bundle['locks'],
             'returnTargets' => $previewOnly ? collect() : $this->returnTargetsForReport($report),
-        ];
+            'isPending' => ! $previewOnly
+                && $approval !== null
+                && $approval->status === ReportApproval::STATUS_PENDING,
+        ]);
     }
 
     /**

@@ -37,6 +37,10 @@ class ReportArchiveController extends Controller
         return view('report-archive.show', [
             'report' => $data['report'],
             'activeFolder' => $data['activeFolder'],
+            'hasSwab' => $data['hasSwab'],
+            'instrumentEntries' => $data['instrumentEntries'],
+            'mediumEntries' => $data['mediumEntries'],
+            'incubators' => $data['incubators'],
             'sectionInstances' => $data['sectionInstances'],
             'lockMap' => $data['lockMap'],
         ]);

@@ -1,10 +1,8 @@
-{{--
-    Approve confirmation modal. Re-confirms the actor's username + password.
+@props([
+    'action',
+    'roleLabel',
+])
 
-    Required:
-      $action     — POST URL
-      $roleLabel  — 'Supervisor' | 'Manajer'
---}}
 <div
     x-cloak
     x-show="$store.approvalApproveModal.isOpen"

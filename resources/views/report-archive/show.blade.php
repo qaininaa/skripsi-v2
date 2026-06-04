@@ -31,10 +31,14 @@
         </div>
     </div>
 
-    @include('report-approval.partials.report-readonly', [
-        'report'           => $report,
-        'sectionInstances' => $sectionInstances,
-        'lockMap'          => $lockMap,
-        'previewOnly'      => true,
-    ])
+    <x-report.readonly
+        :report="$report"
+        :section-instances="$sectionInstances"
+        :instrument-entries="$instrumentEntries"
+        :medium-entries="$mediumEntries"
+        :incubators="$incubators"
+        :has-swab="$hasSwab"
+        :lock-map="$lockMap"
+        :preview-only="true"
+    />
 @endsection
