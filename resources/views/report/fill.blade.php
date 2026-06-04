@@ -4,6 +4,11 @@
 @section('page-title', 'Pengisian Laporan')
 
 @section('content')
+    <datalist id="microbial-count-options">
+        <option value="&lt;1"></option>
+        <option value="TNTC"></option>
+    </datalist>
+
     @php
         use Domain\Report\Models\Incubator;
         use Domain\Report\Models\IncubatorEntry;
@@ -470,9 +475,9 @@
 
         <script>
             // Live border-red feedback for microbial value inputs.
-            // Allowed: empty, "<1", "tntc" (case-insensitive), positive int (no leading zero).
+            // Allowed: empty, "<1", "tntc" (case-insensitive), positive int 1..200.
             (function () {
-                const PATTERN = /^([1-9][0-9]*|<1|tntc)$/i;
+                const PATTERN = /^(<1|tntc|[1-9][0-9]?|1[0-9]{2}|200)$/i;
                 const inputs = document.querySelectorAll('input[data-microbial]');
                 const validate = (el) => {
                     const v = (el.value || '').trim();
@@ -505,7 +510,7 @@
             // Per section:
             //   Any row TMS → section TMS. All MS → MS. All null → "Belum ada data".
             (function () {
-                const PATTERN = /^([1-9][0-9]*|<1|tntc)$/i;
+                const PATTERN = /^(<1|tntc|[1-9][0-9]?|1[0-9]{2}|200)$/i;
                 const POS_INF = Number.POSITIVE_INFINITY;
 
                 const parseVal = (raw) => {
