@@ -24,7 +24,7 @@ class MicrobialCount implements ValidationRule
         }
 
         if (! is_string($value) || ! MicrobialValue::isValid($value)) {
-            $fail('Format nilai harus bilangan bulat positif (mis. 1, 250), "<1", atau "TNTC". Nilai 0, desimal, dan negatif tidak diperbolehkan.');
+            $fail('Format nilai harus bilangan bulat 1 sampai 200, "<1", atau "TNTC". Nilai 0, lebih dari 200, desimal, dan negatif tidak diperbolehkan.');
         }
     }
 }

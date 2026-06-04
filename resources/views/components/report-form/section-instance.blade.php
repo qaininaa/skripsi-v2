@@ -629,6 +629,7 @@
                                                     type="text"
                                                     name="{{ $readName }}[cfu_bacteri]"
                                                     value="{{ $oldB }}"
+                                                    list="microbial-count-options"
                                                     data-microbial
                                                     data-reading="total"
                                                     data-row-id="{{ $row->id }}"
@@ -660,6 +661,7 @@
                                                     type="text"
                                                     name="{{ $readName }}[cfu_fungi]"
                                                     value="{{ $oldF }}"
+                                                    list="microbial-count-options"
                                                     data-microbial
                                                     data-reading="fungi"
                                                     data-row-id="{{ $row->id }}"
