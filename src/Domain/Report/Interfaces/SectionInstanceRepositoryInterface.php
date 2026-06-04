@@ -2,6 +2,7 @@
 
 namespace Domain\Report\Interfaces;
 
+use Domain\Report\Models\FieldLock;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionEntry;
 use Domain\Report\Models\SectionInstance;
@@ -25,7 +26,7 @@ interface SectionInstanceRepositoryInterface
      *
      * @return array{
      *     instances: Collection<int, SectionInstance>,
-     *     locks: array<string, array<string, array<string, \Domain\Report\Models\FieldLock>>>,
+     *     locks: array<string, array<string, array<string, FieldLock>>>,
      * }
      */
     public function getInstancesForReportWithLocks(Report $report): array;
@@ -65,6 +66,14 @@ interface SectionInstanceRepositoryInterface
     public function updateInstance(SectionInstance $instance, array $attributes): void;
 
     /**
+     * Update an instance and return changed field names.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<int, string>
+     */
+    public function updateInstanceAndGetDirtyFields(SectionInstance $instance, array $attributes): array;
+
+    /**
      * Persist N section_instance_locations rows for an instance.
      *
      * @param  array<int, array{location_id: string, display_order: int}>  $rows
@@ -84,6 +93,42 @@ interface SectionInstanceRepositoryInterface
     public function updateEntry(SectionEntry $entry, array $attributes): void;
 
     /**
+     * Update a SectionEntry row and return changed field names.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<int, string>
+     */
+    public function updateEntryAndGetDirtyFields(SectionEntry $entry, array $attributes): array;
+
+    /**
+     * Eager-load relations on an existing section instance.
+     *
+     * @param  array<int, string>  $relations
+     */
+    public function loadRelations(SectionInstance $instance, array $relations): SectionInstance;
+
+    /**
+     * Get all instances for a report with section entries loaded.
+     *
+     * @return Collection<int, SectionInstance>
+     */
+    public function getInstancesWithEntriesForReport(string $reportId): Collection;
+
+    /**
+     * Get all instances for a report with signatures loaded.
+     *
+     * @return Collection<int, SectionInstance>
+     */
+    public function getInstancesWithSignaturesForReport(string $reportId): Collection;
+
+    /**
+     * Get primary keys for every section instance in a report.
+     *
+     * @return array<int, string>
+     */
+    public function getInstanceIdsForReport(string $reportId): array;
+
+    /**
      * Delete a SectionInstance row.
      */
     public function deleteInstance(SectionInstance $instance): void;
@@ -91,10 +136,7 @@ interface SectionInstanceRepositoryInterface
     /**
      * Find a SectionInstance scoped to a report by its primary key.
      *
-     * @param  string                $reportId
-     * @param  string                $instanceId
-     * @param  array<int, string>    $with       Relations to eager-load.
-     * @return SectionInstance|null
+     * @param  array<int, string>  $with  Relations to eager-load.
      */
     public function findByReportAndKey(string $reportId, string $instanceId, array $with = []): ?SectionInstance;
 }

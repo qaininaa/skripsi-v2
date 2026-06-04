@@ -8,12 +8,16 @@ use Domain\Location\Repositories\LocationRepository;
 use Domain\PasswordPolicy\Interfaces\PasswordPolicyRepositoryInterface;
 use Domain\PasswordPolicy\Repositories\PasswordPolicyRepository;
 use Domain\PasswordPolicy\Services\PasswordPolicyService;
+use Domain\Report\Interfaces\AnalystRepositoryInterface;
 use Domain\Report\Interfaces\FieldLockRepositoryInterface;
+use Domain\Report\Interfaces\MonitoringEntryRepositoryInterface;
 use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Interfaces\SectionSignatureRepositoryInterface;
+use Domain\Report\Repositories\AnalystRepository;
 use Domain\Report\Repositories\FieldLockRepository;
+use Domain\Report\Repositories\MonitoringEntryRepository;
 use Domain\Report\Repositories\ReportApprovalRepository;
 use Domain\Report\Repositories\ReportRepository;
 use Domain\Report\Repositories\SectionInstanceRepository;
@@ -42,18 +46,20 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $bindings = [
-            UserRepositoryInterface::class               => UserRepository::class,
-            PasswordPolicyRepositoryInterface::class     => PasswordPolicyRepository::class,
-            PasswordHistoryRepositoryInterface::class    => PasswordHistoryRepository::class,
-            RoomRepositoryInterface::class               => RoomRepository::class,
-            LocationRepositoryInterface::class           => LocationRepository::class,
-            ReportTemplateRepositoryInterface::class     => ReportTemplateRepository::class,
-            SectionRepositoryInterface::class            => SectionRepository::class,
-            ReportRepositoryInterface::class             => ReportRepository::class,
-            SectionInstanceRepositoryInterface::class    => SectionInstanceRepository::class,
-            SectionSignatureRepositoryInterface::class   => SectionSignatureRepository::class,
-            ReportApprovalRepositoryInterface::class     => ReportApprovalRepository::class,
-            FieldLockRepositoryInterface::class          => FieldLockRepository::class,
+            UserRepositoryInterface::class => UserRepository::class,
+            PasswordPolicyRepositoryInterface::class => PasswordPolicyRepository::class,
+            PasswordHistoryRepositoryInterface::class => PasswordHistoryRepository::class,
+            RoomRepositoryInterface::class => RoomRepository::class,
+            LocationRepositoryInterface::class => LocationRepository::class,
+            ReportTemplateRepositoryInterface::class => ReportTemplateRepository::class,
+            SectionRepositoryInterface::class => SectionRepository::class,
+            ReportRepositoryInterface::class => ReportRepository::class,
+            SectionInstanceRepositoryInterface::class => SectionInstanceRepository::class,
+            SectionSignatureRepositoryInterface::class => SectionSignatureRepository::class,
+            ReportApprovalRepositoryInterface::class => ReportApprovalRepository::class,
+            FieldLockRepositoryInterface::class => FieldLockRepository::class,
+            AnalystRepositoryInterface::class => AnalystRepository::class,
+            MonitoringEntryRepositoryInterface::class => MonitoringEntryRepository::class,
         ];
 
         foreach ($bindings as $interface => $implementation) {

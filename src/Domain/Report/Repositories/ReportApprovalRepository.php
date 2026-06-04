@@ -30,7 +30,7 @@ class ReportApprovalRepository implements ReportApprovalRepositoryInterface
         return ReportApproval::firstOrCreate(
             [
                 'report_id' => $attributes['report_id'],
-                'step'      => $attributes['step'],
+                'step' => $attributes['step'],
             ],
             $attributes,
         );
@@ -42,6 +42,34 @@ class ReportApprovalRepository implements ReportApprovalRepositoryInterface
     public function update(ReportApproval $approval, array $attributes): void
     {
         $approval->fill($attributes)->save();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function delete(ReportApproval $approval): void
+    {
+        $approval->delete();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function refresh(ReportApproval $approval): ReportApproval
+    {
+        return $approval->fresh() ?? $approval;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function hasReturnedForAnalyst(string $reportId, string $analystId): bool
+    {
+        return ReportApproval::query()
+            ->where('report_id', $reportId)
+            ->where('status', ReportApproval::STATUS_RETURNED)
+            ->where('returned_to_user_id', $analystId)
+            ->exists();
     }
 
     /**

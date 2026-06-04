@@ -4,7 +4,6 @@ namespace Domain\Report\Repositories;
 
 use Domain\Report\Interfaces\FieldLockRepositoryInterface;
 use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
-use Domain\Report\Models\FieldLock;
 use Domain\Report\Models\Report;
 use Domain\Report\Models\SectionEntry;
 use Domain\Report\Models\SectionInstance;
@@ -14,8 +13,7 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
 {
     public function __construct(
         protected FieldLockRepositoryInterface $fieldLockRepository,
-    ) {
-    }
+    ) {}
 
     /**
      * {@inheritDoc}
@@ -49,7 +47,7 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
         $instances = $this->getInstancesForReport($report);
 
         // Section-level IDs
-        $entryIds    = [];
+        $entryIds = [];
         $instanceIds = [];
         foreach ($instances as $instance) {
             $instanceIds[] = $instance->id;
@@ -63,20 +61,20 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
         // Header-section IDs (instruments / mediums / incubators)
         $report->loadMissing(['instrumentEntries', 'mediumEntries', 'incubators.entries']);
 
-        $instrumentIds     = $report->instrumentEntries->pluck('id')->all();
-        $mediumIds         = $report->mediumEntries->pluck('id')->all();
-        $incubatorIds      = $report->incubators->pluck('id')->all();
+        $instrumentIds = $report->instrumentEntries->pluck('id')->all();
+        $mediumIds = $report->mediumEntries->pluck('id')->all();
+        $incubatorIds = $report->incubators->pluck('id')->all();
         $incubatorEntryIds = $report->incubators
             ->flatMap(fn ($incubator) => $incubator->entries->pluck('id'))
             ->all();
 
         $byTable = [
-            'section_entries'    => $entryIds,
-            'section_instances'  => $instanceIds,
+            'section_entries' => $entryIds,
+            'section_instances' => $instanceIds,
             'instrument_entries' => $instrumentIds,
-            'medium_entries'     => $mediumIds,
-            'incubators'         => $incubatorIds,
-            'incubator_entries'  => $incubatorEntryIds,
+            'medium_entries' => $mediumIds,
+            'incubators' => $incubatorIds,
+            'incubator_entries' => $incubatorEntryIds,
         ];
 
         $locks = [];
@@ -93,7 +91,7 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
 
         return [
             'instances' => $instances,
-            'locks'     => $locks,
+            'locks' => $locks,
         ];
     }
 
@@ -167,11 +165,26 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
     /**
      * {@inheritDoc}
      */
+    public function updateInstanceAndGetDirtyFields(SectionInstance $instance, array $attributes): array
+    {
+        $instance->fill($attributes);
+        $dirtyFields = array_keys($instance->getDirty());
+
+        if (! empty($dirtyFields)) {
+            $instance->save();
+        }
+
+        return $dirtyFields;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function createInstanceLocations(SectionInstance $instance, array $rows): void
     {
         foreach ($rows as $row) {
             $instance->instanceLocations()->create([
-                'location_id'   => $row['location_id'],
+                'location_id' => $row['location_id'],
                 'display_order' => $row['display_order'],
             ]);
         }
@@ -200,6 +213,62 @@ class SectionInstanceRepository implements SectionInstanceRepositoryInterface
     public function updateEntry(SectionEntry $entry, array $attributes): void
     {
         $entry->fill($attributes)->save();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function updateEntryAndGetDirtyFields(SectionEntry $entry, array $attributes): array
+    {
+        $entry->fill($attributes);
+        $dirtyFields = array_keys($entry->getDirty());
+
+        if (! empty($dirtyFields)) {
+            $entry->save();
+        }
+
+        return $dirtyFields;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function loadRelations(SectionInstance $instance, array $relations): SectionInstance
+    {
+        return $instance->load($relations);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getInstancesWithEntriesForReport(string $reportId): Collection
+    {
+        return SectionInstance::query()
+            ->where('report_id', $reportId)
+            ->with('instanceLocations.entries')
+            ->get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getInstancesWithSignaturesForReport(string $reportId): Collection
+    {
+        return SectionInstance::query()
+            ->where('report_id', $reportId)
+            ->with('signatures')
+            ->get();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getInstanceIdsForReport(string $reportId): array
+    {
+        return SectionInstance::query()
+            ->where('report_id', $reportId)
+            ->pluck('id')
+            ->all();
     }
 
     /**
