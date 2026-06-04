@@ -7,7 +7,6 @@ use App\Http\Requests\UserIndexRequest;
 use App\Http\Requests\UserStoreRequest;
 use App\Http\Requests\UserUpdateRequest;
 use Domain\User\Dtos\GetUsersFilterDto;
-use Domain\User\Models\User;
 use Domain\User\Services\UserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -40,28 +39,30 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User created successfully');
     }
 
-    public function edit(User $user): View
+    public function edit(string $user): View
     {
+        $user = $this->userService->findUserById($user);
+
         return view('user-management.edit', compact('user'));
     }
 
-    public function update(UserUpdateRequest $request, User $user): RedirectResponse
+    public function update(UserUpdateRequest $request, string $user): RedirectResponse
     {
-        $this->userService->updateUser($user, $request->toDTO());
+        $this->userService->updateUserById($user, $request->toDTO());
 
         return redirect()->route('users.index')->with('success', 'User updated successfully');
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function destroy(string $user): RedirectResponse
     {
-        $this->userService->deleteUser($user);
+        $this->userService->deleteUserById($user);
 
         return redirect()->route('users.index')->with('success', 'User deleted successfully');
     }
 
     public function getUsers()
     {
-        $users = $this->userService->getDataUsers(new GetUsersFilterDto());
+        $users = $this->userService->getDataUsers(new GetUsersFilterDto);
 
         return response()->json([
             'success' => true,

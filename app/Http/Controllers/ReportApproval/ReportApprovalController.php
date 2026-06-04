@@ -3,18 +3,15 @@
 namespace App\Http\Controllers\ReportApproval;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Approval\ApprovalInboxRequest;
+use App\Http\Requests\Approval\ApprovalInProgressRequest;
 use App\Http\Requests\Approval\ApproveReportRequest;
 use App\Http\Requests\Approval\ReturnReportRequest;
 use App\Http\Requests\Approval\SaveSupervisorMonitoringRequest;
-use Domain\Report\Dtos\GetApprovalReportsFilterDto;
-use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
-use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
-use Domain\Report\Models\Report;
-use Domain\Report\Models\ReportApproval;
 use Domain\Report\Services\MonitoringService;
 use Domain\Report\Services\ReportApprovalService;
+use Domain\Report\Services\ReportService;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -28,112 +25,68 @@ use Illuminate\View\View;
 class ReportApprovalController extends Controller
 {
     public function __construct(
-        protected ReportApprovalRepositoryInterface $approvals,
         protected ReportApprovalService $approvalService,
-        protected SectionInstanceRepositoryInterface $sectionInstances,
         protected MonitoringService $monitoringService,
-    ) {
-    }
+        protected ReportService $reportService,
+    ) {}
 
-    public function inbox(Request $request, string $step): View
+    public function inbox(ApprovalInboxRequest $request, string $step): View
     {
         $config = $this->resolveConfig($step);
-        $tab = (string) $request->query('tab', ReportApproval::STATUS_PENDING);
-
-        $dto = new GetApprovalReportsFilterDto([
-            'tab'     => $tab,
-            'step'    => $config['stepConstant'],
-            'user_id' => (string) Auth::id(),
-        ]);
-
-        $reports = $this->approvals->getReportsForAssignee($dto);
-        $counts  = $this->approvals->countByAssigneeTab(
-            $config['stepConstant'],
-            (string) Auth::id(),
-        );
+        $dto = $request->toDTO();
+        $data = $this->approvalService->getInboxData($dto);
 
         return view('report-inbox.index', [
-            'reports'   => $reports,
-            'counts'    => $counts,
-            'activeTab' => $tab,
+            'reports' => $data['reports'],
+            'counts' => $data['counts'],
+            'activeTab' => $dto->tab,
             'showRoute' => $config['showRoute'],
-            'tabRoute'  => $config['inboxRoute'],
+            'tabRoute' => $config['inboxRoute'],
             'roleLabel' => $config['roleLabel'],
         ]);
     }
 
-    public function inProgress(Request $request, string $step): View
+    public function inProgress(ApprovalInProgressRequest $request, string $step): View
     {
         $config = $this->resolveConfig($step);
-        $stage = (string) $request->query('stage', 'all');
-        $allowedStages = [
-            'all',
-            'pending',
-            'monitoring',
-            'reading',
-            'review_supervisor',
-            'approval_manager',
-            'returned',
-        ];
-        if (! in_array($stage, $allowedStages, true)) {
-            $stage = 'all';
-        }
-
-        $reports = $this->approvals->getInProgressReportsForAssignee(
-            $config['stepConstant'],
-            (string) Auth::id(),
-            $stage,
-        );
-        $counts = $this->approvals->countInProgressByStage(
-            $config['stepConstant'],
-            (string) Auth::id(),
-        );
+        $dto = $request->toDTO();
+        $data = $this->approvalService->getInProgressData($dto);
 
         return view('report-in-progress.index', [
-            'reports'   => $reports,
+            'reports' => $data['reports'],
             'showRoute' => $config['showRoute'],
             'previewRoute' => $config['previewRoute'],
             'roleLabel' => $config['roleLabel'],
-            'activeStage' => $stage,
-            'counts'      => $counts,
+            'activeStage' => $dto->stage,
+            'counts' => $data['counts'],
         ]);
     }
 
-    public function show(Report $report, string $step): View
+    public function show(string $report, string $step): View
     {
         $config = $this->resolveConfig($step);
 
-        $approval = $this->approvals->findByReportAndStep(
-            $report->id,
+        $approval = $this->approvalService->findApprovalForAssignee(
+            $report,
             $config['stepConstant'],
+            (string) Auth::id(),
         );
         abort_if($approval === null, 404);
-        abort_if((string) $approval->user_id !== (string) Auth::id(), 403);
 
-        $report->load([
-            'reportTemplate',
-            'createdByUser',
-            'lockedByUser',
-            'analysts.user',
-            'approvals.user',
-            'approvals.returnedToUser',
-        ]);
-
-        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
-        $returnTargets = $this->approvalService->returnTargetsForReport($report);
+        $data = $this->approvalService->getApprovalDetailData($report, $approval, false);
 
         return view('report-approval.show', [
-            'report'           => $report,
-            'approval'         => $approval,
-            'previewOnly'      => false,
-            'sectionInstances' => $bundle['instances'],
-            'lockMap'          => $bundle['locks'],
-            'returnTargets'    => $returnTargets,
-            'approveRoute'     => $config['approveRoute'],
-            'returnRoute'      => $config['returnRoute'],
+            'report' => $data['report'],
+            'approval' => $data['approval'],
+            'previewOnly' => false,
+            'sectionInstances' => $data['sectionInstances'],
+            'lockMap' => $data['lockMap'],
+            'returnTargets' => $data['returnTargets'],
+            'approveRoute' => $config['approveRoute'],
+            'returnRoute' => $config['returnRoute'],
             'saveMonitoringRoute' => $config['saveMonitoringRoute'],
-            'backRoute'        => $config['inboxRoute'],
-            'roleLabel'        => $config['roleLabel'],
+            'backRoute' => $config['inboxRoute'],
+            'roleLabel' => $config['roleLabel'],
         ]);
     }
 
@@ -141,60 +94,50 @@ class ReportApprovalController extends Controller
      * Read-only preview page for supervisor/manager ongoing list.
      * This does not require an approval row assigned to the current actor.
      */
-    public function preview(Report $report, string $step): View
+    public function preview(string $report, string $step): View
     {
         $config = $this->resolveConfig($step);
-
-        $report->load([
-            'reportTemplate',
-            'createdByUser',
-            'lockedByUser',
-            'analysts.user',
-            'approvals.user',
-            'approvals.returnedToUser',
-        ]);
-
-        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+        $data = $this->approvalService->getApprovalDetailData($report, null, true);
 
         return view('report-approval.show', [
-            'report'           => $report,
-            'approval'         => null,
-            'previewOnly'      => true,
-            'sectionInstances' => $bundle['instances'],
-            'lockMap'          => $bundle['locks'],
-            'returnTargets'    => collect(),
-            'approveRoute'     => $config['approveRoute'],
-            'returnRoute'      => $config['returnRoute'],
+            'report' => $data['report'],
+            'approval' => null,
+            'previewOnly' => true,
+            'sectionInstances' => $data['sectionInstances'],
+            'lockMap' => $data['lockMap'],
+            'returnTargets' => $data['returnTargets'],
+            'approveRoute' => $config['approveRoute'],
+            'returnRoute' => $config['returnRoute'],
             'saveMonitoringRoute' => $config['saveMonitoringRoute'],
-            'backRoute'        => $config['inProgressRoute'],
-            'roleLabel'        => $config['roleLabel'],
+            'backRoute' => $config['inProgressRoute'],
+            'roleLabel' => $config['roleLabel'],
         ]);
     }
 
     public function saveMonitoring(
         SaveSupervisorMonitoringRequest $request,
-        Report $report,
+        string $report,
         string $step,
     ): RedirectResponse {
         if ($step !== 'supervisor') {
             abort(404);
         }
 
-        $approval = $this->approvals->findByReportAndStep(
-            $report->id,
-            ReportApproval::STEP_SUPERVISOR,
+        $approval = $this->approvalService->findApprovalForAssignee(
+            $report,
+            ReportApprovalService::STEP_SUPERVISOR,
+            (string) Auth::id(),
         );
 
         abort_if($approval === null, 404);
-        abort_if((string) $approval->user_id !== (string) Auth::id(), 403);
 
-        if ($approval->status !== ReportApproval::STATUS_PENDING) {
+        if ($approval->status !== ReportApprovalService::STATUS_PENDING) {
             return back()->with('error', 'Laporan ini sudah diproses sebelumnya.');
         }
 
         try {
             $this->monitoringService->saveMonitoringBySupervisor(
-                $report,
+                $this->reportService->findReportById($report),
                 (string) Auth::id(),
                 $request->toDTO(),
             );
@@ -205,11 +148,12 @@ class ReportApprovalController extends Controller
         return back()->with('success', 'Perbaikan data monitoring berhasil disimpan.');
     }
 
-    public function approve(ApproveReportRequest $request, Report $report, string $step): RedirectResponse
+    public function approve(ApproveReportRequest $request, string $report, string $step): RedirectResponse
     {
         $config = $this->resolveConfig($step);
 
         try {
+            $report = $this->reportService->findReportById($report);
             if ($step === 'manager') {
                 $this->approvalService->approveByManager($report, $request->toDTO());
             } else {
@@ -228,18 +172,19 @@ class ReportApprovalController extends Controller
             ->with('success', $successMessage);
     }
 
-    public function return(ReturnReportRequest $request, Report $report, string $step): RedirectResponse
+    public function return(ReturnReportRequest $request, string $report, string $step): RedirectResponse
     {
         $config = $this->resolveConfig($step);
 
         try {
+            $report = $this->reportService->findReportById($report);
             if ($step === 'manager') {
                 $this->approvalService->returnByManager($report, $request->toDTO());
             } else {
                 $this->approvalService->returnBySupervisor($report, $request->toDTO());
             }
         } catch (\RuntimeException $e) {
-            return back()->withInput($request->except('password'))->with('error', $e->getMessage());
+            return back()->withInput()->with('error', $e->getMessage());
         }
 
         return redirect()
@@ -266,25 +211,25 @@ class ReportApprovalController extends Controller
     {
         return match ($step) {
             'manager' => [
-                'stepConstant' => ReportApproval::STEP_MANAGER,
-                'roleLabel'    => 'Manajer',
-                'inboxRoute'   => 'manager.inbox',
+                'stepConstant' => ReportApprovalService::STEP_MANAGER,
+                'roleLabel' => 'Manajer',
+                'inboxRoute' => 'manager.inbox',
                 'inProgressRoute' => 'manager.in-progress',
-                'showRoute'    => 'manager.reports.show',
+                'showRoute' => 'manager.reports.show',
                 'previewRoute' => 'manager.reports.preview',
                 'approveRoute' => 'manager.reports.approve',
-                'returnRoute'  => 'manager.reports.return',
+                'returnRoute' => 'manager.reports.return',
                 'saveMonitoringRoute' => null,
             ],
             default => [
-                'stepConstant' => ReportApproval::STEP_SUPERVISOR,
-                'roleLabel'    => 'Supervisor',
-                'inboxRoute'   => 'supervisor.inbox',
+                'stepConstant' => ReportApprovalService::STEP_SUPERVISOR,
+                'roleLabel' => 'Supervisor',
+                'inboxRoute' => 'supervisor.inbox',
                 'inProgressRoute' => 'supervisor.in-progress',
-                'showRoute'    => 'supervisor.reports.show',
+                'showRoute' => 'supervisor.reports.show',
                 'previewRoute' => 'supervisor.reports.preview',
                 'approveRoute' => 'supervisor.reports.approve',
-                'returnRoute'  => 'supervisor.reports.return',
+                'returnRoute' => 'supervisor.reports.return',
                 'saveMonitoringRoute' => 'supervisor.reports.save-monitoring',
             ],
         };

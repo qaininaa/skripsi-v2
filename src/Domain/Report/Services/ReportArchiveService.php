@@ -4,7 +4,9 @@ namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\GetArchiveReportsFilterDto;
 use Domain\Report\Interfaces\ReportRepositoryInterface;
+use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Report;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ReportArchiveService
 {
@@ -76,8 +78,8 @@ class ReportArchiveService
 
     public function __construct(
         protected ReportRepositoryInterface $reports,
-    ) {
-    }
+        protected SectionInstanceRepositoryInterface $sectionInstances,
+    ) {}
 
     /**
      * @return array<int, array{slug: string, code: string, subtitle: string, annex_numbers: array<int, int>, count: int}>
@@ -86,6 +88,7 @@ class ReportArchiveService
     {
         return array_map(function (array $folder) {
             $folder['count'] = $this->reports->countArchivedReports($folder['annex_numbers']);
+
             return $folder;
         }, self::FOLDERS);
     }
@@ -109,7 +112,7 @@ class ReportArchiveService
     }
 
     /**
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator|null
+     * @return LengthAwarePaginator|null
      */
     public function getReportsForFolder(GetArchiveReportsFilterDto $dto)
     {
@@ -127,6 +130,28 @@ class ReportArchiveService
     public function findArchivedReportById(string $reportId): ?Report
     {
         return $this->reports->findArchivedReportById($reportId);
+    }
+
+    /**
+     * Build all data needed by the archive detail page.
+     *
+     * @return array{report: Report, activeFolder: array|null, sectionInstances: mixed, lockMap: array}|null
+     */
+    public function getArchivedReportDetailData(string $reportId): ?array
+    {
+        $report = $this->findArchivedReportById($reportId);
+        if ($report === null) {
+            return null;
+        }
+
+        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+
+        return [
+            'report' => $report,
+            'activeFolder' => $this->resolveFolderForReport($report),
+            'sectionInstances' => $bundle['instances'],
+            'lockMap' => $bundle['locks'],
+        ];
     }
 
     /**

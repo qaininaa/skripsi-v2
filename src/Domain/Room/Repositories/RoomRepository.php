@@ -2,8 +2,6 @@
 
 namespace Domain\Room\Repositories;
 
-use Shared\Cache\CacheKeyPattern;
-use Shared\Cache\CacheTtl;
 use Domain\Room\Dtos\CreateRoomDto;
 use Domain\Room\Dtos\GetRoomDto;
 use Domain\Room\Dtos\GetRoomsFilterDto;
@@ -13,10 +11,12 @@ use Domain\Room\Models\Room;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Shared\Cache\CacheKeyPattern;
+use Shared\Cache\CacheTtl;
 
 /**
  * Eloquent implementation of RoomRepositoryInterface with read-through caching.
- *
  */
 class RoomRepository implements RoomRepositoryInterface
 {
@@ -34,19 +34,19 @@ class RoomRepository implements RoomRepositoryInterface
     public function getRooms(GetRoomsFilterDto $data)
     {
         $perPage = 10;
-        $page    = (int) (request()->input('page', 1) ?: 1);
+        $page = (int) (request()->input('page', 1) ?: 1);
 
         $keyHash = md5(json_encode([
             'search' => $data->search,
-            'class'  => $data->class,
-            'page'   => $page,
-            'per'    => $perPage,
+            'class' => $data->class,
+            'page' => $page,
+            'per' => $perPage,
         ]));
         $cacheKey = sprintf(CacheKeyPattern::ROOM_ALL_FILTERED, $keyHash);
 
         // Register key into the registry (read-modify-write, skip if already present)
         $keys = Cache::get(CacheKeyPattern::ROOM_KEYS_REGISTRY, []);
-        if (!in_array($cacheKey, $keys)) {
+        if (! in_array($cacheKey, $keys)) {
             $keys[] = $cacheKey;
             Cache::put(CacheKeyPattern::ROOM_KEYS_REGISTRY, $keys, CacheTtl::MASTER);
         }
@@ -55,8 +55,8 @@ class RoomRepository implements RoomRepositoryInterface
             $query = Room::query()
                 ->when($data->search !== null, function ($query) use ($data) {
                     $query->where(function ($subQuery) use ($data) {
-                        $subQuery->where('name', 'like', '%' . $data->search . '%')
-                            ->orWhere('room_number', 'like', '%' . $data->search . '%');
+                        $subQuery->where('name', 'like', '%'.$data->search.'%')
+                            ->orWhere('room_number', 'like', '%'.$data->search.'%');
                     });
                 })
                 ->when($data->class !== null, function ($query) use ($data) {
@@ -83,7 +83,7 @@ class RoomRepository implements RoomRepositoryInterface
             $perPage,
             $page,
             [
-                'path'     => Paginator::resolveCurrentPath(),
+                'path' => Paginator::resolveCurrentPath(),
                 'pageName' => 'page',
             ]
         );
@@ -96,17 +96,15 @@ class RoomRepository implements RoomRepositoryInterface
      *
      * Triggers the 'created' Eloquent event, which causes RoomCacheObserver
      * to invalidate all related cache entries.
-     *
-     * @param  CreateRoomDto  $data  
-     * @return Room                  
      */
     public function createRoom(CreateRoomDto $data): Room
     {
-        $room = new Room();
+        $room = new Room;
         $room->name = $data->name;
         $room->room_number = $data->room_number;
         $room->class = $data->class;
         $room->save();
+
         return $room;
     }
 
@@ -116,9 +114,6 @@ class RoomRepository implements RoomRepositoryInterface
      * Used for duplicate validation during create and update operations.
      * Intentionally NOT cached - must always return fresh data to prevent false negatives.
      * Optionally excludes a specific room ID to support update uniqueness checks.
-     *
-     * @param  GetRoomDto  $data  
-     * @return Room|null       
      */
     public function getRoomByName(GetRoomDto $data): ?Room
     {
@@ -126,7 +121,7 @@ class RoomRepository implements RoomRepositoryInterface
             return null;
         }
 
-        $normalizedName       = strtolower(trim($data->name ?? ''));
+        $normalizedName = strtolower(trim($data->name ?? ''));
         $normalizedRoomNumber = strtolower(trim($data->room_number ?? ''));
 
         return Room::query()
@@ -137,14 +132,32 @@ class RoomRepository implements RoomRepositoryInterface
     }
 
     /**
+     * {@inheritDoc}
+     */
+    public function findById(string $id): ?Room
+    {
+        return Room::find($id);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function hasReportSnapshotUsage(Room $room): bool
+    {
+        return DB::table('section_instance_locations')
+            ->join('locations', 'section_instance_locations.location_id', '=', 'locations.id')
+            ->where('locations.room_id', $room->id)
+            ->exists();
+    }
+
+    /**
      * Update an existing room with new data.
      *
      * Triggers the 'updated' Eloquent event, which causes RoomCacheObserver
      * to invalidate all related cache entries.
      *
-     * @param  Room            
-     * @param  UpdateRoomDto    
-     * @return void
+     * @param  Room
+     * @param  UpdateRoomDto
      */
     public function updateRoom(Room $room, UpdateRoomDto $data): void
     {
@@ -161,7 +174,6 @@ class RoomRepository implements RoomRepositoryInterface
      * to invalidate all related cache entries.
      *
      * @param  Room  $room  The room model to delete.
-     * @return void
      */
     public function deleteRoom(Room $room): void
     {

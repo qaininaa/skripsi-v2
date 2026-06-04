@@ -7,6 +7,8 @@ use Domain\ReportTemplate\Dtos\GetReportTemplatesFilterDto;
 use Domain\ReportTemplate\Dtos\UpdateReportTemplateDto;
 use Domain\ReportTemplate\Interfaces\ReportTemplateRepositoryInterface;
 use Domain\ReportTemplate\Models\ReportTemplate;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 /**
  * Handles business logic for the ReportTemplate domain.
@@ -26,8 +28,7 @@ class ReportTemplateService
     /**
      * Retrieve a paginated, filtered list of report templates.
      *
-     * @param  GetReportTemplatesFilterDto  $dto
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      */
     public function getReportTemplates(GetReportTemplatesFilterDto $dto)
     {
@@ -39,10 +40,8 @@ class ReportTemplateService
      *
      * Validates that the annex_number + sop_code + sop_version combination is unique.
      *
-     * @param  CreateReportTemplateDto  $dto
-     * @return ReportTemplate
      *
-     * @throws \RuntimeException  If the combination already exists.
+     * @throws \RuntimeException If the combination already exists.
      */
     public function createReportTemplate(CreateReportTemplateDto $dto): ReportTemplate
     {
@@ -66,11 +65,8 @@ class ReportTemplateService
      *
      * Validates uniqueness while excluding the current template from the check.
      *
-     * @param  ReportTemplate           $reportTemplate
-     * @param  UpdateReportTemplateDto  $dto
-     * @return void
      *
-     * @throws \RuntimeException  If the combination is taken by another template.
+     * @throws \RuntimeException If the combination is taken by another template.
      */
     public function updateReportTemplate(ReportTemplate $reportTemplate, UpdateReportTemplateDto $dto): void
     {
@@ -91,13 +87,53 @@ class ReportTemplateService
     }
 
     /**
-     * Delete a report template.
+     * Find report template by ID.
      *
-     * @param  ReportTemplate  $reportTemplate
-     * @return void
+     * @throws \RuntimeException
+     */
+    public function findReportTemplateById(string $reportTemplateId): ReportTemplate
+    {
+        $reportTemplate = $this->repository->findById($reportTemplateId);
+        if ($reportTemplate === null) {
+            throw (new ModelNotFoundException)->setModel(ReportTemplate::class, [$reportTemplateId]);
+        }
+
+        return $reportTemplate;
+    }
+
+    /**
+     * Find report template with edit form relations.
+     *
+     * @throws \RuntimeException
+     */
+    public function getReportTemplateForEdit(string $reportTemplateId): ReportTemplate
+    {
+        $reportTemplate = $this->repository->findByIdWithRelations($reportTemplateId, [
+            'mediumTemplates',
+            'incubatorTemplates',
+        ]);
+        if ($reportTemplate === null) {
+            throw (new ModelNotFoundException)->setModel(ReportTemplate::class, [$reportTemplateId]);
+        }
+
+        return $reportTemplate;
+    }
+
+    public function updateReportTemplateById(string $reportTemplateId, UpdateReportTemplateDto $dto): void
+    {
+        $this->updateReportTemplate($this->findReportTemplateById($reportTemplateId), $dto);
+    }
+
+    /**
+     * Delete a report template.
      */
     public function deleteReportTemplate(ReportTemplate $reportTemplate): void
     {
         $this->repository->deleteReportTemplate($reportTemplate);
+    }
+
+    public function deleteReportTemplateById(string $reportTemplateId): void
+    {
+        $this->deleteReportTemplate($this->findReportTemplateById($reportTemplateId));
     }
 }

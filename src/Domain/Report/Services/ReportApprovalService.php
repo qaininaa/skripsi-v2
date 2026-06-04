@@ -3,6 +3,8 @@
 namespace Domain\Report\Services;
 
 use Domain\Report\Dtos\ApproveReportDto;
+use Domain\Report\Dtos\GetApprovalReportsFilterDto;
+use Domain\Report\Dtos\GetInProgressReportsFilterDto;
 use Domain\Report\Dtos\ReturnReportDto;
 use Domain\Report\Interfaces\AnalystRepositoryInterface;
 use Domain\Report\Interfaces\ReportApprovalRepositoryInterface;
@@ -51,6 +53,12 @@ use Illuminate\Support\Facades\DB;
  */
 class ReportApprovalService
 {
+    public const STEP_SUPERVISOR = ReportApproval::STEP_SUPERVISOR;
+
+    public const STEP_MANAGER = ReportApproval::STEP_MANAGER;
+
+    public const STATUS_PENDING = ReportApproval::STATUS_PENDING;
+
     public function __construct(
         protected ReportApprovalRepositoryInterface $approvals,
         protected ReportRepositoryInterface $reports,
@@ -88,6 +96,69 @@ class ReportApprovalService
             ReportApproval::ROLE_SUPERVISOR,
             (string) $supervisor->id,
         );
+    }
+
+    /**
+     * Inbox listing and tab counts for a role assignee.
+     *
+     * @return array{reports: mixed, counts: array<string, int>}
+     */
+    public function getInboxData(GetApprovalReportsFilterDto $dto): array
+    {
+        return [
+            'reports' => $this->approvals->getReportsForAssignee($dto),
+            'counts' => $this->approvals->countByAssigneeTab($dto->step, $dto->userId),
+        ];
+    }
+
+    /**
+     * Ongoing report listing and stage counts.
+     *
+     * @return array{reports: mixed, counts: array<string, int>}
+     */
+    public function getInProgressData(GetInProgressReportsFilterDto $dto): array
+    {
+        return [
+            'reports' => $this->approvals->getInProgressReportsForAssignee($dto->step, $dto->userId, $dto->stage),
+            'counts' => $this->approvals->countInProgressByStage($dto->step, $dto->userId),
+        ];
+    }
+
+    /**
+     * Find an approval assigned to the actor for display pages.
+     */
+    public function findApprovalForAssignee(string $reportId, int $step, string $userId): ?ReportApproval
+    {
+        $approval = $this->approvals->findByReportAndStep($reportId, $step);
+
+        if ($approval === null || (string) $approval->user_id !== $userId) {
+            return null;
+        }
+
+        return $approval;
+    }
+
+    /**
+     * Build report approval detail page data.
+     *
+     * @return array{report: Report, approval: ReportApproval|null, sectionInstances: mixed, lockMap: array, returnTargets: Collection}
+     */
+    public function getApprovalDetailData(string $reportId, ?ReportApproval $approval, bool $previewOnly): array
+    {
+        $report = $this->reports->findByIdWithRelations($reportId, $this->approvalDetailRelations());
+        if ($report === null) {
+            throw new \RuntimeException('Laporan tidak ditemukan.');
+        }
+
+        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+
+        return [
+            'report' => $report,
+            'approval' => $approval,
+            'sectionInstances' => $bundle['instances'],
+            'lockMap' => $bundle['locks'],
+            'returnTargets' => $previewOnly ? collect() : $this->returnTargetsForReport($report),
+        ];
     }
 
     /**
@@ -406,5 +477,20 @@ class ReportApprovalService
             'user_id' => $userId,
             'status' => ReportApproval::STATUS_PENDING,
         ]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function approvalDetailRelations(): array
+    {
+        return [
+            'reportTemplate',
+            'createdByUser',
+            'lockedByUser',
+            'analysts.user',
+            'approvals.user',
+            'approvals.returnedToUser',
+        ];
     }
 }

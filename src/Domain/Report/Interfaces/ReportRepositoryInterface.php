@@ -92,6 +92,13 @@ interface ReportRepositoryInterface
     public function findById(string $id): ?Report;
 
     /**
+     * Find a report by its primary key and eager-load relations.
+     *
+     * @param  array<int, string>  $with
+     */
+    public function findByIdWithRelations(string $id, array $with): ?Report;
+
+    /**
      * Refresh a report from storage with optional relations.
      *
      * @param  array<int, string>  $with

@@ -4,39 +4,24 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ChangeInitialPasswordRequest;
-use Domain\User\Dtos\CheckPasswordExpirationDto;
+use App\Http\Requests\ChangePasswordEditRequest;
 use Domain\User\Services\ChangePasswordService;
-use Domain\PasswordPolicy\Services\PasswordPolicyService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class ChangePasswordController extends Controller
 {
     public function __construct(
-        protected ChangePasswordService $changePasswordService,
-        protected PasswordPolicyService $passwordPolicyService
-    ) {
-    }
+        protected ChangePasswordService $changePasswordService
+    ) {}
 
-    public function edit(): View
+    public function edit(ChangePasswordEditRequest $request): View
     {
-        $reason = request()->query('reason');
-        $user = request()->user();
-        $isPasswordExpired = $reason === 'expired'
-            || ($user !== null && $this->passwordPolicyService->isPasswordExpired(
-                new CheckPasswordExpirationDto($user->password_changed_at)
-            ));
-
-        if ($reason === 'initial' || ($user !== null && $user->password_changed_at === null)) {
-            $notice = 'Demi keamanan akun, Anda wajib mengganti password default sebelum melanjutkan.';
-        } elseif ($isPasswordExpired) {
-            $notice = 'Password Anda sudah kedaluwarsa. Demi keamanan akun, Anda wajib membuat password baru sebelum melanjutkan.';
-        } else {
-            $notice = 'Silakan ubah password Anda untuk menjaga keamanan akun.';
-        }
-
         return view('auth.change-password', [
-            'passwordNotice' => $notice,
+            'passwordNotice' => $this->changePasswordService->getChangePasswordNotice(
+                $request->user(),
+                $request->toDTO(),
+            ),
         ]);
     }
 

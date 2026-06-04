@@ -251,6 +251,16 @@ class ReportRepository implements ReportRepositoryInterface
     /**
      * {@inheritDoc}
      */
+    public function findByIdWithRelations(string $id, array $with): ?Report
+    {
+        return Report::query()
+            ->with($with)
+            ->find($id);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public function refresh(Report $report, array $with = []): Report
     {
         return $report->fresh($with) ?? $report;

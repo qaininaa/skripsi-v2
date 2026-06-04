@@ -7,7 +7,6 @@ use App\Http\Requests\Room\RoomIndexRequest;
 use App\Http\Requests\Room\RoomStoreRequest;
 use App\Http\Requests\Room\RoomUpdateRequest;
 use Domain\Room\Dtos\GetRoomsFilterDto;
-use Domain\Room\Models\Room;
 use Domain\Room\Services\RoomService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -46,15 +45,17 @@ class RoomController extends Controller
         return redirect()->route('rooms.index')->with('success', 'Berhasil membuat ruangan baru');
     }
 
-    public function edit(Room $room): View
+    public function edit(string $room): View
     {
+        $room = $this->roomService->findRoomById($room);
+
         return view('room-management.edit', compact('room'));
     }
 
-    public function update(RoomUpdateRequest $request, Room $room): RedirectResponse
+    public function update(RoomUpdateRequest $request, string $room): RedirectResponse
     {
         try {
-            $this->roomService->updateRoom($room, $request->toDTO());
+            $this->roomService->updateRoomById($room, $request->toDTO());
         } catch (\RuntimeException $e) {
             return redirect()
                 ->back()
@@ -65,16 +66,22 @@ class RoomController extends Controller
         return redirect()->route('rooms.index')->with('success', 'Berhasil memperbarui ruangan');
     }
 
-    public function destroy(Room $room): RedirectResponse
+    public function destroy(string $room): RedirectResponse
     {
-        $this->roomService->deleteRoom($room);
+        try {
+            $this->roomService->deleteRoomById($room);
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->route('rooms.index')
+                ->with('error', $e->getMessage());
+        }
 
         return redirect()->route('rooms.index')->with('success', 'Berhasil menghapus ruangan');
     }
 
     public function getRooms()
     {
-        $rooms = $this->roomService->getDataRooms(new GetRoomsFilterDto());
+        $rooms = $this->roomService->getDataRooms(new GetRoomsFilterDto);
 
         return response()->json([
             'success' => true,

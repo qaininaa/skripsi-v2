@@ -6,13 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ReportFill\ReportFillIndexRequest;
 use App\Http\Requests\ReportFill\SaveMonitoringRequest;
 use App\Http\Requests\ReportFill\SaveReadingRequest;
-use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
-use Domain\Report\Models\Report;
 use Domain\Report\Services\MonitoringService;
 use Domain\Report\Services\ReadingService;
 use Domain\Report\Services\ReportService;
 use Domain\User\Services\UserService;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 /**
@@ -27,23 +26,21 @@ class ReportFillController extends Controller
         protected ReportService $reportService,
         protected MonitoringService $monitoringService,
         protected ReadingService $readingService,
-        protected SectionInstanceRepositoryInterface $sectionInstances,
         protected UserService $userService,
-    ) {
-    }
+    ) {}
 
     /**
      * Inbox: tabs (Semua, Belum Dikerjakan, ...) + table of reports.
      */
     public function index(ReportFillIndexRequest $request): View
     {
-        $dto     = $request->toDTO();
+        $dto = $request->toDTO();
         $reports = $this->reportService->getReportsForAnalyst($dto);
-        $counts  = $this->reportService->countByAnalystTab($this->currentAnalystId());
+        $counts = $this->reportService->countByAnalystTab($this->currentAnalystId());
 
         return view('report-fill.index', [
-            'reports'   => $reports,
-            'counts'    => $counts,
+            'reports' => $reports,
+            'counts' => $counts,
             'activeTab' => $dto->tab,
         ]);
     }
@@ -55,14 +52,10 @@ class ReportFillController extends Controller
      *   pending / in_progress_monitoring → enter monitoring phase
      *   in_progress_reading             → enter reading phase
      */
-    public function start(Report $report): RedirectResponse
+    public function start(string $report): RedirectResponse
     {
         try {
-            if ($report->status === Report::STATUS_IN_PROGRESS_READING) {
-                $this->readingService->startReading($report, $this->currentAnalystId());
-            } else {
-                $this->monitoringService->startMonitoring($report, $this->currentAnalystId());
-            }
+            $this->reportService->startAnalystWork($report, $this->currentAnalystId());
         } catch (\RuntimeException $e) {
             return redirect()
                 ->route('report-fill.index')
@@ -75,7 +68,7 @@ class ReportFillController extends Controller
     /**
      * Read-only "Lihat" page for analysts who don't own the report.
      */
-    public function show(Report $report): View
+    public function show(string $report): View
     {
         return $this->preview($report);
     }
@@ -83,20 +76,18 @@ class ReportFillController extends Controller
     /**
      * Read-only preview page for analysts.
      */
-    public function preview(Report $report): View
+    public function preview(string $report): View
     {
-        $report->load($this->fillRelations());
-
-        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+        $data = $this->reportService->getFillViewData($report, $this->currentAnalystId(), true);
 
         return view('report-fill.fill', [
-            'report'           => $report,
-            'readonly'         => true,
-            'previewOnly'      => true,
-            'phase'            => $this->currentPhase($report),
-            'sectionInstances' => $bundle['instances'],
-            'lockMap'          => $bundle['locks'],
-            'supervisors'      => $this->userService->listSupervisors(),
+            'report' => $data['report'],
+            'readonly' => $data['readonly'],
+            'previewOnly' => $data['previewOnly'],
+            'phase' => $data['phase'],
+            'sectionInstances' => $data['sectionInstances'],
+            'lockMap' => $data['lockMap'],
+            'supervisors' => $this->userService->listSupervisors(),
         ]);
     }
 
@@ -104,22 +95,18 @@ class ReportFillController extends Controller
      * Fill-in form. Editable when current user is the locking analyst,
      * read-only otherwise.
      */
-    public function fill(Report $report): View
+    public function fill(string $report): View
     {
-        $report->load($this->fillRelations());
-
-        $isOwner = $report->locked_by !== null && $report->locked_by === $this->currentAnalystId();
-
-        $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
+        $data = $this->reportService->getFillViewData($report, $this->currentAnalystId(), false);
 
         return view('report-fill.fill', [
-            'report'           => $report,
-            'readonly'         => ! $isOwner,
-            'previewOnly'      => false,
-            'phase'            => $this->currentPhase($report),
-            'sectionInstances' => $bundle['instances'],
-            'lockMap'          => $bundle['locks'],
-            'supervisors'      => $this->userService->listSupervisors(),
+            'report' => $data['report'],
+            'readonly' => $data['readonly'],
+            'previewOnly' => $data['previewOnly'],
+            'phase' => $data['phase'],
+            'sectionInstances' => $data['sectionInstances'],
+            'lockMap' => $data['lockMap'],
+            'supervisors' => $this->userService->listSupervisors(),
         ]);
     }
 
@@ -130,11 +117,11 @@ class ReportFillController extends Controller
      * release  → lepas lock, ke index.
      * finalize → sign + transition ke reading, ke index.
      */
-    public function saveMonitoring(SaveMonitoringRequest $request, Report $report): RedirectResponse
+    public function saveMonitoring(SaveMonitoringRequest $request, string $report): RedirectResponse
     {
         try {
             $this->monitoringService->saveMonitoring(
-                $report,
+                $this->reportService->findReportById($report),
                 $this->currentAnalystId(),
                 $request->toDTO(),
                 $request->action(),
@@ -148,16 +135,16 @@ class ReportFillController extends Controller
         }
 
         return match ($request->action()) {
-            \Domain\Report\Services\MonitoringService::ACTION_TO_READING => redirect()
+            MonitoringService::ACTION_TO_READING => redirect()
                 ->route('report-fill.fill', $report)
                 ->with('success', 'Monitoring revisi tersimpan. Anda masuk ke tahap pembacaan.'),
-            \Domain\Report\Services\MonitoringService::ACTION_FINALIZE_TO_REVIEW => redirect()
+            MonitoringService::ACTION_FINALIZE_TO_REVIEW => redirect()
                 ->route('report-fill.index')
                 ->with('success', 'Revisi monitoring tersimpan dan laporan langsung dikirim ke supervisor.'),
-            \Domain\Report\Services\MonitoringService::ACTION_FINALIZE => redirect()
+            MonitoringService::ACTION_FINALIZE => redirect()
                 ->route('report-fill.index')
                 ->with('success', 'Monitoring selesai. Laporan berlanjut ke tahap pembacaan.'),
-            \Domain\Report\Services\MonitoringService::ACTION_RELEASE  => redirect()
+            MonitoringService::ACTION_RELEASE => redirect()
                 ->route('report-fill.index')
                 ->with('success', 'Monitoring tersimpan. Analis lain dapat melanjutkan.'),
             default => redirect()
@@ -169,11 +156,11 @@ class ReportFillController extends Controller
     /**
      * Save the reading form (draft / release / finalize).
      */
-    public function saveReading(SaveReadingRequest $request, Report $report): RedirectResponse
+    public function saveReading(SaveReadingRequest $request, string $report): RedirectResponse
     {
         try {
             $this->readingService->saveReading(
-                $report,
+                $this->reportService->findReportById($report),
                 $this->currentAnalystId(),
                 $request->toDTO(),
                 $request->action(),
@@ -187,10 +174,10 @@ class ReportFillController extends Controller
         }
 
         return match ($request->action()) {
-            \Domain\Report\Services\ReadingService::ACTION_FINALIZE => redirect()
+            ReadingService::ACTION_FINALIZE => redirect()
                 ->route('report-fill.index')
                 ->with('success', 'Pembacaan selesai. Laporan dikirim untuk review.'),
-            \Domain\Report\Services\ReadingService::ACTION_RELEASE  => redirect()
+            ReadingService::ACTION_RELEASE => redirect()
                 ->route('report-fill.index')
                 ->with('success', 'Pembacaan tersimpan. Analis lain dapat melanjutkan.'),
             default => redirect()
@@ -199,43 +186,8 @@ class ReportFillController extends Controller
         };
     }
 
-    /**
-     * Tells the view which phase to render: 'monitoring' or 'reading'.
-     */
-    private function currentPhase(Report $report): string
-    {
-        return $report->isReadingPhase() ? 'reading' : 'monitoring';
-    }
-
-    /**
-     * Relations needed by the fill-in view to render the full form.
-     *
-     * @return array<int, string>
-     */
-    private function fillRelations(): array
-    {
-        return [
-            'reportTemplate.mediumTemplates',
-            'reportTemplate.incubatorTemplates',
-            'lockedByUser',
-            'analysts.user',
-            'approvals.user',
-            'approvals.returnedToUser',
-            'instrumentEntries',
-            'mediumEntries.template',
-            'incubators.template',
-            'incubators.entries.incubatedBy',
-            'incubators.entries.removedBy',
-        ];
-    }
-
     private function currentAnalystId(): string
     {
-        return (string) $this->user()->id;
-    }
-
-    private function user()
-    {
-        return request()->user();
+        return (string) Auth::id();
     }
 }

@@ -4,7 +4,9 @@ namespace Domain\User\Services;
 
 use Domain\PasswordPolicy\Services\PasswordPolicyService;
 use Domain\User\Dtos\ChangeInitialPasswordDto;
+use Domain\User\Dtos\CheckPasswordExpirationDto;
 use Domain\User\Dtos\CreatePasswordHistoryDto;
+use Domain\User\Dtos\GetChangePasswordNoticeDto;
 use Domain\User\Dtos\GetRecentPasswordHistoriesDto;
 use Domain\User\Dtos\TrimPasswordHistoriesDto;
 use Domain\User\Dtos\UpdateUserPasswordDto;
@@ -30,7 +32,24 @@ class ChangePasswordService
         protected UserRepositoryInterface $userRepository,
         protected PasswordHistoryRepositoryInterface $passwordHistoryRepository,
         protected PasswordPolicyService $passwordPolicyService
-    ) {
+    ) {}
+
+    public function getChangePasswordNotice(User $user, GetChangePasswordNoticeDto $dto): string
+    {
+        $isPasswordExpired = $dto->reason === 'expired'
+            || $this->passwordPolicyService->isPasswordExpired(
+                new CheckPasswordExpirationDto($user->password_changed_at)
+            );
+
+        if ($dto->reason === 'initial' || $user->password_changed_at === null) {
+            return 'Demi keamanan akun, Anda wajib mengganti password default sebelum melanjutkan.';
+        }
+
+        if ($isPasswordExpired) {
+            return 'Password Anda sudah kedaluwarsa. Demi keamanan akun, Anda wajib membuat password baru sebelum melanjutkan.';
+        }
+
+        return 'Silakan ubah password Anda untuk menjaga keamanan akun.';
     }
 
     /**
@@ -40,16 +59,15 @@ class ChangePasswordService
      * then atomically updates the password, records it in history, and trims
      * excess history entries — all within a single database transaction.
      *
-     * @param  User                      $user  The user whose password is being changed.
-     * @param  ChangeInitialPasswordDto  $dto   DTO containing oldPassword and newPassword.
-     * @return void
+     * @param  User  $user  The user whose password is being changed.
+     * @param  ChangeInitialPasswordDto  $dto  DTO containing oldPassword and newPassword.
      *
-     * @throws ValidationException  If the old password is incorrect or the new password
-     *                              matches one of the recent password history entries.
+     * @throws ValidationException If the old password is incorrect or the new password
+     *                             matches one of the recent password history entries.
      */
     public function changePassword(User $user, ChangeInitialPasswordDto $dto): void
     {
-        if (!Hash::check($dto->oldPassword, $user->password)) {
+        if (! Hash::check($dto->oldPassword, $user->password)) {
             throw ValidationException::withMessages([
                 'old_password' => ['Password lama tidak sesuai.'],
             ]);
@@ -79,12 +97,11 @@ class ChangePasswordService
      *
      * Fetches the most recent N password history entries and checks each one.
      *
-     * @param  User    $user          The user to check history for.
-     * @param  string  $newPassword   The plain-text new password to validate.
-     * @param  int     $historyLimit  Number of recent passwords to check against.
-     * @return void
+     * @param  User  $user  The user to check history for.
+     * @param  string  $newPassword  The plain-text new password to validate.
+     * @param  int  $historyLimit  Number of recent passwords to check against.
      *
-     * @throws ValidationException  If the new password matches a recent history entry.
+     * @throws ValidationException If the new password matches a recent history entry.
      */
     private function validateNotUsingRecentPasswords(User $user, string $newPassword, int $historyLimit): void
     {
