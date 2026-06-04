@@ -11,6 +11,8 @@ use Domain\Report\Interfaces\SectionInstanceRepositoryInterface;
 use Domain\Report\Models\Report;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Fluent;
 
 /**
  * Handles business logic for the Report domain.
@@ -19,6 +21,12 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
  */
 class ReportService
 {
+    private const ANALYST_TYPE_MONITORING = 'monitoring';
+
+    private const ANALYST_TYPE_READING = 'reading';
+
+    private const APPROVAL_STATUS_RETURNED = 'returned';
+
     protected ReportRepositoryInterface $repository;
 
     public function __construct(
@@ -136,7 +144,7 @@ class ReportService
     /**
      * Data needed by analyst fill/preview page.
      *
-     * @return array{report: Report, readonly: bool, previewOnly: bool, phase: string, sectionInstances: mixed, lockMap: array}
+     * @return array<string, mixed>
      */
     public function getFillViewData(string $reportId, string $analystId, bool $previewOnly): array
     {
@@ -147,14 +155,148 @@ class ReportService
 
         $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
         $isOwner = $report->locked_by !== null && $report->locked_by === $analystId;
+        $phase = $report->isReadingPhase() ? 'reading' : 'monitoring';
+        $readonly = $previewOnly || ! $isOwner;
+        $revision = $this->revisionState($report, $phase, $readonly, $analystId);
 
-        return [
+        return array_merge($revision, [
             'report' => $report,
-            'readonly' => $previewOnly || ! $isOwner,
+            'reportId' => (string) $report->id,
+            'template' => $report->reportTemplate,
+            'hasSwab' => $report->reportTemplate?->hasSwab() ?? false,
+            'instrumentEntries' => $this->instrumentEntries($report),
+            'mediumEntries' => $this->mediumEntries($report),
+            'incubators' => $this->incubators($report),
+            'readonly' => $readonly,
             'previewOnly' => $previewOnly,
-            'phase' => $report->isReadingPhase() ? 'reading' : 'monitoring',
+            'phase' => $phase,
             'sectionInstances' => $bundle['instances'],
             'lockMap' => $bundle['locks'],
+        ]);
+    }
+
+    private function instrumentEntries(Report $report): Collection
+    {
+        $instrumentEntries = $report->instrumentEntries
+            ->sortBy(fn ($instrument) => $instrument->tool_name === 'Swab Kit' ? 1 : 0)
+            ->values();
+
+        if ($instrumentEntries->isNotEmpty()) {
+            return $instrumentEntries;
+        }
+
+        return collect([
+            new Fluent([
+                'id' => null,
+                'tool_name' => 'Air Sampler',
+                'no_id' => null,
+                'calibration_date' => null,
+                'due_date' => null,
+            ]),
+        ]);
+    }
+
+    private function mediumEntries(Report $report): Collection
+    {
+        $mediumEntries = $report->mediumEntries
+            ->sortBy(fn ($medium) => $medium->is_swab ? 1 : 0)
+            ->values();
+
+        if ($mediumEntries->isNotEmpty() || $report->reportTemplate === null) {
+            return $mediumEntries;
+        }
+
+        return $report->reportTemplate->mediumTemplates
+            ->map(function ($template) {
+                return new Fluent([
+                    'id' => 'preview-'.$template->id,
+                    'name' => $template->name,
+                    'is_swab' => str_contains(strtolower($template->name), 'swab'),
+                    'batch_number' => null,
+                    'gpt_number' => null,
+                    'expiration_date' => null,
+                ]);
+            })
+            ->sortBy(fn ($medium) => $medium->is_swab ? 1 : 0)
+            ->values();
+    }
+
+    private function incubators(Report $report): Collection
+    {
+        if ($report->incubators->isNotEmpty() || $report->reportTemplate === null) {
+            return $report->incubators;
+        }
+
+        $hasSwab = $report->reportTemplate->hasSwab();
+
+        return $report->reportTemplate->incubatorTemplates->map(function ($template) use ($hasSwab) {
+            $entries = collect([
+                $this->previewIncubatorEntry((string) $template->id, 'monitoring'),
+            ]);
+
+            if ($hasSwab) {
+                $entries->push($this->previewIncubatorEntry((string) $template->id, 'swab'));
+            }
+
+            return new Fluent([
+                'id' => 'preview-'.$template->id,
+                'template' => $template,
+                'entries' => $entries,
+                'no_id' => null,
+                'calibration_date' => null,
+                'due_date_calibration' => null,
+            ]);
+        });
+    }
+
+    private function previewIncubatorEntry(string $templateId, string $mediumType): Fluent
+    {
+        return new Fluent([
+            'id' => 'preview-'.$mediumType.'-'.$templateId,
+            'medium_type' => $mediumType,
+            'date_in' => null,
+            'time_in' => null,
+            'date_out' => null,
+            'time_out' => null,
+            'incubated_by' => null,
+            'removed_by' => null,
+            'incubatedBy' => null,
+            'removedBy' => null,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function revisionState(Report $report, string $phase, bool $readonly, string $currentUserId): array
+    {
+        $returnedApproval = $report->approvals
+            ->where('status', self::APPROVAL_STATUS_RETURNED)
+            ->filter(fn ($approval) => (string) $approval->returned_to_user_id === $currentUserId)
+            ->sortByDesc(fn ($approval) => $approval->updated_at?->getTimestamp() ?? 0)
+            ->first();
+
+        $isRevisionForMe = $returnedApproval !== null;
+        $hasMonitoringRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === self::ANALYST_TYPE_MONITORING
+                && (string) $analyst->user_id === $currentUserId
+        );
+        $hasReadingRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === self::ANALYST_TYPE_READING
+                && (string) $analyst->user_id === $currentUserId
+        );
+
+        return [
+            'returnedApproval' => $returnedApproval,
+            'isRevisionForMe' => $isRevisionForMe,
+            'isDualRoleRevision' => $isRevisionForMe && $hasMonitoringRole && $hasReadingRole,
+            'isMonitoringRevisionMode' => ! $readonly
+                && $phase === 'monitoring'
+                && $isRevisionForMe
+                && $hasMonitoringRole,
+            'isReadingRevisionSendOnlyMode' => ! $readonly
+                && $isRevisionForMe
+                && $phase === 'reading',
         ];
     }
 

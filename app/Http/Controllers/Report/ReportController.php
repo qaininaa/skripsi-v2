@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Report\AnalystReportIndexRequest;
 use App\Http\Requests\Report\SaveMonitoringRequest;
 use App\Http\Requests\Report\SaveReadingRequest;
+use App\Services\AnalystReportViewService;
 use Domain\Report\Services\MonitoringService;
 use Domain\Report\Services\ReadingService;
 use Domain\Report\Services\ReportService;
-use Domain\User\Services\UserService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -26,7 +26,7 @@ class ReportController extends Controller
         protected ReportService $reportService,
         protected MonitoringService $monitoringService,
         protected ReadingService $readingService,
-        protected UserService $userService,
+        protected AnalystReportViewService $analystReportViewService,
     ) {}
 
     /**
@@ -80,15 +80,7 @@ class ReportController extends Controller
     {
         $data = $this->reportService->getFillViewData($report, $this->currentAnalystId(), true);
 
-        return view('report.fill', [
-            'report' => $data['report'],
-            'readonly' => $data['readonly'],
-            'previewOnly' => $data['previewOnly'],
-            'phase' => $data['phase'],
-            'sectionInstances' => $data['sectionInstances'],
-            'lockMap' => $data['lockMap'],
-            'supervisors' => $this->userService->listSupervisors(),
-        ]);
+        return view('report.fill', $this->analystReportViewService->prepare($data));
     }
 
     /**
@@ -99,15 +91,7 @@ class ReportController extends Controller
     {
         $data = $this->reportService->getFillViewData($report, $this->currentAnalystId(), false);
 
-        return view('report.fill', [
-            'report' => $data['report'],
-            'readonly' => $data['readonly'],
-            'previewOnly' => $data['previewOnly'],
-            'phase' => $data['phase'],
-            'sectionInstances' => $data['sectionInstances'],
-            'lockMap' => $data['lockMap'],
-            'supervisors' => $this->userService->listSupervisors(),
-        ]);
+        return view('report.fill', $this->analystReportViewService->prepare($data));
     }
 
     /**
