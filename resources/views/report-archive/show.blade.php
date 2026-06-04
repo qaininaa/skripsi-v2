@@ -29,6 +29,14 @@
                 </p>
             </div>
         </div>
+        <a
+            href="{{ route('arsip-laporan.print', ['reportId' => $report->id]) }}"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700"
+        >
+            Cetak Laporan
+        </a>
     </div>
 
     <x-report.readonly

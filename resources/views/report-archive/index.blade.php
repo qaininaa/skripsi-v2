@@ -117,7 +117,7 @@
                                 </td>
                                 <td class="whitespace-nowrap px-3 py-4 text-center">
                                     <a
-                                        href="{{ route('arsip-laporan.show', ['reportId' => $report->id, 'folder' => $activeFolder['slug']]) }}"
+                                        href="{{ route('arsip-laporan.print', ['reportId' => $report->id, 'folder' => $activeFolder['slug']]) }}"
                                         class="inline-flex items-center rounded-md border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700 transition-colors hover:bg-green-100"
                                     >
                                         Lihat Laporan

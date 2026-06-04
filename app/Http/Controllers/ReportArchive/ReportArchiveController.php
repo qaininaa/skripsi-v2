@@ -4,13 +4,16 @@ namespace App\Http\Controllers\ReportArchive;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReportArchive\ReportArchiveIndexRequest;
+use Domain\Report\Services\ReportArchivePrintService;
 use Domain\Report\Services\ReportArchiveService;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ReportArchiveController extends Controller
 {
     public function __construct(
         protected ReportArchiveService $archiveService,
+        protected ReportArchivePrintService $archivePrintService,
     ) {}
 
     public function index(ReportArchiveIndexRequest $request): View
@@ -44,5 +47,20 @@ class ReportArchiveController extends Controller
             'sectionInstances' => $data['sectionInstances'],
             'lockMap' => $data['lockMap'],
         ]);
+    }
+
+    public function print(Request $request, string $reportId): View
+    {
+        $data = $this->archivePrintService->getPrintData($reportId);
+        abort_if($data === null, 404);
+
+        $folderSlug = $request->query('folder');
+        $activeFolder = is_string($folderSlug)
+            ? $this->archiveService->findFolderBySlug($folderSlug)
+            : $data['activeFolder'];
+
+        return view('report-archive.print', array_merge($data, [
+            'activeFolder' => $activeFolder,
+        ]));
     }
 }
