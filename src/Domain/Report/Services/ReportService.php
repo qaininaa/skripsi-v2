@@ -19,6 +19,12 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
  */
 class ReportService
 {
+    private const ANALYST_TYPE_MONITORING = 'monitoring';
+
+    private const ANALYST_TYPE_READING = 'reading';
+
+    private const APPROVAL_STATUS_RETURNED = 'returned';
+
     protected ReportRepositoryInterface $repository;
 
     public function __construct(
@@ -27,6 +33,7 @@ class ReportService
         protected SectionInstanceRepositoryInterface $sectionInstances,
         protected MonitoringService $monitoringService,
         protected ReadingService $readingService,
+        protected ReportFormViewDataService $formViewData,
     ) {
         $this->repository = $repository;
     }
@@ -136,7 +143,7 @@ class ReportService
     /**
      * Data needed by analyst fill/preview page.
      *
-     * @return array{report: Report, readonly: bool, previewOnly: bool, phase: string, sectionInstances: mixed, lockMap: array}
+     * @return array<string, mixed>
      */
     public function getFillViewData(string $reportId, string $analystId, bool $previewOnly): array
     {
@@ -147,14 +154,53 @@ class ReportService
 
         $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
         $isOwner = $report->locked_by !== null && $report->locked_by === $analystId;
+        $phase = $report->isReadingPhase() ? 'reading' : 'monitoring';
+        $readonly = $previewOnly || ! $isOwner;
+        $revision = $this->revisionState($report, $phase, $readonly, $analystId);
 
-        return [
+        return array_merge($revision, $this->formViewData->forReport($report), [
             'report' => $report,
-            'readonly' => $previewOnly || ! $isOwner,
+            'reportId' => (string) $report->id,
+            'readonly' => $readonly,
             'previewOnly' => $previewOnly,
-            'phase' => $report->isReadingPhase() ? 'reading' : 'monitoring',
+            'phase' => $phase,
             'sectionInstances' => $bundle['instances'],
             'lockMap' => $bundle['locks'],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function revisionState(Report $report, string $phase, bool $readonly, string $currentUserId): array
+    {
+        $returnedApproval = $report->approvals
+            ->where('status', self::APPROVAL_STATUS_RETURNED)
+            ->filter(fn ($approval) => (string) $approval->returned_to_user_id === $currentUserId)
+            ->sortByDesc(fn ($approval) => $approval->updated_at?->getTimestamp() ?? 0)
+            ->first();
+
+        $isRevisionForMe = $returnedApproval !== null;
+        $hasMonitoringRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === self::ANALYST_TYPE_MONITORING
+                && (string) $analyst->user_id === $currentUserId
+        );
+        $hasReadingRole = $report->analysts->contains(
+            fn ($analyst) => $analyst->type === self::ANALYST_TYPE_READING
+                && (string) $analyst->user_id === $currentUserId
+        );
+
+        return [
+            'returnedApproval' => $returnedApproval,
+            'isRevisionForMe' => $isRevisionForMe,
+            'isDualRoleRevision' => $isRevisionForMe && $hasMonitoringRole && $hasReadingRole,
+            'isMonitoringRevisionMode' => ! $readonly
+                && $phase === 'monitoring'
+                && $isRevisionForMe
+                && $hasMonitoringRole,
+            'isReadingRevisionSendOnlyMode' => ! $readonly
+                && $isRevisionForMe
+                && $phase === 'reading',
         ];
     }
 

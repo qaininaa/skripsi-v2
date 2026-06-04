@@ -7,7 +7,8 @@ use App\Http\Requests\Approval\ApprovalInboxRequest;
 use App\Http\Requests\Approval\ApprovalInProgressRequest;
 use App\Http\Requests\Approval\ApproveReportRequest;
 use App\Http\Requests\Approval\ReturnReportRequest;
-use App\Http\Requests\Approval\SaveSupervisorMonitoringRequest;
+use App\Http\Requests\Approval\SaveApprovalMonitoringRequest;
+use Domain\Report\Models\Report;
 use Domain\Report\Services\MonitoringService;
 use Domain\Report\Services\ReportApprovalService;
 use Domain\Report\Services\ReportService;
@@ -79,9 +80,15 @@ class ReportApprovalController extends Controller
             'report' => $data['report'],
             'approval' => $data['approval'],
             'previewOnly' => false,
+            'hasSwab' => $data['hasSwab'],
+            'instrumentEntries' => $data['instrumentEntries'],
+            'mediumEntries' => $data['mediumEntries'],
+            'incubators' => $data['incubators'],
             'sectionInstances' => $data['sectionInstances'],
             'lockMap' => $data['lockMap'],
             'returnTargets' => $data['returnTargets'],
+            'isPending' => $data['isPending'],
+            'canEditMonitoring' => $data['isPending'],
             'approveRoute' => $config['approveRoute'],
             'returnRoute' => $config['returnRoute'],
             'saveMonitoringRoute' => $config['saveMonitoringRoute'],
@@ -103,9 +110,15 @@ class ReportApprovalController extends Controller
             'report' => $data['report'],
             'approval' => null,
             'previewOnly' => true,
+            'hasSwab' => $data['hasSwab'],
+            'instrumentEntries' => $data['instrumentEntries'],
+            'mediumEntries' => $data['mediumEntries'],
+            'incubators' => $data['incubators'],
             'sectionInstances' => $data['sectionInstances'],
             'lockMap' => $data['lockMap'],
             'returnTargets' => $data['returnTargets'],
+            'isPending' => $data['isPending'],
+            'canEditMonitoring' => false,
             'approveRoute' => $config['approveRoute'],
             'returnRoute' => $config['returnRoute'],
             'saveMonitoringRoute' => $config['saveMonitoringRoute'],
@@ -115,30 +128,18 @@ class ReportApprovalController extends Controller
     }
 
     public function saveMonitoring(
-        SaveSupervisorMonitoringRequest $request,
+        SaveApprovalMonitoringRequest $request,
         string $report,
         string $step,
     ): RedirectResponse {
-        if ($step !== 'supervisor') {
-            abort(404);
-        }
-
-        $approval = $this->approvalService->findApprovalForAssignee(
-            $report,
-            ReportApprovalService::STEP_SUPERVISOR,
-            (string) Auth::id(),
-        );
-
-        abort_if($approval === null, 404);
-
-        if ($approval->status !== ReportApprovalService::STATUS_PENDING) {
-            return back()->with('error', 'Laporan ini sudah diproses sebelumnya.');
-        }
+        $config = $this->resolveConfig($step);
 
         try {
-            $this->monitoringService->saveMonitoringBySupervisor(
+            $this->monitoringService->saveMonitoringByApprover(
                 $this->reportService->findReportById($report),
                 (string) Auth::id(),
+                $config['stepConstant'],
+                $config['editableMonitoringStatus'],
                 $request->toDTO(),
             );
         } catch (\RuntimeException $e) {
@@ -204,7 +205,8 @@ class ReportApprovalController extends Controller
      *   previewRoute: string,
      *   approveRoute: string,
      *   returnRoute: string,
-     *   saveMonitoringRoute: string|null
+     *   saveMonitoringRoute: string,
+     *   editableMonitoringStatus: string
      * }
      */
     private function resolveConfig(string $step): array
@@ -219,7 +221,8 @@ class ReportApprovalController extends Controller
                 'previewRoute' => 'manager.reports.preview',
                 'approveRoute' => 'manager.reports.approve',
                 'returnRoute' => 'manager.reports.return',
-                'saveMonitoringRoute' => null,
+                'saveMonitoringRoute' => 'manager.reports.save-monitoring',
+                'editableMonitoringStatus' => Report::STATUS_PENDING_APPROVAL,
             ],
             default => [
                 'stepConstant' => ReportApprovalService::STEP_SUPERVISOR,
@@ -231,6 +234,7 @@ class ReportApprovalController extends Controller
                 'approveRoute' => 'supervisor.reports.approve',
                 'returnRoute' => 'supervisor.reports.return',
                 'saveMonitoringRoute' => 'supervisor.reports.save-monitoring',
+                'editableMonitoringStatus' => Report::STATUS_PENDING_REVIEW,
             ],
         };
     }

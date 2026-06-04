@@ -270,26 +270,42 @@ class MonitoringService
     }
 
     /**
-     * Supervisor correction on monitoring fields during pending review.
+     * Approver correction on monitoring fields during pending review/approval.
      *
-     * Lock ownership is bypassed so supervisor can adjust monitoring inputs.
+     * Lock ownership is bypassed so supervisor/manager can adjust monitoring inputs.
      * Special rule for analyst-filled fields:
      *  - time_start/time_end, time_in/time_out, and SP/Shift labels may be
      *    edited only when the current persisted value is already non-empty.
      *
      * @throws \RuntimeException
      */
-    public function saveMonitoringBySupervisor(Report $report, string $supervisorId, SaveMonitoringDto $dto): void
-    {
-        if ($report->status !== Report::STATUS_PENDING_REVIEW) {
-            throw new \RuntimeException('Perbaikan monitoring hanya tersedia saat tahap review supervisor.');
+    public function saveMonitoringByApprover(
+        Report $report,
+        string $actorId,
+        int $approvalStep,
+        string $expectedReportStatus,
+        SaveMonitoringDto $dto,
+    ): void {
+        if ($report->status !== $expectedReportStatus) {
+            throw new \RuntimeException('Perbaikan monitoring tidak tersedia pada tahap laporan saat ini.');
         }
 
-        DB::transaction(function () use ($report, $dto, $supervisorId) {
-            $this->saveInstrumentRows($report, $dto, $supervisorId, true);
-            $this->saveMediumRows($report, $dto, $supervisorId, true);
-            $this->saveIncubatorRows($report, $dto, $supervisorId, true, true, true);
-            $this->saveSectionMonitoringRows($report, $dto, $supervisorId, true, true, true);
+        $approval = $this->approvals->findByReportAndStep($report->id, $approvalStep);
+        if ($approval === null) {
+            throw new \RuntimeException('Laporan ini tidak menunggu tindakan Anda.');
+        }
+        if ((string) $approval->user_id !== $actorId) {
+            throw new \RuntimeException('Laporan ini bukan ditugaskan kepada Anda.');
+        }
+        if ($approval->status !== ReportApprovalService::STATUS_PENDING) {
+            throw new \RuntimeException('Laporan ini sudah diproses sebelumnya.');
+        }
+
+        DB::transaction(function () use ($report, $dto, $actorId) {
+            $this->saveInstrumentRows($report, $dto, $actorId, true);
+            $this->saveMediumRows($report, $dto, $actorId, true);
+            $this->saveIncubatorRows($report, $dto, $actorId, true, true, true);
+            $this->saveSectionMonitoringRows($report, $dto, $actorId, true, true, true);
         });
     }
 

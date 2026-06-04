@@ -79,6 +79,7 @@ class ReportArchiveService
     public function __construct(
         protected ReportRepositoryInterface $reports,
         protected SectionInstanceRepositoryInterface $sectionInstances,
+        protected ReportFormViewDataService $formViewData,
     ) {}
 
     /**
@@ -135,7 +136,7 @@ class ReportArchiveService
     /**
      * Build all data needed by the archive detail page.
      *
-     * @return array{report: Report, activeFolder: array|null, sectionInstances: mixed, lockMap: array}|null
+     * @return array{report: Report, activeFolder: array|null, sectionInstances: mixed, lockMap: array, template: mixed, hasSwab: bool, instrumentEntries: mixed, mediumEntries: mixed, incubators: mixed}|null
      */
     public function getArchivedReportDetailData(string $reportId): ?array
     {
@@ -146,12 +147,12 @@ class ReportArchiveService
 
         $bundle = $this->sectionInstances->getInstancesForReportWithLocks($report);
 
-        return [
+        return array_merge($this->formViewData->forReport($report), [
             'report' => $report,
             'activeFolder' => $this->resolveFolderForReport($report),
             'sectionInstances' => $bundle['instances'],
             'lockMap' => $bundle['locks'],
-        ];
+        ]);
     }
 
     /**

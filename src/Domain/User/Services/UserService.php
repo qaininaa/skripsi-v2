@@ -123,4 +123,19 @@ class UserService
     {
         return $this->repository->listByRoles(['supervisor']);
     }
+
+    /**
+     * Supervisor options ready for view/dropdown usage.
+     *
+     * @return Collection<int, array{id: string, name: string}>
+     */
+    public function listSupervisorOptions(): Collection
+    {
+        return $this->listSupervisors()
+            ->map(fn (User $supervisor) => [
+                'id' => (string) $supervisor->id,
+                'name' => $supervisor->name,
+            ])
+            ->values();
+    }
 }
