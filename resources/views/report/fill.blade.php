@@ -4,11 +4,6 @@
 @section('page-title', 'Pengisian Laporan')
 
 @section('content')
-    <datalist id="microbial-count-options">
-        <option value="&lt;1"></option>
-        <option value="TNTC"></option>
-    </datalist>
-
     {{-- Header --}}
     <div class="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex items-center gap-4">

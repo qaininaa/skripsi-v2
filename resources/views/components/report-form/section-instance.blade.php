@@ -300,6 +300,13 @@
     $headColCount = count($columns);
 @endphp
 
+@once
+    <datalist id="microbial-count-options">
+        <option value="&lt;1"></option>
+        <option value="TNTC"></option>
+    </datalist>
+@endonce
+
 <section
     class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100"
     data-conclusion-section
