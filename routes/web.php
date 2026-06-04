@@ -85,7 +85,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         Route::get('/report-assignment', [ReportAssignmentController::class, 'index'])->name('report-assignment.index');
         Route::get('/report-assignment/create', [ReportAssignmentController::class, 'create'])->name('report-assignment.create');
         Route::post('/report-assignment/store', [ReportAssignmentController::class, 'store'])->name('report-assignment.store');
-        Route::get('/report-assignment/{report}/preview', [ReportAssignmentController::class, 'preview'])->name('report-assignment.preview');
+        Route::get('/{report}/preview', [ReportAssignmentController::class, 'preview'])->name('report-assignment.preview');
         Route::get('/report-assignment/{report}', [ReportAssignmentController::class, 'show'])->name('report-assignment.show');
         Route::get('/report-assignment/{report}/edit', [ReportAssignmentController::class, 'edit'])->name('report-assignment.edit');
         Route::put('/report-assignment/{report}', [ReportAssignmentController::class, 'update'])->name('report-assignment.update');
@@ -114,7 +114,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     });
 
     // Report Approval — Supervisor approval step
-    Route::middleware('role:supervisor')->prefix('supervisor')->name('supervisor.')->group(function () {
+    Route::middleware('role:supervisor')->name('supervisor.')->group(function () {
         Route::get('/inbox', [ReportApprovalController::class, 'inbox'])->defaults('step', 'supervisor')->name('inbox');
         Route::get('/in-progress', [ReportApprovalController::class, 'inProgress'])->defaults('step', 'supervisor')->name('in-progress');
         Route::get('/reports/{report}/preview', [ReportApprovalController::class, 'preview'])->defaults('step', 'supervisor')->name('reports.preview');
@@ -125,7 +125,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
     });
 
     // Report Approval — Manager approval step
-    Route::middleware('role:manager')->prefix('manager')->name('manager.')->group(function () {
+    Route::middleware('role:manager')->name('manager.')->group(function () {
         Route::get('/inbox', [ReportApprovalController::class, 'inbox'])->defaults('step', 'manager')->name('inbox');
         Route::get('/in-progress', [ReportApprovalController::class, 'inProgress'])->defaults('step', 'manager')->name('in-progress');
         Route::get('/reports/{report}/preview', [ReportApprovalController::class, 'preview'])->defaults('step', 'manager')->name('reports.preview');
