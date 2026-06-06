@@ -39,6 +39,7 @@ Route::middleware(['auth', 'password.changed'])->group(function () {
         ->name('arsip-laporan.')
         ->group(function () {
             Route::get('/', [ReportArchiveController::class, 'index'])->name('index');
+            Route::get('/{reportId}/cetak', [ReportArchiveController::class, 'print'])->name('print');
             Route::get('/{reportId}', [ReportArchiveController::class, 'show'])->name('show');
         });
 
